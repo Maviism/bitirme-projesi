@@ -12,3 +12,10 @@ INSTALLED_APPS = [
 ]
 ```
 3. add app urls to project urls.py
+```python
+url_patterns = [
+    ...
+    path('app_name/', include('app_name.urls')),
+]
+```
+

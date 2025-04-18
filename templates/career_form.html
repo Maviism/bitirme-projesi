@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Transcript Parser</title>
+  <style>
+    .results { margin-top: 20px; }
+    .results pre { background: #f4f4f4; padding: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Upload PDF Transcript</h1>
+  <input type="file" id="pdfInput" accept="application/pdf">
+  
+  <div class="results" id="results">
+    <!-- Parsed Student Info and Courses will be displayed here -->
+  </div>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+  <script>
+    
+    async function extractPdfText(file) {
+      const fileReader = new FileReader();
+      return new Promise((resolve, reject) => {
+        fileReader.onload = async function() {
+          const typedarray = new Uint8Array(this.result);
+          const pdf = await pdfjsLib.getDocument(typedarray).promise;
+          const textChunks = [];
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            
+            // Tambahkan opsi ekstraksi untuk hasil yang lebih baik
+            const options = {
+              normalizeWhitespace: true,
+              disableCombineTextItems: false
+            };
+            
+            const content = await page.getTextContent(options);
+            
+            // Proses teks dengan cara yang lebih cerdas berdasarkan posisi
+            const processedText = processPageContent(content);
+            textChunks.push(processedText);
+          }
+          
+          const text = textChunks.join("\n");
+          // Bersihkan hasil ekstraksi
+          const cleanedText = cleanExtractedText(text);
+          console.log("Cleaned Text:", cleanedText);
+          resolve(cleanedText);
+        };
+        fileReader.onerror = reject;
+        fileReader.readAsArrayBuffer(file);
+      });
+    }
+    
+    // Fungsi untuk memproses konten halaman dengan layout yang lebih baik
+    function processPageContent(content) {
+      // Ekstrak informasi posisi untuk setiap item teks
+      const items = content.items.map(item => {
+        return {
+          text: item.str,
+          x: Math.round(item.transform[4]),
+          y: Math.round(item.transform[5]),
+          width: Math.round(item.width) || 0,
+          height: Math.round(item.height) || 0
+        };
+      });
+      
+      // Identifikasi baris berdasarkan posisi Y
+      const yPositions = {};
+      items.forEach(item => {
+        // Gunakan toleransi 3 piksel untuk posisi Y yang sama
+        const yPos = Math.floor(item.y / 3) * 3;
+        if (!yPositions[yPos]) {
+          yPositions[yPos] = [];
+        }
+        yPositions[yPos].push(item);
+      });
+      
+      // Urutkan baris dari atas ke bawah (Y terbesar ke terkecil)
+      const sortedYPositions = Object.keys(yPositions)
+        .map(Number)
+        .sort((a, b) => b - a);
+      
+      // Untuk setiap baris, urutkan item dari kiri ke kanan dan gabungkan
+      const lines = [];
+      sortedYPositions.forEach(yPos => {
+        // Urutkan item dalam baris dari kiri ke kanan
+        const sortedLineItems = yPositions[yPos].sort((a, b) => a.x - b.x);
+        
+        // Gabungkan teks dalam baris dengan spasi yang sesuai
+        let line = '';
+        let lastX = -9999;
+        
+        sortedLineItems.forEach(item => {
+          // Tambahkan spasi jika jarak dengan item sebelumnya cukup besar
+          const distance = item.x - lastX;
+          if (distance > 10 && line !== '') { // 10 adalah threshold yang bisa disesuaikan
+            line += ' ';
+          }
+          line += item.text;
+          lastX = item.x + item.width;
+        });
+        
+        lines.push(line);
+      });
+      
+      return lines.join('\n');
+    }
+    
+    // Fungsi untuk membersihkan dan memperbaiki teks hasil ekstraksi
+    function cleanExtractedText(text) {
+      // Hapus spasi berlebih
+      let cleaned = text.replace(/\s+/g, ' ');
+      
+      // Perbaiki format untuk data terstruktur (misal "Key : Value" menjadi "Key: Value")
+      cleaned = cleaned.replace(/(\w+)\s+:\s+/g, '$1: ');
+      
+      // Perbaiki format numerik, gabungkan digit yang terpisah
+      cleaned = cleaned.replace(/(\d)\s+(\d)/g, '$1$2');
+      
+      // Perbaiki format tanggal
+      cleaned = cleaned.replace(/(\d{2})\s+\/\s+(\d{2})\s+\/\s+(\d{4})/g, '$1/$2/$3');
+      
+      // Gabungkan kode mata kuliah yang mungkin terpisah
+      cleaned = cleaned.replace(/([A-Z]{3})\s+(\d{4})/g, '$1$2');
+      
+      return cleaned;
+    }
+
+    function extractStudentInfo(text) {
+      const student_info = {};
+      
+      // Perbaikan regex untuk hanya mengambil nilai yang diinginkan
+      const studentIdMatch = text.match(/Öğrenci No\s*\(Student ID\)\s*:\s*([0-9]+)/);
+      const idNumberMatch = text.match(/T\.C\. Kimlik No\s*\(TR Identity No\)\s*:\s*([0-9]+)/);
+      const nameMatch = text.match(/Adı\s*\(Given Name\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Soyadı|\s*$)/i);
+      const surnameMatch = text.match(/Soyadı\s*\(Surname\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Doğum|\s*$)/i);
+      const birthDateMatch = text.match(/Doğum Tarihi\s*\(Date of Birth\)\s*:\s*([0-9/]+)/);
+      const facultyMatch = text.match(/Eğitim Birimi(?:.*?):\s*([^:\r\n]+?)(?=\s*:[0-9]|\s*\()/);
+      const programMatch = text.match(/Programı\/ABD\/ASD(?:.*?):\s*([^:\r\n]+?)(?=\s*:|$)/);
+      const gpaMatch = text.match(/Genel Not Ortalaması(?:.*?):\s*([0-9.]+)/);
+      
+      // Assign nilai dan bersihkan dengan trim
+      student_info.student_id = studentIdMatch ? studentIdMatch[1].trim() : "Not Found";
+      student_info.id_number = idNumberMatch ? idNumberMatch[1].trim() : "Not Found";
+      
+      // Gunakan fullname untuk nama lengkap
+      if (nameMatch) {
+        student_info.fullname = nameMatch[1].trim();
+      } else {
+        student_info.fullname = "Not Found";
+      }
+      
+      student_info.last_name = surnameMatch ? surnameMatch[1].trim() : "Not Found";
+      student_info.birth_date = birthDateMatch ? birthDateMatch[1].trim() : "Not Found";
+      student_info.faculty = facultyMatch ? facultyMatch[1].trim() : "Not Found";
+      student_info.program = programMatch ? programMatch[1].trim() : "Not Found";
+      student_info.gpa = gpaMatch ? gpaMatch[1].trim() : "Not Found";
+      
+      return student_info;
+    }
+
+    function extractCourses(text) {
+      const courses = [];
+      
+      // Pattern yang lebih fleksibel untuk menangkap berbagai variasi format mata kuliah
+      // Format dasar: KODE Nama Mata Kuliah Status Lang digits digits ECTS GRADE points status
+      const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
+      
+      let match;
+      while ((match = courseRegex.exec(text)) !== null) {
+        // Dapatkan nama kursus dan bersihkan
+        let courseName = match[2].trim();
+        // Hilangkan text dalam kurung jika ada di akhir nama kursus
+        courseName = courseName.replace(/\s*\([^)]*\)\s*$/, '');
+        
+        // Tentukan grade dan ects
+        const grade = match[7] || "--";  // Grade bisa berupa AA, BA, atau "--"
+        const ects = match[6] ? match[6].trim() : "";
+        
+        courses.push({
+          code: match[1],       // Kode mata kuliah (contoh: AIT1101, BLM2123, ING1015İ)
+          name: courseName,     // Nama mata kuliah 
+          type: match[3],       // Z=Zorunlu (Wajib), S=Seçmeli (Pilihan)
+          ects: ects,           // ECTS
+          grade: grade          // Grade (contoh: AA, BA, --)
+        });
+      }
+      
+      // Jika tidak ada hasil, coba pattern alternatif untuk menangkap mata kuliah yang tidak cocok dengan pola utama
+      if (courses.length === 0) {
+        const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)/g;
+        
+        while ((match = altCourseRegex.exec(text)) !== null) {
+          let courseName = match[2].trim().replace(/\s*\([^)]*\)\s*$/, '');
+          
+          courses.push({
+            code: match[1],
+            name: courseName,
+            type: match[3],
+            ects: "",
+            grade: "--"
+          });
+        }
+      }
+      
+      return courses;
+    }
+
+    function displayResults(studentInfo, courses) {
+      const resultsDiv = document.getElementById('results');
+      resultsDiv.innerHTML = "";
+      
+      // Header
+      const header = document.createElement('h2');
+      header.textContent = "Hasil Ekstraksi Transkrip";
+      resultsDiv.appendChild(header);
+    
+      // Create Student Info Table
+      const studentInfoDiv = document.createElement('div');
+      studentInfoDiv.innerHTML = "<h3>Informasi Mahasiswa</h3>";
+      
+      const studentInfoTable = document.createElement('table');
+      studentInfoTable.border = "1";
+      studentInfoTable.style.borderCollapse = "collapse";
+      studentInfoTable.style.width = "100%";
+      studentInfoTable.style.marginBottom = "20px";
+      
+      // Tambahkan header tabel
+      const studentInfoHeader = document.createElement('tr');
+      studentInfoHeader.innerHTML = "<th style='padding: 8px; background-color: #f2f2f2;'>Field</th><th style='padding: 8px; background-color: #f2f2f2;'>Value</th>";
+      studentInfoTable.appendChild(studentInfoHeader);
+    
+      // Field yang ingin ditampilkan dan urutan yang sesuai
+      const fieldsToDisplay = [
+        { key: 'student_id', label: 'Student ID' },
+        { key: 'id_number', label: 'Identity Number' },
+        { key: 'fullname', label: 'Full Name' },
+        { key: 'last_name', label: 'Last Name' },
+        { key: 'birth_date', label: 'Date of Birth' },
+        { key: 'faculty', label: 'Faculty' },
+        { key: 'program', label: 'Program' },
+        { key: 'gpa', label: 'GPA' }
+      ];
+    
+      // Tambahkan baris-baris tabel untuk setiap field
+      fieldsToDisplay.forEach(field => {
+        if (studentInfo[field.key]) {
+          const row = document.createElement('tr');
+          row.innerHTML = `<td style='padding: 8px; border: 1px solid #ddd;'>${field.label}</td><td style='padding: 8px; border: 1px solid #ddd;'>${studentInfo[field.key]}</td>`;
+          studentInfoTable.appendChild(row);
+        }
+      });
+      
+      studentInfoDiv.appendChild(studentInfoTable);
+      resultsDiv.appendChild(studentInfoDiv);
+    
+      // Create Courses Table
+      const coursesDiv = document.createElement('div');
+      coursesDiv.innerHTML = `<h3>Daftar Mata Kuliah (${courses.length} mata kuliah)</h3>`;
+      
+      const coursesTable = document.createElement('table');
+      coursesTable.border = "1";
+      coursesTable.style.borderCollapse = "collapse";
+      coursesTable.style.width = "100%";
+      
+      const coursesHeader = document.createElement('tr');
+      coursesHeader.innerHTML = `
+        <th style='padding: 8px; background-color: #f2f2f2;'>Code</th>
+        <th style='padding: 8px; background-color: #f2f2f2;'>Name</th>
+        <th style='padding: 8px; background-color: #f2f2f2;'>Type</th>
+        <th style='padding: 8px; background-color: #f2f2f2;'>ECTS</th>
+        <th style='padding: 8px; background-color: #f2f2f2;'>Grade</th>
+      `;
+      coursesTable.appendChild(coursesHeader);
+    
+      courses.forEach(course => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td style='padding: 8px; border: 1px solid #ddd;'>${course.code}</td>
+          <td style='padding: 8px; border: 1px solid #ddd;'>${course.name}</td>
+          <td style='padding: 8px; border: 1px solid #ddd;'>${course.type === 'Z' ? 'Compulsory' : 'Elective'}</td>
+          <td style='padding: 8px; border: 1px solid #ddd;'>${course.ects}</td>
+          <td style='padding: 8px; border: 1px solid #ddd;'>${course.grade}</td>
+        `;
+        coursesTable.appendChild(row);
+      });
+      
+      coursesDiv.appendChild(coursesTable);
+      resultsDiv.appendChild(coursesDiv);
+    }
+
+    document.getElementById('pdfInput').addEventListener('change', async function(event) {
+      const file = event.target.files[0];
+      if (file) {
+        try {
+          const text = await extractPdfText(file);
+          console.log("Extracted Text:", text);
+          const studentInfo = extractStudentInfo(text);
+          const courses = extractCourses(text);
+          console.log("Student Info:", studentInfo);
+          console.log("Courses:", courses);
+
+          // Display results in the UI
+          displayResults(studentInfo, courses);
+        } catch (error) {
+          console.error("Error extracting PDF text:", error);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
