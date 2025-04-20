@@ -1,26 +1,33 @@
 ## run django
-1. create virtual env
+1. clone the repo
 ```
-python -m venv venv
+git clone [repository_url]
 ```
-2. activate virtual venv
+2. create virtual environment
 ```
-# windows
-.\venv\Scripts\activate
-# linux
-source venv/bin/activate
+python -m venv env
 ```
-3. install django
+3. activate virtual environment
 ```
-pip install django
+# Windows
+.\env\Scripts\activate
+# Linux
+source env/bin/activate
 ```
-4. create django project
+4. install requirements
 ```
-django-admin startproject [project_name]
+pip install -r requirements.txt
 ```
-5. run django server
+5. create superuser
 ```
-cd [project_name]
+python manage.py createsuperuser
+```
+6. migrate database
+```
+python manage.py migrate
+```
+7. run server
+```
 python manage.py runserver
 ```
 
@@ -46,3 +53,12 @@ url_patterns = [
 ]
 ```
 
+## Libraries
+1. install libraries
+```
+pip install [library_name]
+```
+2. add libraries to requirements.txt
+```
+pip freeze > requirements.txt
+```

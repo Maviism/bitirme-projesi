@@ -3,6 +3,16 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 
+# Import our recommender system
+from .recommender import HybridRecommender, initialize_alumni_database, initialize_job_postings_database
+
+# Initialize the recommender system
+recommender = HybridRecommender(alumni_weight=0.6, job_weight=0.4)
+recommender.set_databases(
+    initialize_alumni_database(), 
+    initialize_job_postings_database()
+)
+
 # Create your views here.
 def landing_page(request):
     return render(request, 'landing_page.html')
@@ -10,11 +20,11 @@ def landing_page(request):
 def career_form(request):
     return render(request, 'career_form.html')
 
-# New view to handle form submission
+# View to handle form submission
 @csrf_exempt
 def submit_application(request):
     """
-    View to receive POST data from career form and return JSON response
+    View to receive POST data from career form and return JSON response with job recommendations
     """
     if request.method != 'POST':
         return JsonResponse({"error": "Only POST method is allowed"}, status=405)
@@ -76,6 +86,27 @@ def submit_application(request):
                 internships.append(intern)
             i += 1
         
+        # Generate job recommendations using the hybrid recommender
+        job_recommendations = recommender.get_hybrid_recommendations(
+            student_data,
+            courses_data,
+            organizations,
+            internships
+        )
+        
+        # Format job recommendations for response
+        formatted_recommendations = []
+        for rec in job_recommendations:
+            job = rec.get('job', {})
+            formatted_recommendations.append({
+                'id': job.get('id', ''),
+                'title': job.get('title', ''),
+                'company': job.get('company', ''),
+                'description': job.get('description', ''),
+                'match_score': round(rec.get('score', 0) * 100),  # Convert to percentage
+                'recommendation_sources': rec.get('sources', [])
+            })
+        
         # Construct the complete response
         response_data = {
             "status": "success",
@@ -84,7 +115,8 @@ def submit_application(request):
                 "student": student_data,
                 "courses": courses_data,
                 "organizations": organizations,
-                "internships": internships
+                "internships": internships,
+                "job_recommendations": formatted_recommendations
             }
         }
         
