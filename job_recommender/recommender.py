@@ -1,5 +1,6 @@
 from collections import Counter
 from .models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
+from sentence_transformers import SentenceTransformer, util
 
 # Updated function to retrieve alumni data from the database
 def get_alumni_database():
@@ -97,7 +98,7 @@ class HybridRecommender:
         self.alumni_weight = alumni_weight
         self.job_weight = job_weight
         self.min_recommendations = min_recommendations
-        # No need to load data at initialization as we'll fetch from DB when needed
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
     
     def _extract_keywords(self, text):
         """
@@ -202,88 +203,58 @@ class HybridRecommender:
         return recommendations
     
     def get_job_recommendations(self, student_data, orgs, internships):
-        """
-        Generate job recommendations based on the student's organization and internship experiences.
-        
-        Parameters:
-        -----------
-        student_data : dict
-            Student information including program, etc.
-        orgs : list
-            List of organization experiences
-        internships : list
-            List of internship experiences
-            
-        Returns:
-        --------
-        list
-            Recommended jobs based on experiences
-        """
-        # Get job postings data from database
-        job_postings = get_job_postings_database()
-        if not job_postings:
-            return []
-            
-        # Make sure orgs and internships are lists
-        if not isinstance(orgs, list):
-            orgs = []
-        if not isinstance(internships, list):
-            internships = []
-            
-        # Extract keywords from organizations and internships
-        experience_keywords = []
-        
-        # Extract from organization descriptions
-        for org in orgs:
-            if isinstance(org, dict):
-                if 'description' in org and org['description']:
-                    experience_keywords.extend(self._extract_keywords(org['description']))
-                if 'position' in org and org['position']:
-                    experience_keywords.extend(self._extract_keywords(org['position']))
-        
-        # Extract from internship descriptions
-        for internship in internships:
-            if isinstance(internship, dict):
-                if 'description' in internship and internship['description']:
-                    experience_keywords.extend(self._extract_keywords(internship['description']))
-                if 'position' in internship and internship['position']:
-                    experience_keywords.extend(self._extract_keywords(internship['position']))
-                if 'company' in internship and internship['company']:
-                    experience_keywords.extend(self._extract_keywords(internship['company']))
-        
-        
-        # Count keyword frequencies
-        keyword_counts = Counter(experience_keywords)
-        
-        # Match with job postings
-        matches = []
-        
-        for job in job_postings:
-            try:
-                # Extract keywords from job description
-                job_keywords = self._extract_keywords(job['description'])
-                job_keywords.extend(self._extract_keywords(job['title']))
-                
-                # Program match bonus (safely get program from student_data)
-                program = student_data.get('program', '')
-                required_majors = job.get('required_majors', '')
-                program_match = 1.5 if program in required_majors else 1.0
-                
-                # Calculate keyword match score
-                match_score = sum(keyword_counts.get(kw, 0) for kw in job_keywords) * program_match
-                matches.append((match_score, job))
-            except Exception as e:
-                continue
-        
-        try:
-            # Sort using the first element of each tuple (the match score)
-            matches.sort(key=lambda x: x[0], reverse=True)
-        except Exception as e:
-            pass
-        
-        # Extract top recommendations (up to 10 to ensure we have enough even with low scores)
-        recommendations = [item[1] for item in matches[:10]]
-        return recommendations
+      job_postings = get_job_postings_database()
+      if not job_postings:
+          return []
+
+      if not isinstance(orgs, list): orgs = []
+      if not isinstance(internships, list): internships = []
+
+      # Gabungkan semua pengalaman menjadi satu teks
+      experience_texts = []
+      for org in orgs:
+          if isinstance(org, dict):
+              experience_texts.append(org.get('description', ''))
+              experience_texts.append(org.get('position', ''))
+      
+      for internship in internships:
+          if isinstance(internship, dict):
+              experience_texts.append(internship.get('description', ''))
+              experience_texts.append(internship.get('position', ''))
+              experience_texts.append(internship.get('company', ''))
+
+      combined_experience = ' '.join(filter(None, experience_texts)).strip()
+      if not combined_experience:
+          return []
+
+      # Encode pengalaman pakai SBERT
+      try:
+          experience_embedding = self.model.encode(combined_experience, convert_to_tensor=True)
+      except Exception as e:
+          return []
+
+      matches = []
+
+      for job in job_postings:
+          try:
+              job_text = f"{job.get('title', '')}. {job.get('description', '')}"
+              job_embedding = self.model.encode(job_text, convert_to_tensor=True)
+              similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
+
+              # Bonus jika program mahasiswa cocok
+              program = student_data.get('program', '')
+              required_majors = job.get('required_majors', '')
+              program_match = 1.5 if program in required_majors else 1.0
+              total_score = similarity_score * program_match
+
+              matches.append((total_score, job))
+          except Exception:
+              continue
+
+      matches.sort(key=lambda x: x[0], reverse=True)
+      recommendations = [item[1] for item in matches[:10]]
+      return recommendations
+
     
     def get_hybrid_recommendations(self, student_data, courses, orgs, internships):
         """
