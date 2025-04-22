@@ -2,9 +2,13 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from datetime import datetime
+from django.db import transaction
 
 # Import our recommender system
 from .recommender import HybridRecommender, initialize_alumni_database, initialize_job_postings_database
+# Import our models
+from .models import Student, Course, Organization, Internship, Job, JobRecommendation
 
 # Initialize the recommender system
 recommender = HybridRecommender(alumni_weight=0.6, job_weight=0.4)
@@ -107,10 +111,111 @@ def submit_application(request):
                 'recommendation_sources': rec.get('sources', [])
             })
         
+        # Save all data to the database
+        with transaction.atomic():
+            # Save student data
+            try:
+                # Convert birth date string to date object
+                birth_date = datetime.strptime(student_data['birth_date'], '%d/%m/%Y').date()
+            except ValueError:
+                try:
+                    birth_date = datetime.strptime(student_data['birth_date'], '%Y-%m-%d').date()
+                except ValueError:
+                    return JsonResponse({"error": "Invalid birth date format. Use DD/MM/YYYY"}, status=400)
+            
+            # Create or update student record
+            student, created = Student.objects.update_or_create(
+                student_id=student_data['student_id'],
+                defaults={
+                    'id_number': student_data['id_number'],
+                    'fullname': student_data['fullname'],
+                    'last_name': student_data['last_name'],
+                    'birth_date': birth_date,
+                    'faculty': student_data['faculty'],
+                    'program': student_data['program'],
+                    'gpa': float(student_data['gpa']) if student_data['gpa'] else 0.0,
+                }
+            )
+            
+            # Save courses
+            for course_data in courses_data:
+                Course.objects.update_or_create(
+                    student=student,
+                    code=course_data['code'],
+                    defaults={
+                        'name': course_data['name'],
+                        'grade': course_data['grade']
+                    }
+                )
+            
+            # Save organizations
+            for org_data in organizations:
+                start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
+                end_date = None
+                if org_data.get('end_date'):
+                    end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
+                
+                Organization.objects.create(
+                    student=student,
+                    name=org_data['name'],
+                    position=org_data['position'],
+                    start_date=start_date,
+                    end_date=end_date,
+                    description=org_data.get('description', '')
+                )
+            
+            # Save internships
+            for intern_data in internships:
+                start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
+                end_date = None
+                if intern_data.get('end_date'):
+                    end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
+                
+                Internship.objects.create(
+                    student=student,
+                    company=intern_data['company'],
+                    position=intern_data['position'],
+                    start_date=start_date,
+                    end_date=end_date,
+                    description=intern_data.get('description', '')
+                )
+            
+            # Save job recommendations
+            for rec in job_recommendations:
+                job_data = rec.get('job', {})
+                # Create or get the job
+                job, _ = Job.objects.get_or_create(
+                    title=job_data.get('title', ''),
+                    company=job_data.get('company', ''),
+                    defaults={
+                        'description': job_data.get('description', ''),
+                        'required_majors': job_data.get('required_majors', [])
+                    }
+                )
+                
+                # Determine the source
+                sources = rec.get('sources', [])
+                if len(sources) > 1:
+                    source = 'hybrid'
+                elif sources and sources[0] in ('alumni', 'job_posting'):
+                    source = sources[0]
+                else:
+                    source = 'hybrid'
+                
+                # Create recommendation
+                JobRecommendation.objects.update_or_create(
+                    student=student,
+                    job=job,
+                    defaults={
+                        'match_score': rec.get('score', 0) * 100,  # Convert to percentage
+                        'source': source
+                    }
+                )
+        
         # Construct the complete response
         response_data = {
             "status": "success",
-            "message": "Application received successfully",
+            "message": "Application received and saved successfully",
             "data": {
                 "student": student_data,
                 "courses": courses_data,

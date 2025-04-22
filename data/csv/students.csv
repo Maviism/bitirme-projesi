@@ -1,0 +1,11 @@
+student_id,id_number,fullname,last_name,birth_date,faculty,program,gpa
+S001,ID12345,John,Doe,1998-05-15,Engineering,Computer Engineering Pr.,3.8
+S002,ID23456,Jane,Smith,1999-02-20,Engineering,Computer Engineering Pr.,3.5
+S003,ID34567,Michael,Brown,1997-11-10,Engineering,Computer Engineering Pr.,3.2
+S004,ID45678,Emily,Johnson,1998-07-22,Engineering,Computer Engineering Pr.,3.9
+S005,ID56789,David,Wilson,1999-04-11,Engineering,Electrical Engineering,3.6
+S006,ID67890,Sarah,Taylor,1998-09-30,Engineering,Electrical Engineering,3.3
+S007,ID78901,Robert,Miller,1997-06-18,Engineering,Mechanical Engineering,3.7
+S008,ID89012,Jennifer,Anderson,1999-01-07,Engineering,Mechanical Engineering,3.4
+S009,ID90123,Matthew,Thomas,1998-03-25,Engineering,Civil Engineering,3.1
+S010,ID01234,Lisa,Jackson,1997-12-14,Engineering,Civil Engineering,3.8

@@ -1,0 +1,11 @@
+title,company,description,required_majors
+Software Engineer,Google,"Developing scalable backend systems for Google products using Python and Go.",["Computer Engineering Pr.","Computer Engineering","Software Engineering"]
+Frontend Developer,Microsoft,"Building intuitive user interfaces for Microsoft products using React and TypeScript.",["Computer Engineering Pr.","Computer Engineering","Software Engineering"]
+Full Stack Developer,Amazon,"Creating end-to-end solutions for Amazon Web Services using Node.js and React.",["Computer Engineering Pr.","Computer Engineering","Software Engineering"]
+Machine Learning Engineer,IBM,"Designing and implementing machine learning models for enterprise solutions.",["Computer Engineering Pr.","Computer Engineering","Data Science"]
+Hardware Engineer,Samsung,"Designing and testing electronic circuits for consumer devices.",["Electrical Engineering","Computer Engineering","Electronics Engineering"]
+Chip Architect,Intel,"Designing processor architecture and optimizing performance.",["Electrical Engineering","Computer Engineering","Electronics Engineering"]
+Mechanical Design Engineer,Toyota,"Designing and testing mechanical components for automotive applications.",["Mechanical Engineering"]
+Renewable Energy Engineer,Tesla,"Developing innovative solutions for energy storage and renewable energy.",["Electrical Engineering","Mechanical Engineering","Energy Engineering"]
+Structural Engineer,AECOM,"Designing and analyzing structural systems for buildings and infrastructure.",["Civil Engineering","Structural Engineering"]
+Environmental Engineer,Environmental Agency,"Conducting environmental assessments and developing sustainable solutions.",["Civil Engineering","Environmental Engineering"]

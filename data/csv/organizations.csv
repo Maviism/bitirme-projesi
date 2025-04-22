@@ -1,0 +1,12 @@
+student_id,name,position,start_date,end_date,description
+S001,Computer Society,President,2020-09-01,2022-05-31,Leading the university computer society and organizing tech events
+S001,Robotics Club,Member,2019-10-15,2021-06-30,Participated in robotics competitions and projects
+S002,Student Council,Secretary,2020-08-15,2021-06-30,Handled administrative tasks and meeting minutes
+S003,Programming Team,Captain,2019-09-01,2022-05-31,Led the university programming team in competitions
+S004,AI Research Group,Lead,2020-09-01,2022-05-31,Coordinated AI research projects and publications
+S005,Electronics Club,Vice President,2020-09-01,2022-05-31,Organized electronics workshops and competitions
+S006,Women in Engineering,Coordinator,2019-10-15,2022-05-31,Promoted gender diversity in engineering fields
+S007,Mechanical Engineering Society,Treasurer,2020-08-15,2022-05-31,Managed club finances and budget planning
+S008,Renewable Energy Club,Project Manager,2019-09-01,2021-06-30,Led renewable energy projects and initiatives
+S009,Civil Engineering Association,Event Organizer,2020-09-01,2022-05-31,Planned and executed industry networking events
+S010,Environmental Club,Founder,2019-10-15,2022-05-31,Established and led campus sustainability initiatives

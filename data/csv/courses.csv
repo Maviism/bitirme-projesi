@@ -1,0 +1,35 @@
+student_id,code,name,grade
+S001,BLM1101,Physics,AA
+S001,BLM1102,Mathematics,BA
+S001,BLM1121,Linear Algebra,BB
+S001,BLM1123,Introduction to Programming,AA
+S002,BLM1101,Physics,BA
+S002,BLM1102,Mathematics,BB
+S002,BLM1121,Linear Algebra,CB
+S002,BLM1123,Introduction to Programming,BA
+S003,BLM1101,Physics,BB
+S003,BLM1102,Mathematics,CB
+S003,BLM1121,Linear Algebra,BB
+S003,BLM1123,Introduction to Programming,AA
+S004,BLM1101,Physics,AA
+S004,BLM1102,Mathematics,AA
+S004,BLM1121,Linear Algebra,AA
+S004,BLM1123,Introduction to Programming,AA
+S005,EEE1101,Circuit Theory,BA
+S005,EEE1102,Digital Design,AA
+S005,EEE1103,Signals and Systems,BB
+S006,EEE1101,Circuit Theory,CB
+S006,EEE1102,Digital Design,BA
+S006,EEE1103,Signals and Systems,BB
+S007,ME1101,Mechanics,AA
+S007,ME1102,Thermodynamics,BA
+S007,ME1103,Materials Science,BB
+S008,ME1101,Mechanics,BB
+S008,ME1102,Thermodynamics,CB
+S008,ME1103,Materials Science,BA
+S009,CE1101,Structural Analysis,BB
+S009,CE1102,Fluid Mechanics,CB
+S009,CE1103,Environmental Engineering,BA
+S010,CE1101,Structural Analysis,AA
+S010,CE1102,Fluid Mechanics,BA
+S010,CE1103,Environmental Engineering,AA
