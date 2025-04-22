@@ -153,31 +153,26 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} internships'))
     
     def import_jobs(self, file_path):
-        self.stdout.write('Importing jobs...')
-        count = 0
-        
-        with open(file_path, 'r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                # Parse required_majors from string to list
-                try:
-                    required_majors = json.loads(row['required_majors'])
-                except json.JSONDecodeError:
-                    self.stdout.write(self.style.WARNING(f"Invalid JSON in required_majors for job {row['title']}, setting empty list"))
-                    required_majors = []
-                
-                # Create the job
-                Job.objects.update_or_create(
-                    title=row['title'],
-                    company=row['company'],
-                    defaults={
-                        'description': row['description'],
-                        'required_majors': required_majors
-                    }
-                )
-                count += 1
-        
-        self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} jobs'))
+      self.stdout.write('Importing jobs...')
+      count = 0
+
+      with open(file_path, 'r', encoding='utf-8') as file:
+          reader = csv.DictReader(file)
+          for row in reader:
+              majors = [major.strip() for major in row['required_majors'].split(';') if major.strip()]
+              self.stdout.write(f"Parsed required_majors for job '{row['title']}': {majors}")
+
+              Job.objects.update_or_create(
+                  title=row['title'],
+                  company=row['company'],
+                  defaults={
+                      'description': row['description'],
+                      'required_majors': majors
+                  }
+              )
+              count += 1
+
+      self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} jobs'))
     
     def generate_recommendations(self):
         self.stdout.write('Generating job recommendations...')

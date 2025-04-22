@@ -1,11 +1,90 @@
 from collections import Counter
+from .models import Student, Course, Organization, Internship, Job, JobRecommendation
+
+# Fixed functions to retrieve data from the database
+def get_alumni_database():
+    """
+    Retrieve alumni data from the database
+    """
+    try:
+        # Find students who have completed courses
+        students = Student.objects.filter(courses__isnull=False).distinct()
+        
+        # Structure alumni data as needed for recommendations
+        alumni_data = []
+        grade_mapping = {
+            'AA': 4.0, 'BA': 3.5, 'BB': 3.0, 'CB': 2.5, 
+            'CC': 2.0, 'DC': 1.5, 'DD': 1.0, 'FF': 0.0
+        }
+        
+        for student in students:
+            # Skip students without job recommendations
+            recommendations = student.recommendations.filter(source='hybrid')
+            if not recommendations.exists():
+                continue
+                
+            # Get the highest-scored job as their "current job"
+            top_recommendation = recommendations.order_by('-match_score').first()
+            if not top_recommendation:
+                continue
+                
+            # Build course grades dictionary
+            courses = student.courses.all()
+            course_grades = {}
+            for course in courses:
+                course_grades[course.code] = grade_mapping.get(course.grade, 0)
+            
+            # Structure the alumni data
+            alumni_record = {
+                'student': {
+                    'id': student.student_id,
+                    'program': student.program,
+                    'gpa': float(student.gpa)
+                },
+                'course_grades': course_grades,
+                'current_job': {
+                    'id': top_recommendation.job.id,
+                    'title': top_recommendation.job.title,
+                    'company': top_recommendation.job.company,
+                    'description': top_recommendation.job.description,
+                    'required_majors': top_recommendation.job.required_majors
+                }
+            }
+            alumni_data.append(alumni_record)
+            
+        return alumni_data
+    except Exception as e:
+        return []
+
+def get_job_postings_database():
+    """
+    Retrieve job postings from the database
+    """
+    try:
+        # Get all job postings from the database
+        jobs = Job.objects.all()
+        
+        # Convert to the format expected by the recommender
+        job_postings = []
+        for job in jobs:
+            job_postings.append({
+                'id': job.id,
+                'title': job.title,
+                'company': job.company,
+                'description': job.description,
+                'required_majors': job.required_majors
+            })
+            
+        return job_postings
+    except Exception as e:
+        return []
 
 class HybridRecommender:
     """
     A hybrid recommender system that combines alumni-based and job-posting-based recommendations.
     """
     
-    def __init__(self, alumni_weight=0.6, job_weight=0.4):
+    def __init__(self, alumni_weight=0.6, job_weight=0.4, min_recommendations=5):
         """
         Initialize the recommender with weights for each component.
         
@@ -15,18 +94,23 @@ class HybridRecommender:
             Weight for alumni-based recommendations (between 0 and 1)
         job_weight : float
             Weight for job-posting-based recommendations (between 0 and 1)
+        min_recommendations : int
+            Minimum number of recommendations to return, even with low scores
         """
         self.alumni_weight = alumni_weight
         self.job_weight = job_weight
-        
-        # Sample database - in a real application, these would come from a database
-        self.alumni_db = []
-        self.job_postings_db = []
+        self.min_recommendations = min_recommendations
+        # No need to load data at initialization as we'll fetch from DB when needed
     
-    def set_databases(self, alumni_db, job_postings_db):
-        """Set the alumni and job postings databases."""
-        self.alumni_db = alumni_db
-        self.job_postings_db = job_postings_db
+    def _extract_keywords(self, text):
+        """
+        Extract keywords from text string.
+        """
+        if not text or not isinstance(text, str):
+            return []
+        # Simple implementation - split by spaces and clean up
+        keywords = [word.lower().strip() for word in text.split() if word.strip()]
+        return keywords
     
     def get_alumni_recommendations(self, student_data, courses):
         """
@@ -44,7 +128,9 @@ class HybridRecommender:
         list
             Recommended jobs based on alumni with similar profiles
         """
-        if not self.alumni_db:
+        # Get alumni data from database
+        alumni_data = get_alumni_database()
+        if not alumni_data:
             return []
             
         # Extract student features: GPA, program, and course performance
@@ -68,26 +154,33 @@ class HybridRecommender:
         
         # Calculate similarity with each alumni
         similarities = []
-        for alumni in self.alumni_db:
+        
+        for alumni in alumni_data:
             try:
+                # Get alumni's courses
+                alumni_course_grades = alumni.get('course_grades', {})
+                
+                # Skip alumni without job information
+                if 'current_job' not in alumni or not isinstance(alumni['current_job'], dict):
+                    continue
+                
                 # Program match bonus
-                program_bonus = 1.5 if alumni['student']['program'] == student_program else 1.0
+                program_bonus = 1.5 if alumni.get('student', {}).get('program') == student_program else 1.0
                 
                 # GPA similarity (inverse of difference)
                 try:
-                    alumni_gpa = float(alumni['student']['gpa'])
+                    alumni_gpa = float(alumni.get('student', {}).get('gpa', 0))
+                    gpa_similarity = max(0, 1 - abs(student_gpa - alumni_gpa) / 4.0)
                 except (ValueError, TypeError):
-                    alumni_gpa = 0.0
-                    
-                gpa_similarity = max(0, 1 - abs(student_gpa - alumni_gpa) / 4.0)
+                    gpa_similarity = 0.5  # Default if GPA can't be compared
                 
                 # Course similarity
                 common_courses = 0
                 grade_diff_sum = 0
                 for code, grade in student_courses.items():
-                    if code in alumni['course_grades']:
+                    if code in alumni_course_grades:
                         common_courses += 1
-                        grade_diff_sum += abs(grade - alumni['course_grades'][code])
+                        grade_diff_sum += abs(grade - alumni_course_grades[code])
                 
                 course_similarity = 1.0
                 if common_courses > 0:
@@ -96,15 +189,19 @@ class HybridRecommender:
                 
                 # Calculate overall similarity
                 similarity = (0.3 * gpa_similarity + 0.7 * course_similarity) * program_bonus
-                similarities.append((similarity, alumni['current_job']))
-            except Exception:
+                
+                # Get recommended job for this alumni
+                job = alumni['current_job']
+                similarities.append((similarity, job))
+                    
+            except Exception as e:
                 continue
         
         # Sort by similarity (highest first)
         similarities.sort(reverse=True)
         
-        # Extract top recommendations
-        recommendations = [item[1] for item in similarities[:5]]
+        # Extract top recommendations (up to 10 to ensure we have enough even with low scores)
+        recommendations = [item[1] for item in similarities[:10]]
         return recommendations
     
     def get_job_recommendations(self, student_data, orgs, internships):
@@ -125,7 +222,9 @@ class HybridRecommender:
         list
             Recommended jobs based on experiences
         """
-        if not self.job_postings_db:
+        # Get job postings data from database
+        job_postings = get_job_postings_database()
+        if not job_postings:
             return []
             
         # Make sure orgs and internships are lists
@@ -144,7 +243,7 @@ class HybridRecommender:
                     experience_keywords.extend(self._extract_keywords(org['description']))
                 if 'position' in org and org['position']:
                     experience_keywords.extend(self._extract_keywords(org['position']))
-                
+        
         # Extract from internship descriptions
         for internship in internships:
             if isinstance(internship, dict):
@@ -155,12 +254,14 @@ class HybridRecommender:
                 if 'company' in internship and internship['company']:
                     experience_keywords.extend(self._extract_keywords(internship['company']))
         
+        
         # Count keyword frequencies
         keyword_counts = Counter(experience_keywords)
         
         # Match with job postings
         matches = []
-        for job in self.job_postings_db:
+        
+        for job in job_postings:
             try:
                 # Extract keywords from job description
                 job_keywords = self._extract_keywords(job['description'])
@@ -168,23 +269,23 @@ class HybridRecommender:
                 
                 # Program match bonus (safely get program from student_data)
                 program = student_data.get('program', '')
-                required_majors = job.get('required_majors', [])
+                required_majors = job.get('required_majors', '')
                 program_match = 1.5 if program in required_majors else 1.0
                 
                 # Calculate keyword match score
                 match_score = sum(keyword_counts.get(kw, 0) for kw in job_keywords) * program_match
                 matches.append((match_score, job))
-            except Exception:
+            except Exception as e:
                 continue
         
         try:
             # Sort using the first element of each tuple (the match score)
             matches.sort(key=lambda x: x[0], reverse=True)
-        except Exception:
+        except Exception as e:
             pass
         
-        # Extract top recommendations
-        recommendations = [item[1] for item in matches[:5]]
+        # Extract top recommendations (up to 10 to ensure we have enough even with low scores)
+        recommendations = [item[1] for item in matches[:10]]
         return recommendations
     
     def get_hybrid_recommendations(self, student_data, courses, orgs, internships):
@@ -220,9 +321,35 @@ class HybridRecommender:
         # Get recommendations from both sources
         try:
             alumni_recs = self.get_alumni_recommendations(student_data, courses)
+            
+            # Even with empty orgs and internships, try to get recommendations
             job_recs = self.get_job_recommendations(student_data, orgs, internships)
-        except Exception:
-            return []
+        except Exception as e:
+            # If there's an error but we don't want to fail completely,
+            # return a "no recommendations" message
+            return [{
+                'job': {
+                    'id': 'no-recommendations',
+                    'title': 'No Recommendations Available',
+                    'company': 'N/A',
+                    'description': 'We could not retrieve job recommendations at this time. Please try again later.'
+                },
+                'score': 0,
+                'sources': ['system']
+            }]
+        
+        # If both recommendation sources are empty, return a "no recommendations" message
+        if not alumni_recs and not job_recs:
+            return [{
+                'job': {
+                    'id': 'no-recommendations',
+                    'title': 'No Recommendations Available',
+                    'company': 'N/A',
+                    'description': 'We could not find any job recommendations based on your profile. Please check back later as our database grows.'
+                },
+                'score': 0,
+                'sources': ['system']
+            }]
         
         # Combine recommendations with weights
         combined_scores = {}
@@ -245,9 +372,9 @@ class HybridRecommender:
                     combined_scores[job_id]['score'] += score * self.alumni_weight
                     if 'alumni' not in combined_scores[job_id]['sources']:
                         combined_scores[job_id]['sources'].append('alumni')
-            except Exception:
+            except Exception as e:
                 continue
-        
+                
         # Process job posting recommendations
         for i, job in enumerate(job_recs):
             try:
@@ -266,168 +393,26 @@ class HybridRecommender:
                     combined_scores[job_id]['score'] += score * self.job_weight
                     if 'job_posting' not in combined_scores[job_id]['sources']:
                         combined_scores[job_id]['sources'].append('job_posting')
-            except Exception:
+            except Exception as e:
                 continue
+                        
+        # Convert to list and sort by score
+        recommendations = list(combined_scores.values())
+        recommendations.sort(key=lambda x: x.get('score', 0), reverse=True)
         
-        try:
-            # Convert dictionary values to list and sort by score
-            ranked_jobs = list(combined_scores.values())
+        if len(recommendations) > 0:
+            pass
+        else:
+            # If we've processed everything but still have no recommendations, return a message
+            return [{
+                'job': {
+                    'id': 'no-recommendations',
+                    'title': 'No Recommendations Available',
+                    'company': 'N/A',
+                    'description': 'We could not find any job recommendations matching your profile. Please try again with more information about your courses and experiences.'
+                },
+                'score': 0,
+                'sources': ['system']
+            }]
             
-            # Defensive sorting - make sure we have scores to sort by
-            ranked_jobs = [job for job in ranked_jobs if 'score' in job and job['score'] is not None]
-            
-            # Sort using key function
-            ranked_jobs.sort(key=lambda x: float(x['score']) if isinstance(x['score'], (int, float, str)) else 0, reverse=True)
-            
-            return ranked_jobs
-        except Exception:
-            return []
-    
-    def _extract_keywords(self, text):
-        """
-        Extract relevant keywords from text.
-        
-        Parameters:
-        -----------
-        text : str
-            Text to extract keywords from
-            
-        Returns:
-        --------
-        list
-            List of keywords
-        """
-        if not text or not isinstance(text, str):
-            return []
-            
-        # In a real implementation, this would use NLP techniques
-        # For simplicity, we'll just split on spaces and filter common words
-        text = text.lower()
-        words = text.split()
-        
-        # Filter out common words (this would be more sophisticated in a real system)
-        stopwords = {'and', 'the', 'is', 'at', 'of', 'to', 'for', 'in', 'on', 'with'}
-        keywords = [word for word in words if word not in stopwords and len(word) > 2]
-        
-        return keywords
-
-
-# Sample alumni database initialization function
-def initialize_alumni_database():
-    """
-    Initialize a sample alumni database.
-    In a real application, this would come from a database.
-    """
-    return [
-        {
-            'id': 1,
-            'student': {
-                'program': 'Computer Engineering Pr.',
-                'gpa': '3.5'
-            },
-            'course_grades': {
-                'BLM1101': 4.0,  # Physics
-                'BLM1102': 3.5,  # Mathematics
-                'BLM1121': 3.0,  # Linear Algebra
-                'BLM1123': 4.0,  # Introduction to Programming
-            },
-            'current_job': {
-                'id': 101,
-                'title': 'Software Engineer',
-                'company': 'Tech Solutions Inc.',
-                'description': 'Developing backend systems using Java and Spring Boot',
-                'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Software Engineering']
-            }
-        },
-        {
-            'id': 2,
-            'student': {
-                'program': 'Computer Engineering Pr.',
-                'gpa': '2.8'
-            },
-            'course_grades': {
-                'BLM1101': 3.0,  # Physics
-                'BLM1102': 2.5,  # Mathematics
-                'BLM1121': 3.0,  # Linear Algebra
-                'BLM1123': 3.5,  # Introduction to Programming
-            },
-            'current_job': {
-                'id': 102,
-                'title': 'QA Engineer',
-                'company': 'Quality Solutions',
-                'description': 'Testing software applications and writing automated tests',
-                'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Information Technology']
-            }
-        },
-        {
-            'id': 3,
-            'student': {
-                'program': 'Computer Engineering Pr.',
-                'gpa': '3.2'
-            },
-            'course_grades': {
-                'BLM1101': 3.0,  # Physics
-                'BLM1102': 3.0,  # Mathematics
-                'BLM1121': 3.5,  # Linear Algebra
-                'BLM1123': 4.0,  # Introduction to Programming
-            },
-            'current_job': {
-                'id': 103,
-                'title': 'Data Analyst',
-                'company': 'Data Insights Co.',
-                'description': 'Analyzing data and creating visualization dashboards',
-                'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Statistics', 'Mathematics']
-            }
-        }
-    ]
-
-# Sample job postings database initialization function
-def initialize_job_postings_database():
-    """
-    Initialize a sample job postings database.
-    In a real application, this would come from a database.
-    """
-    return [
-        {
-            'id': 101,
-            'title': 'Software Engineer',
-            'company': 'Tech Solutions Inc.',
-            'description': 'Developing backend systems using Java and Spring Boot',
-            'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Software Engineering']
-        },
-        {
-            'id': 102,
-            'title': 'QA Engineer',
-            'company': 'Quality Solutions',
-            'description': 'Testing software applications and writing automated tests',
-            'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Information Technology']
-        },
-        {
-            'id': 103,
-            'title': 'Data Analyst',
-            'company': 'Data Insights Co.',
-            'description': 'Analyzing data and creating visualization dashboards',
-            'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Statistics', 'Mathematics']
-        },
-        {
-            'id': 104,
-            'title': 'Web Developer',
-            'company': 'Web Solutions',
-            'description': 'Building responsive web applications using React and Node.js',
-            'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Web Development']
-        },
-        {
-            'id': 105,
-            'title': 'Machine Learning Engineer',
-            'company': 'AI Innovations',
-            'description': 'Developing and implementing machine learning algorithms',
-            'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Data Science']
-        },
-        {
-            'id': 106,
-            'title': 'DevOps Engineer',
-            'company': 'Cloud Services Inc.',
-            'description': 'Managing cloud infrastructure and CI/CD pipelines',
-            'required_majors': ['Computer Engineering', 'Computer Engineering Pr.', 'Cloud Computing']
-        }
-    ]
+        return recommendations

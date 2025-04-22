@@ -6,16 +6,12 @@ from datetime import datetime
 from django.db import transaction
 
 # Import our recommender system
-from .recommender import HybridRecommender, initialize_alumni_database, initialize_job_postings_database
+from .recommender import HybridRecommender
 # Import our models
 from .models import Student, Course, Organization, Internship, Job, JobRecommendation
 
 # Initialize the recommender system
 recommender = HybridRecommender(alumni_weight=0.6, job_weight=0.4)
-recommender.set_databases(
-    initialize_alumni_database(), 
-    initialize_job_postings_database()
-)
 
 # Create your views here.
 def landing_page(request):
@@ -53,6 +49,8 @@ def submit_application(request):
                 courses_data = json.loads(request.POST.get('courses_data'))
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid courses data format"}, status=400)
+        else:
+            print("[DEBUG] No courses data provided")
         
         # Process organization experiences
         organizations = []
@@ -228,6 +226,7 @@ def submit_application(request):
         return JsonResponse(response_data)
         
     except Exception as e:
+        print(f"[DEBUG] Error in submit_application: {str(e)}")
         return JsonResponse({"error": str(e)}, status=400)
 
 
