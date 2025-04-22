@@ -1,10 +1,11 @@
 import csv
 import json
 import os
-from datetime import datetime
+import random
+from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from job_recommender.models import Student, Course, Organization, Internship, Job, JobRecommendation
+from job_recommender.models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
 
 class Command(BaseCommand):
     help = 'Seeds the database with initial data from CSV files'
@@ -29,6 +30,9 @@ class Command(BaseCommand):
         
         # Import Jobs
         self.import_jobs(os.path.join(base_path, 'jobs.csv'))
+        
+        # Generate Alumni records
+        self.generate_alumni()
         
         # Generate Job Recommendations (simple matching based on program)
         self.generate_recommendations()
@@ -153,26 +157,67 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} internships'))
     
     def import_jobs(self, file_path):
-      self.stdout.write('Importing jobs...')
-      count = 0
+        self.stdout.write('Importing jobs...')
+        count = 0
 
-      with open(file_path, 'r', encoding='utf-8') as file:
-          reader = csv.DictReader(file)
-          for row in reader:
-              majors = [major.strip() for major in row['required_majors'].split(';') if major.strip()]
-              self.stdout.write(f"Parsed required_majors for job '{row['title']}': {majors}")
+        with open(file_path, 'r', encoding='utf-8') as file:
+            reader = csv.DictReader(file)
+            for row in reader:
+                majors = [major.strip() for major in row['required_majors'].split(';') if major.strip()]
+                self.stdout.write(f"Parsed required_majors for job '{row['title']}': {majors}")
 
-              Job.objects.update_or_create(
-                  title=row['title'],
-                  company=row['company'],
-                  defaults={
-                      'description': row['description'],
-                      'required_majors': majors
-                  }
-              )
-              count += 1
+                Job.objects.update_or_create(
+                    title=row['title'],
+                    company=row['company'],
+                    defaults={
+                        'description': row['description'],
+                        'required_majors': majors
+                    }
+                )
+                count += 1
 
-      self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} jobs'))
+        self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} jobs'))
+    
+    def generate_alumni(self):
+        self.stdout.write('Generating alumni records...')
+        count = 0
+        
+        # Get a sample of students to convert to alumni (about 30%)
+        students = Student.objects.all()
+        alumni_count = max(int(students.count() * 0.3), 1)  # At least 1 alumni
+        alumni_candidates = random.sample(list(students), min(alumni_count, students.count()))
+        
+        # Get all jobs for alumni employment
+        jobs = Job.objects.all()
+        if not jobs:
+            self.stdout.write(self.style.WARNING('No jobs available for alumni. Create jobs first.'))
+            return
+        
+        for student in alumni_candidates:
+            # Generate a graduation date within the last 5 years
+            days_ago = random.randint(0, 5*365)  # Up to 5 years ago
+            graduation_date = datetime.now().date() - timedelta(days=days_ago)
+            
+            # Assign a random job
+            current_job = random.choice(jobs)
+            
+            # Create the alumni record
+            alumni = Alumni.objects.create(
+                student=student,
+                graduation_date=graduation_date,
+                current_job=current_job,
+                current_company=current_job.company,
+                current_position=current_job.title,
+                linkedin_profile=f"https://linkedin.com/in/{student.fullname.lower()}-{student.last_name.lower()}"
+            )
+            
+            # Set is_alumni flag on the student
+            student.is_alumni = True
+            student.save()
+            
+            count += 1
+        
+        self.stdout.write(self.style.SUCCESS(f'Successfully generated {count} alumni records'))
     
     def generate_recommendations(self):
         self.stdout.write('Generating job recommendations...')
@@ -202,14 +247,29 @@ class Command(BaseCommand):
                     if job.company in [i.company for i in student.internships.all()]:
                         match_score = max(match_score, 90.0)  # Higher score for company match
                     
+                    # Check alumni connection
+                    alumni_match = False
+                    try:
+                        # Check if there are alumni with the same program working at this job's company
+                        alumni_at_company = Alumni.objects.filter(
+                            current_company=job.company,
+                            student__program=student.program
+                        ).exists()
+                        if alumni_at_company:
+                            match_score = max(match_score, 95.0)  # Highest score for alumni connection
+                            alumni_match = True
+                    except:
+                        pass
+                    
                     # Create a recommendation if there's a match
                     if match_score > 0:
+                        source = 'alumni' if alumni_match else ('hybrid' if match_score > 85.0 else 'job_posting')
                         JobRecommendation.objects.update_or_create(
                             student=student,
                             job=job,
                             defaults={
                                 'match_score': match_score,
-                                'source': 'hybrid' if match_score > 85.0 else 'alumni'
+                                'source': source
                             }
                         )
                         count += 1

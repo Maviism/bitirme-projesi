@@ -13,9 +13,31 @@ class Student(models.Model):
     gpa = models.DecimalField(max_digits=3, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(4.0)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Add a flag to differentiate regular students from alumni
+    is_alumni = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.fullname} {self.last_name} ({self.student_id})"
+
+class Alumni(models.Model):
+    """Model representing alumni information, extending the Student model"""
+    student = models.OneToOneField(Student, on_delete=models.CASCADE, related_name='alumni_profile')
+    graduation_date = models.DateField()
+    current_job = models.ForeignKey('Job', on_delete=models.SET_NULL, null=True, blank=True, related_name='current_employees')
+    current_company = models.CharField(max_length=100, blank=True, null=True)
+    current_position = models.CharField(max_length=100, blank=True, null=True)
+    linkedin_profile = models.URLField(blank=True, null=True)
+    
+    def __str__(self):
+        return f"Alumni: {self.student.fullname} {self.student.last_name}"
+
+    def save(self, *args, **kwargs):
+        # Ensure the linked student is marked as alumni
+        if not self.student.is_alumni:
+            self.student.is_alumni = True
+            self.student.save()
+        super().save(*args, **kwargs)
 
 class Course(models.Model):
     """Model representing a course taken by a student"""

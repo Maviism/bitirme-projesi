@@ -1,14 +1,14 @@
 from collections import Counter
-from .models import Student, Course, Organization, Internship, Job, JobRecommendation
+from .models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
 
-# Fixed functions to retrieve data from the database
+# Updated function to retrieve alumni data from the database
 def get_alumni_database():
     """
-    Retrieve alumni data from the database
+    Retrieve alumni data from the database using the dedicated Alumni model
     """
     try:
-        # Find students who have completed courses
-        students = Student.objects.filter(courses__isnull=False).distinct()
+        # Find alumni using the Alumni model
+        alumni_records = Alumni.objects.select_related('student', 'current_job').all()
         
         # Structure alumni data as needed for recommendations
         alumni_data = []
@@ -17,15 +17,11 @@ def get_alumni_database():
             'CC': 2.0, 'DC': 1.5, 'DD': 1.0, 'FF': 0.0
         }
         
-        for student in students:
-            # Skip students without job recommendations
-            recommendations = student.recommendations.filter(source='hybrid')
-            if not recommendations.exists():
-                continue
-                
-            # Get the highest-scored job as their "current job"
-            top_recommendation = recommendations.order_by('-match_score').first()
-            if not top_recommendation:
+        for alumni_record in alumni_records:
+            student = alumni_record.student
+            
+            # Skip alumni without a current job
+            if not alumni_record.current_job:
                 continue
                 
             # Build course grades dictionary
@@ -35,22 +31,23 @@ def get_alumni_database():
                 course_grades[course.code] = grade_mapping.get(course.grade, 0)
             
             # Structure the alumni data
-            alumni_record = {
+            alumni_record_data = {
                 'student': {
                     'id': student.student_id,
                     'program': student.program,
                     'gpa': float(student.gpa)
                 },
                 'course_grades': course_grades,
+                'graduation_date': alumni_record.graduation_date,
                 'current_job': {
-                    'id': top_recommendation.job.id,
-                    'title': top_recommendation.job.title,
-                    'company': top_recommendation.job.company,
-                    'description': top_recommendation.job.description,
-                    'required_majors': top_recommendation.job.required_majors
+                    'id': alumni_record.current_job.id,
+                    'title': alumni_record.current_job.title,
+                    'company': alumni_record.current_job.company,
+                    'description': alumni_record.current_job.description,
+                    'required_majors': alumni_record.current_job.required_majors
                 }
             }
-            alumni_data.append(alumni_record)
+            alumni_data.append(alumni_record_data)
             
         return alumni_data
     except Exception as e:
@@ -61,7 +58,7 @@ def get_job_postings_database():
     Retrieve job postings from the database
     """
     try:
-        # Get all job postings from the database
+        # Get job postings from the database
         jobs = Job.objects.all()
         
         # Convert to the format expected by the recommender
