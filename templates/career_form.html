@@ -1,524 +1,525 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PDF Transcript Parser</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.css">
-  <style>
-    body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 1200px; margin: 0 auto; padding: 20px; }
-    .container { display: flex; flex-direction: column; gap: 20px; }
-    .form-section { background-color: #f9f9f9; padding: 20px; border-radius: 5px; margin-bottom: 20px; }
-    h2 { margin-top: 0; color: #333; border-bottom: 1px solid #ddd; padding-bottom: 10px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input[type="text"], input[type="date"], textarea, select { width: 100%; padding: 8px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; }
-    button { background-color: #4CAF50; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
-    button:hover { background-color: #45a049; }
-    .dynamic-inputs { margin-bottom: 15px; }
-    .input-group { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; border-radius: 4px; background-color: #fff; }
-    .add-more { background-color: #2196F3; margin-bottom: 20px; }
-    .add-more:hover { background-color: #0b7dda; }
-    .remove-btn { background-color: #f44336; color: white; padding: 5px 10px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-    .remove-btn:hover { background-color: #d32f2f; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 8px; text-align: left; border: 1px solid #ddd; }
-    th { background-color: #f2f2f2; }
-    .courses-table-container { max-height: 300px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; }
-    .courses-table thead { position: sticky; top: 0; background-color: #f2f2f2; z-index: 1; }
-    
-    /* New styles for recommendations */
-    .recommendations-container { 
-      margin-top: 30px;
-      display: none; 
-    }
-    .recommendation-card {
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 15px;
-      background-color: white;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    .recommendation-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 10px;
-      margin-bottom: 10px;
-    }
-    .match-score {
-      background-color: #4CAF50;
-      color: white;
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-weight: bold;
-    }
-    .match-score.medium {
-      background-color: #FFC107;
-    }
-    .match-score.low {
-      background-color: #FF5722;
-    }
-    .recommendation-tags {
-      margin-top: 10px;
-    }
-    .tag {
-      display: inline-block;
-      background-color: #e1f5fe;
-      color: #0288d1;
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 12px;
-      margin-right: 5px;
-      margin-bottom: 5px;
-    }
-    .loading-spinner {
-      display: none;
-      text-align: center;
-      padding: 20px;
-    }
-    .loading-spinner::after {
-      content: "";
-      display: inline-block;
-      width: 30px;
-      height: 30px;
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Upload PDF Transcript</h1>
-    <div class="form-section">
-      <input type="file" id="pdfInput" accept="application/pdf">
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}PDF Transcript Parser{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.css">
+<style>
+  /* Minimal custom styling - most styles now use Bootstrap classes */
+  .courses-table-container { 
+    max-height: 300px; 
+    overflow-y: auto; 
+  }
+  .courses-table thead { 
+    position: sticky; 
+    top: 0; 
+    background-color: #f8f9fa; 
+    z-index: 1; 
+  }
+  .match-score {
+    padding: 0.35em 0.65em;
+    border-radius: 50rem;
+    color: #fff;
+    font-weight: bold;
+  }
+  .match-score.high { background-color: #198754; }
+  .match-score.medium { background-color: #ffc107; color: #000; }
+  .match-score.low { background-color: #dc3545; }
+  .tag {
+    display: inline-block;
+    background-color: #e1f5fe;
+    color: #0288d1;
+    padding: 0.25em 0.5em;
+    border-radius: 0.25rem;
+    font-size: 0.875em;
+    margin-right: 0.5em;
+    margin-bottom: 0.5em;
+  }
+  .loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 20px;
+  }
+  .loading-spinner::after {
+    content: "";
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #0d6efd;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-4">Upload PDF Transcript</h1>
+
+  <div class="card mb-4 shadow-sm">
+    <div class="card-body">
+      <input type="file" id="pdfInput" class="form-control" accept="application/pdf">
     </div>
-    
-    <div id="formContainer" class="form-section">
-      <h2>Submit Application Data</h2>
+  </div>
+  
+  <div id="formContainer" class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+      <h2 class="h4 mb-0">Submit Application Data</h2>
+    </div>
+    <div class="card-body">
       <form id="applicationForm">
         {% csrf_token %}
+        
         <!-- Student Info Section -->
-        <div class="form-section">
-          <h3>Student Information</h3>
-          <input type="hidden" id="student_id" name="student_id">
-          <input type="hidden" id="id_number" name="id_number">
-          
-          <div class="form-group">
-            <label for="fullname">Full Name:</label>
-            <input type="text" id="fullname" name="fullname" required>
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Student Information</h3>
           </div>
-          
-          <div class="form-group">
-            <label for="last_name">Last Name:</label>
-            <input type="text" id="last_name" name="last_name" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="birth_date">Date of Birth:</label>
-            <input type="text" id="birth_date" name="birth_date" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="faculty">Faculty:</label>
-            <input type="text" id="faculty" name="faculty" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="program">Program:</label>
-            <input type="text" id="program" name="program" required>
-          </div>
-          
-          <div class="form-group">
-            <label for="gpa">GPA:</label>
-            <input type="text" id="gpa" name="gpa" required>
+          <div class="card-body">
+            <input type="hidden" id="student_id" name="student_id">
+            <input type="hidden" id="id_number" name="id_number">
+            
+            <div class="mb-3">
+              <label for="fullname" class="form-label">Full Name:</label>
+              <input type="text" id="fullname" name="fullname" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="last_name" class="form-label">Last Name:</label>
+              <input type="text" id="last_name" name="last_name" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="birth_date" class="form-label">Date of Birth:</label>
+              <input type="text" id="birth_date" name="birth_date" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="faculty" class="form-label">Faculty:</label>
+              <input type="text" id="faculty" name="faculty" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="program" class="form-label">Program:</label>
+              <input type="text" id="program" name="program" class="form-control" required>
+            </div>
+            
+            <div class="mb-3">
+              <label for="gpa" class="form-label">GPA:</label>
+              <input type="text" id="gpa" name="gpa" class="form-control" required>
+            </div>
           </div>
         </div>
         
         <!-- Organization Experience Section -->
-        <div class="form-section">
-          <h3>Organization Experience</h3>
-          <div id="organization-inputs" class="dynamic-inputs"></div>
-          <button type="button" id="add-organization" class="add-more">Add Organization Experience</button>
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Organization Experience</h3>
+          </div>
+          <div class="card-body">
+            <div id="organization-inputs" class="mb-3"></div>
+            <button type="button" id="add-organization" class="btn btn-primary">
+              <i class="bi bi-plus-circle"></i> Add Organization Experience
+            </button>
+          </div>
         </div>
         
         <!-- Internship Experience Section -->
-        <div class="form-section">
-          <h3>Internship Experience</h3>
-          <div id="internship-inputs" class="dynamic-inputs"></div>
-          <button type="button" id="add-internship" class="add-more">Add Internship Experience</button>
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Internship Experience</h3>
+          </div>
+          <div class="card-body">
+            <div id="internship-inputs" class="mb-3"></div>
+            <button type="button" id="add-internship" class="btn btn-primary">
+              <i class="bi bi-plus-circle"></i> Add Internship Experience
+            </button>
+          </div>
         </div>
         
         <!-- Course Data Section -->
-        <div class="form-section">
-          <h3>Course Data</h3>
-          <div id="courses-container">
-            <input type="hidden" id="courses_data" name="courses_data">
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Course Data</h3>
+          </div>
+          <div class="card-body">
+            <div id="courses-container">
+              <input type="hidden" id="courses_data" name="courses_data">
+            </div>
           </div>
         </div>
         
-        <button type="submit" id="submitBtn">Submit Application</button>
+        <div class="d-grid">
+          <button type="submit" id="submitBtn" class="btn btn-success btn-lg">Submit Application</button>
+        </div>
       </form>
       
       <!-- Loading Spinner -->
-      <div id="loadingSpinner" class="loading-spinner"></div>
+      <div id="loadingSpinner" class="loading-spinner mt-4"></div>
       
       <!-- Job Recommendations Section -->
-      <div id="recommendationsContainer" class="recommendations-container">
-        <h2>Job Recommendations</h2>
-        <p>Based on your transcript and experiences, here are some job recommendations for you:</p>
-        <div id="recommendationsList"></div>
+      <div id="recommendationsContainer" class="mt-5" style="display: none;">
+        <h2 class="mb-3">Job Recommendations</h2>
+        <p class="lead">Based on your transcript and experiences, here are some job recommendations for you:</p>
+        <div id="recommendationsList" class="mt-4"></div>
       </div>
     </div>
   </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
-  <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js';
-    
-    // Fungsi ekstraksi PDF dan pembersihan teks
-    async function extractPdfText(file) {
-      return new Promise((resolve, reject) => {
-        const fileReader = new FileReader();
-        fileReader.onload = async function() {
-          try {
-            const typedarray = new Uint8Array(this.result);
-            const pdf = await pdfjsLib.getDocument(typedarray).promise;
-            const textChunks = [];
-            
-            for (let i = 1; i <= pdf.numPages; i++) {
-              const page = await pdf.getPage(i);
-              const content = await page.getTextContent({normalizeWhitespace: true, disableCombineTextItems: false});
-              textChunks.push(processPageContent(content));
-            }
-            
-            const text = textChunks.join("\n");
-            const cleanedText = text.replace(/\s+/g, ' ')
-                                    .replace(/(\w+)\s+:\s+/g, '$1: ')
-                                    .replace(/(\d)\s+(\d)/g, '$1$2')
-                                    .replace(/(\d{2})\s+\/\s+(\d{2})\s+\/\s+(\d{4})/g, '$1/$2/$3')
-                                    .replace(/([A-Z]{3})\s+(\d{4})/g, '$1$2');
-            resolve(cleanedText);
-          } catch (error) {
-            reject(error);
+  // PDF extraction and text cleaning function
+  async function extractPdfText(file) {
+    return new Promise((resolve, reject) => {
+      const fileReader = new FileReader();
+      fileReader.onload = async function() {
+        try {
+          const typedarray = new Uint8Array(this.result);
+          const pdf = await pdfjsLib.getDocument(typedarray).promise;
+          const textChunks = [];
+          
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent({normalizeWhitespace: true, disableCombineTextItems: false});
+            textChunks.push(processPageContent(content));
           }
-        };
-        fileReader.onerror = reject;
-        fileReader.readAsArrayBuffer(file);
+          
+          const text = textChunks.join("\n");
+          const cleanedText = text.replace(/\s+/g, ' ')
+                                  .replace(/(\w+)\s+:\s+/g, '$1: ')
+                                  .replace(/(\d)\s+(\d)/g, '$1$2')
+                                  .replace(/(\d{2})\s+\/\s+(\d{2})\s+\/\s+(\d{4})/g, '$1/$2/$3')
+                                  .replace(/([A-Z]{3})\s+(\d{4})/g, '$1$2');
+          resolve(cleanedText);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      fileReader.onerror = reject;
+      fileReader.readAsArrayBuffer(file);
+    });
+  }
+  
+  // PDF page content processing function
+  function processPageContent(content) {
+    const items = content.items.map(item => ({
+      text: item.str,
+      x: Math.round(item.transform[4]),
+      y: Math.round(item.transform[5]),
+      width: Math.round(item.width) || 0
+    }));
+    
+    const yPositions = {};
+    items.forEach(item => {
+      const yPos = Math.floor(item.y / 3) * 3;
+      if (!yPositions[yPos]) yPositions[yPos] = [];
+      yPositions[yPos].push(item);
+    });
+    
+    const sortedYPositions = Object.keys(yPositions).map(Number).sort((a, b) => b - a);
+    
+    return sortedYPositions.map(yPos => {
+      let line = '';
+      let lastX = -9999;
+      yPositions[yPos].sort((a, b) => a.x - b.x).forEach(item => {
+        if (item.x - lastX > 10 && line !== '') line += ' ';
+        line += item.text;
+        lastX = item.x + item.width;
+      });
+      return line;
+    }).join('\n');
+  }
+
+  // Student info extraction
+  function extractStudentInfo(text) {
+    const patterns = {
+      student_id: /Öğrenci No\s*\(Student ID\)\s*:\s*([0-9]+)/,
+      id_number: /T\.C\. Kimlik No\s*\(TR Identity No\)\s*:\s*([0-9]+)/,
+      fullname: /Adı\s*\(Given Name\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Soyadı|\s*$)/i,
+      last_name: /Soyadı\s*\(Surname\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Doğum|\s*$)/i,
+      birth_date: /Doğum Tarihi\s*\(Date of Birth\)\s*:\s*([0-9/]+)/,
+      faculty: /Eğitim Birimi(?:.*?):\s*([^:\r\n]+?)(?=\s*:[0-9]|\s*\()/,
+      program: /Programı\/ABD\/ASD(?:.*?):\s*([^:\r\n]+?)(?=\s*:|$)/,
+      gpa: /Genel Not Ortalaması(?:.*?):\s*([0-9.]+)/
+    };
+    
+    return Object.entries(patterns).reduce((info, [key, pattern]) => {
+      const match = text.match(pattern);
+      info[key] = match ? match[1].trim() : "Not Found";
+      return info;
+    }, {});
+  }
+
+  // Course list extraction
+  function extractCourses(text) {
+    const courses = [];
+    const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
+    
+    let match;
+    while ((match = courseRegex.exec(text)) !== null) {
+      courses.push({
+        code: match[1],
+        name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
+        grade: match[7] || "--"
       });
     }
     
-    // Fungsi pemrosesan konten halaman PDF
-    function processPageContent(content) {
-      const items = content.items.map(item => ({
-        text: item.str,
-        x: Math.round(item.transform[4]),
-        y: Math.round(item.transform[5]),
-        width: Math.round(item.width) || 0
-      }));
-      
-      const yPositions = {};
-      items.forEach(item => {
-        const yPos = Math.floor(item.y / 3) * 3;
-        if (!yPositions[yPos]) yPositions[yPos] = [];
-        yPositions[yPos].push(item);
-      });
-      
-      const sortedYPositions = Object.keys(yPositions).map(Number).sort((a, b) => b - a);
-      
-      return sortedYPositions.map(yPos => {
-        let line = '';
-        let lastX = -9999;
-        yPositions[yPos].sort((a, b) => a.x - b.x).forEach(item => {
-          if (item.x - lastX > 10 && line !== '') line += ' ';
-          line += item.text;
-          lastX = item.x + item.width;
-        });
-        return line;
-      }).join('\n');
-    }
-
-    // Ekstraksi informasi mahasiswa
-    function extractStudentInfo(text) {
-      const patterns = {
-        student_id: /Öğrenci No\s*\(Student ID\)\s*:\s*([0-9]+)/,
-        id_number: /T\.C\. Kimlik No\s*\(TR Identity No\)\s*:\s*([0-9]+)/,
-        fullname: /Adı\s*\(Given Name\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Soyadı|\s*$)/i,
-        last_name: /Soyadı\s*\(Surname\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Doğum|\s*$)/i,
-        birth_date: /Doğum Tarihi\s*\(Date of Birth\)\s*:\s*([0-9/]+)/,
-        faculty: /Eğitim Birimi(?:.*?):\s*([^:\r\n]+?)(?=\s*:[0-9]|\s*\()/,
-        program: /Programı\/ABD\/ASD(?:.*?):\s*([^:\r\n]+?)(?=\s*:|$)/,
-        gpa: /Genel Not Ortalaması(?:.*?):\s*([0-9.]+)/
-      };
-      
-      return Object.entries(patterns).reduce((info, [key, pattern]) => {
-        const match = text.match(pattern);
-        info[key] = match ? match[1].trim() : "Not Found";
-        return info;
-      }, {});
-    }
-
-    // Ekstraksi daftar mata kuliah
-    function extractCourses(text) {
-      const courses = [];
-      const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
-      
-      let match;
-      while ((match = courseRegex.exec(text)) !== null) {
+    if (courses.length === 0) {
+      const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)/g;
+      while ((match = altCourseRegex.exec(text)) !== null) {
         courses.push({
           code: match[1],
           name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
-          grade: match[7] || "--"
+          grade: "--"
         });
       }
-      
-      if (courses.length === 0) {
-        const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)/g;
-        while ((match = altCourseRegex.exec(text)) !== null) {
-          courses.push({
-            code: match[1],
-            name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
-            grade: "--"
-          });
-        }
-      }
-      
-      return courses;
     }
+    
+    return courses;
+  }
 
-    // Tampilkan data dan auto-fill form
-    function populateForm(studentInfo, courses) {
-      ['student_id', 'id_number', 'fullname', 'last_name', 'birth_date', 'faculty', 'program', 'gpa'].forEach(field => {
-        document.getElementById(field).value = studentInfo[field] || '';
-      });
-      
-      document.getElementById('courses_data').value = JSON.stringify(courses);
-      displayCoursesTable(courses);
-    }
+  // Populate form with extracted data
+  function populateForm(studentInfo, courses) {
+    ['student_id', 'id_number', 'fullname', 'last_name', 'birth_date', 'faculty', 'program', 'gpa'].forEach(field => {
+      document.getElementById(field).value = studentInfo[field] || '';
+    });
     
-    // Tampilkan tabel mata kuliah
-    function displayCoursesTable(courses) {
-      const coursesContainer = document.getElementById('courses-container');
-      const hiddenInput = document.getElementById('courses_data');
-      
-      coursesContainer.innerHTML = '';
-      coursesContainer.appendChild(hiddenInput);
-      
-      const coursesTitle = document.createElement('h4');
-      coursesTitle.textContent = `Mata Kuliah yang Diambil (${courses.length})`;
-      
-      const tableContainer = document.createElement('div');
-      tableContainer.className = 'courses-table-container';
-      
-      const table = document.createElement('table');
-      table.className = 'courses-table';
-      
-      table.innerHTML = `
-        <thead>
+    document.getElementById('courses_data').value = JSON.stringify(courses);
+    displayCoursesTable(courses);
+  }
+  
+  // Display courses table
+  function displayCoursesTable(courses) {
+    const coursesContainer = document.getElementById('courses-container');
+    const hiddenInput = document.getElementById('courses_data');
+    
+    coursesContainer.innerHTML = '';
+    coursesContainer.appendChild(hiddenInput);
+    
+    const coursesTitle = document.createElement('h4');
+    coursesTitle.className = 'mb-3';
+    coursesTitle.textContent = `Courses (${courses.length})`;
+    
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'courses-table-container border rounded';
+    
+    const table = document.createElement('table');
+    table.className = 'table table-striped table-hover mb-0';
+    
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Grade</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${courses.map(course => `
           <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Grade</th>
+            <td>${course.code}</td>
+            <td>${course.name}</td>
+            <td>${course.grade}</td>
           </tr>
-        </thead>
-        <tbody>
-          ${courses.map(course => `
-            <tr>
-              <td>${course.code}</td>
-              <td>${course.name}</td>
-              <td>${course.grade}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      `;
-      
-      tableContainer.appendChild(table);
-      coursesContainer.appendChild(coursesTitle);
-      coursesContainer.appendChild(tableContainer);
-    }
+        `).join('')}
+      </tbody>
+    `;
     
-    // Template untuk input pengalaman
-    const createExperienceInput = (type, index) => {
-      const isOrg = type === 'organization';
-      const prefix = isOrg ? 'org' : 'intern';
-      const nameField = isOrg ? 'name' : 'company';
-      const nameLabel = isOrg ? 'Organization Name:' : 'Company Name:';
-      
-      return `
-        <div class="form-group">
-          <label for="${prefix}_${nameField}_${index}">${nameLabel}</label>
-          <input type="text" id="${prefix}_${nameField}_${index}" name="${type}s[${index}][${nameField}]" required>
-        </div>
-        <div class="form-group">
-          <label for="${prefix}_position_${index}">Position:</label>
-          <input type="text" id="${prefix}_position_${index}" name="${type}s[${index}][position]" required>
-        </div>
-        <div class="form-group">
-          <label for="${prefix}_description_${index}">Description:</label>
-          <textarea id="${prefix}_description_${index}" name="${type}s[${index}][description]" rows="3"></textarea>
-        </div>
-        <button type="button" class="remove-btn" onclick="removeInput(this, '${type}')">Remove</button>
-      `;
-    };
+    tableContainer.appendChild(table);
+    coursesContainer.appendChild(coursesTitle);
+    coursesContainer.appendChild(tableContainer);
+  }
+  
+  // Experience input template
+  const createExperienceInput = (type, index) => {
+    const isOrg = type === 'organization';
+    const prefix = isOrg ? 'org' : 'intern';
+    const nameField = isOrg ? 'name' : 'company';
+    const nameLabel = isOrg ? 'Organization Name:' : 'Company Name:';
     
-    // Tambahkan input pengalaman
-    function addExperienceInput(type) {
-      const container = document.getElementById(`${type}-inputs`);
-      const inputGroup = document.createElement('div');
-      inputGroup.className = 'input-group';
-      inputGroup.innerHTML = createExperienceInput(type, container.children.length);
-      container.appendChild(inputGroup);
-    }
-    
-    // Hapus input
-    window.removeInput = function(button, type) {
-      const inputGroup = button.parentNode;
-      const container = inputGroup.parentNode;
-      container.removeChild(inputGroup);
-      
-      Array.from(container.querySelectorAll('.input-group')).forEach((group, index) => {
-        Array.from(group.querySelectorAll('[name]')).forEach(input => {
-          const nameAttr = input.getAttribute('name');
-          if (nameAttr) {
-            input.setAttribute('name', nameAttr.replace(/\[\d+\]/, `[${index}]`));
-          }
-        });
-      });
-    };
-    
-    // Display job recommendations
-    function displayRecommendations(recommendations) {
-      const container = document.getElementById('recommendationsContainer');
-      const list = document.getElementById('recommendationsList');
-      list.innerHTML = '';
-      
-      if (recommendations.length === 0) {
-        list.innerHTML = '<p>No job recommendations found for your profile. Please try adding more courses or experience information.</p>';
-        container.style.display = 'block';
-        return;
-      }
-      
-      recommendations.forEach(job => {
-        const card = document.createElement('div');
-        card.className = 'recommendation-card';
-        
-        // Determine the score class
-        let scoreClass = 'high';
-        if (job.match_score < 50) {
-          scoreClass = 'low';
-        } else if (job.match_score < 75) {
-          scoreClass = 'medium';
-        }
-        
-        // Create the source tags
-        const sourceTags = job.recommendation_sources.map(source => {
-          const sourceText = source === 'alumni' ? 'Alumni Profile Match' : 'Experience Match';
-          return `<span class="tag">${sourceText}</span>`;
-        }).join('');
-        
-        card.innerHTML = `
-          <div class="recommendation-header">
-            <h3>${job.title} at ${job.company}</h3>
-            <span class="match-score ${scoreClass}">${job.match_score}% Match</span>
+    return `
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="mb-3">
+            <label for="${prefix}_${nameField}_${index}" class="form-label">${nameLabel}</label>
+            <input type="text" id="${prefix}_${nameField}_${index}" name="${type}s[${index}][${nameField}]" class="form-control" required>
           </div>
-          <p>${job.description}</p>
-          <div class="recommendation-tags">
-            <strong>Matched by:</strong> ${sourceTags}
+          <div class="mb-3">
+            <label for="${prefix}_position_${index}" class="form-label">Position:</label>
+            <input type="text" id="${prefix}_position_${index}" name="${type}s[${index}][position]" class="form-control" required>
           </div>
-        `;
-        
-        list.appendChild(card);
-      });
-      
-      container.style.display = 'block';
-    }
+          <div class="mb-3">
+            <label for="${prefix}_description_${index}" class="form-label">Description:</label>
+            <textarea id="${prefix}_description_${index}" name="${type}s[${index}][description]" class="form-control" rows="3"></textarea>
+          </div>
+          <button type="button" class="btn btn-danger" onclick="removeInput(this, '${type}')">Remove</button>
+        </div>
+      </div>
+    `;
+  };
+  
+  // Add experience input
+  function addExperienceInput(type) {
+    const container = document.getElementById(`${type}-inputs`);
+    const inputGroup = document.createElement('div');
+    inputGroup.innerHTML = createExperienceInput(type, container.children.length);
+    container.appendChild(inputGroup.firstElementChild);
+  }
+  
+  // Remove input
+  window.removeInput = function(button, type) {
+    const card = button.closest('.card');
+    const container = card.parentNode;
+    container.removeChild(card);
     
-    // Event listeners
-    document.addEventListener('DOMContentLoaded', function() {
-      document.getElementById('add-organization').addEventListener('click', () => addExperienceInput('organization'));
-      document.getElementById('add-internship').addEventListener('click', () => addExperienceInput('internship'));
-      
-      document.getElementById('applicationForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
-        // Show loading spinner
-        document.getElementById('loadingSpinner').style.display = 'block';
-        document.getElementById('recommendationsContainer').style.display = 'none';
-        
-        try {
-          const formData = new FormData(e.target);
-          
-          // Get the CSRF token from the cookie
-          const csrftoken = getCookie('csrftoken');
-          
-          const response = await fetch('/api/submit-application/', {
-            method: 'POST',
-            headers: {
-              'X-CSRFToken': csrftoken
-            },
-            body: formData
-          });
-          
-          // Hide loading spinner
-          document.getElementById('loadingSpinner').style.display = 'none';
-          
-          if (response.ok) {
-            const result = await response.json();
-            console.log('Submission result:', result);
-            
-            // Display job recommendations
-            if (result.data && result.data.job_recommendations) {
-              displayRecommendations(result.data.job_recommendations);
-            }
-          } else {
-            const errorText = await response.text();
-            alert('Failed to submit application: ' + errorText);
-          }
-        } catch (error) {
-          // Hide loading spinner on error
-          document.getElementById('loadingSpinner').style.display = 'none';
-          console.error('Error submitting form:', error);
-          alert('An error occurred while submitting your application. Please try again.');
-        }
-      });
-      
-      document.getElementById('pdfInput').addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          try {
-            const text = await extractPdfText(file);
-            const studentInfo = extractStudentInfo(text);
-            const courses = extractCourses(text);
-            populateForm(studentInfo, courses);
-          } catch (error) {
-            console.error("Error extracting PDF text:", error);
-          }
+    Array.from(container.querySelectorAll('.card')).forEach((card, index) => {
+      Array.from(card.querySelectorAll('[name]')).forEach(input => {
+        const nameAttr = input.getAttribute('name');
+        if (nameAttr) {
+          input.setAttribute('name', nameAttr.replace(/\[\d+\]/, `[${index}]`));
         }
       });
     });
+  };
+  
+  // Display job recommendations
+  function displayRecommendations(recommendations) {
+    const container = document.getElementById('recommendationsContainer');
+    const list = document.getElementById('recommendationsList');
+    list.innerHTML = '';
     
-    // Function to get CSRF token from cookie
-    function getCookie(name) {
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
+    if (recommendations.length === 0) {
+      list.innerHTML = '<div class="alert alert-info">No job recommendations found for your profile. Please try adding more courses or experience information.</div>';
+      container.style.display = 'block';
+      return;
+    }
+    
+    recommendations.forEach(job => {
+      const card = document.createElement('div');
+      card.className = 'card mb-3 shadow-sm';
+      
+      // Determine the score class
+      let scoreClass = 'high';
+      if (job.match_score < 50) {
+        scoreClass = 'low';
+      } else if (job.match_score < 75) {
+        scoreClass = 'medium';
+      }
+      
+      // Create the source tags
+      const sourceTags = job.recommendation_sources.map(source => {
+        const sourceText = source === 'alumni' ? 'Alumni Profile Match' : 'Experience Match';
+        return `<span class="tag">${sourceText}</span>`;
+      }).join('');
+      
+      card.innerHTML = `
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h3 class="h5 mb-0">${job.title} at ${job.company}</h3>
+          <span class="match-score ${scoreClass}">${job.match_score}% Match</span>
+        </div>
+        <div class="card-body">
+          <p class="card-text">${job.description}</p>
+          <div class="mt-3">
+            <strong>Matched by:</strong> ${sourceTags}
+          </div>
+        </div>
+      `;
+      
+      list.appendChild(card);
+    });
+    
+    container.style.display = 'block';
+  }
+  
+  // Event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('add-organization').addEventListener('click', () => addExperienceInput('organization'));
+    document.getElementById('add-internship').addEventListener('click', () => addExperienceInput('internship'));
+    
+    document.getElementById('applicationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Show loading spinner
+      document.getElementById('loadingSpinner').style.display = 'block';
+      document.getElementById('recommendationsContainer').style.display = 'none';
+      
+      try {
+        const formData = new FormData(e.target);
+        
+        // Get the CSRF token from the cookie
+        const csrftoken = getCookie('csrftoken');
+        
+        const response = await fetch('/api/submit-application/', {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrftoken
+          },
+          body: formData
+        });
+        
+        // Hide loading spinner
+        document.getElementById('loadingSpinner').style.display = 'none';
+        
+        if (response.ok) {
+          const result = await response.json();
+          console.log('Submission result:', result);
+          
+          // Display job recommendations
+          if (result.data && result.data.job_recommendations) {
+            displayRecommendations(result.data.job_recommendations);
           }
+        } else {
+          const errorText = await response.text();
+          alert('Failed to submit application: ' + errorText);
+        }
+      } catch (error) {
+        // Hide loading spinner on error
+        document.getElementById('loadingSpinner').style.display = 'none';
+        console.error('Error submitting form:', error);
+        alert('An error occurred while submitting your application. Please try again.');
+      }
+    });
+    
+    document.getElementById('pdfInput').addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        try {
+          const text = await extractPdfText(file);
+          const studentInfo = extractStudentInfo(text);
+          const courses = extractCourses(text);
+          populateForm(studentInfo, courses);
+        } catch (error) {
+          console.error("Error extracting PDF text:", error);
         }
       }
-      return cookieValue;
+    });
+  });
+  
+  // Function to get CSRF token from cookie
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
     }
-  </script>
-</body>
-</html>
+    return cookieValue;
+  }
+</script>
+{% endblock %}
