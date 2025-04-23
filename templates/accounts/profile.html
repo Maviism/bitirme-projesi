@@ -1,0 +1,30 @@
+{% extends "landing_page.html" %}
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header text-center">
+                    <h2>User Profile</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <img src="https://via.placeholder.com/150" class="rounded-circle" alt="Profile picture">
+                        </div>
+                        <div class="col-md-8">
+                            <h4>{{ user.username }}</h4>
+                            <p><strong>Date joined:</strong> {{ user.date_joined|date:"F d, Y" }}</p>
+                            <p><strong>Last login:</strong> {{ user.last_login|date:"F d, Y" }}</p>
+                            <div class="mt-3">
+                                <a href="#" class="btn btn-primary">Edit Profile</a>
+                                <a href="{% url 'logout' %}" class="btn btn-outline-danger ms-2">Logout</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
