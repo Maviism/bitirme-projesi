@@ -36,7 +36,8 @@ def get_alumni_database():
                 'student': {
                     'id': student.student_id,
                     'program': student.program,
-                    'gpa': float(student.gpa)
+                    'gpa': float(student.gpa),
+                    'skills': student.skills if hasattr(student, 'skills') else []
                 },
                 'course_grades': course_grades,
                 'graduation_date': alumni_record.graduation_date,
@@ -45,7 +46,8 @@ def get_alumni_database():
                     'title': alumni_record.current_job.title,
                     'company': alumni_record.current_job.company,
                     'description': alumni_record.current_job.description,
-                    'required_majors': alumni_record.current_job.required_majors
+                    'required_majors': alumni_record.current_job.required_majors,
+                    'required_skills': alumni_record.current_job.required_skills if hasattr(alumni_record.current_job, 'required_skills') else []
                 }
             }
             alumni_data.append(alumni_record_data)
@@ -70,7 +72,8 @@ def get_job_postings_database():
                 'title': job.title,
                 'company': job.company,
                 'description': job.description,
-                'required_majors': job.required_majors
+                'required_majors': job.required_majors,
+                'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
             })
             
         return job_postings
@@ -110,7 +113,7 @@ class HybridRecommender:
         keywords = [word.lower().strip() for word in text.split() if word.strip()]
         return keywords
     
-    def get_alumni_recommendations(self, student_data, courses):
+    def get_alumni_recommendations(self, student_data, courses, skills=None):
         """
         Generate job recommendations based on alumni with similar academic profiles.
         
@@ -120,6 +123,8 @@ class HybridRecommender:
             Student information including GPA, program, etc.
         courses : list
             List of courses taken by the student with grades
+        skills : list
+            List of student skill preferences
             
         Returns:
         --------
@@ -185,8 +190,20 @@ class HybridRecommender:
                     avg_grade_diff = grade_diff_sum / common_courses
                     course_similarity = max(0, 1 - avg_grade_diff / 4.0)
                 
-                # Calculate overall similarity
-                similarity = (0.3 * gpa_similarity + 0.7 * course_similarity) * program_bonus
+                # Skills similarity bonus
+                skill_bonus = 1.0
+                if skills and isinstance(skills, list) and len(skills) > 0:
+                    # Get the job's required skills
+                    job_skills = alumni['current_job'].get('required_skills', [])
+                    if job_skills and isinstance(job_skills, list):
+                        # Calculate number of matching skills
+                        matching_skills = len(set(skills) & set(job_skills))
+                        if matching_skills > 0:
+                            # More matching skills = higher bonus
+                            skill_bonus = 1.0 + (matching_skills / max(len(skills), 1)) * 0.5
+                
+                # Calculate overall similarity with skill bonus
+                similarity = (0.3 * gpa_similarity + 0.7 * course_similarity) * program_bonus * skill_bonus
                 
                 # Get recommended job for this alumni
                 job = alumni['current_job']
@@ -202,61 +219,71 @@ class HybridRecommender:
         recommendations = [item[1] for item in similarities[:10]]
         return recommendations
     
-    def get_job_recommendations(self, student_data, orgs, internships):
-      job_postings = get_job_postings_database()
-      if not job_postings:
-          return []
+    def get_job_recommendations(self, student_data, orgs, internships, skills=None):
+        job_postings = get_job_postings_database()
+        if not job_postings:
+            return []
 
-      if not isinstance(orgs, list): orgs = []
-      if not isinstance(internships, list): internships = []
+        if not isinstance(orgs, list): orgs = []
+        if not isinstance(internships, list): internships = []
 
-      # Gabungkan semua pengalaman menjadi satu teks
-      experience_texts = []
-      for org in orgs:
-          if isinstance(org, dict):
-              experience_texts.append(org.get('description', ''))
-              experience_texts.append(org.get('position', ''))
-      
-      for internship in internships:
-          if isinstance(internship, dict):
-              experience_texts.append(internship.get('description', ''))
-              experience_texts.append(internship.get('position', ''))
-              experience_texts.append(internship.get('company', ''))
+        # Gabungkan semua pengalaman menjadi satu teks
+        experience_texts = []
+        for org in orgs:
+            if isinstance(org, dict):
+                experience_texts.append(org.get('description', ''))
+                experience_texts.append(org.get('position', ''))
+        
+        for internship in internships:
+            if isinstance(internship, dict):
+                experience_texts.append(internship.get('description', ''))
+                experience_texts.append(internship.get('position', ''))
+                experience_texts.append(internship.get('company', ''))
 
-      combined_experience = ' '.join(filter(None, experience_texts)).strip()
-      if not combined_experience:
-          return []
+        combined_experience = ' '.join(filter(None, experience_texts)).strip()
+        if not combined_experience:
+            return []
 
-      # Encode pengalaman pakai SBERT
-      try:
-          experience_embedding = self.model.encode(combined_experience, convert_to_tensor=True)
-      except Exception as e:
-          return []
+        # Encode pengalaman pakai SBERT
+        try:
+            experience_embedding = self.model.encode(combined_experience, convert_to_tensor=True)
+        except Exception as e:
+            return []
 
-      matches = []
+        matches = []
 
-      for job in job_postings:
-          try:
-              job_text = f"{job.get('title', '')}. {job.get('description', '')}"
-              job_embedding = self.model.encode(job_text, convert_to_tensor=True)
-              similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
+        for job in job_postings:
+            try:
+                job_text = f"{job.get('title', '')}. {job.get('description', '')}"
+                job_embedding = self.model.encode(job_text, convert_to_tensor=True)
+                similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
 
-              # Bonus jika program mahasiswa cocok
-              program = student_data.get('program', '')
-              required_majors = job.get('required_majors', '')
-              program_match = 1.5 if program in required_majors else 1.0
-              total_score = similarity_score * program_match
+                # Bonus jika program mahasiswa cocok
+                program = student_data.get('program', '')
+                required_majors = job.get('required_majors', '')
+                program_match = 1.5 if program in required_majors else 1.0
+                
+                # Skills matching bonus
+                skill_bonus = 1.0
+                if skills and isinstance(skills, list) and len(skills) > 0:
+                    job_skills = job.get('required_skills', [])
+                    if job_skills and isinstance(job_skills, list):
+                        matching_skills = len(set(skills) & set(job_skills))
+                        if matching_skills > 0:
+                            skill_bonus = 1.0 + (matching_skills / max(len(skills), 1)) * 0.5
+                
+                # Calculate total score with all bonuses
+                total_score = similarity_score * program_match * skill_bonus
 
-              matches.append((total_score, job))
-          except Exception:
-              continue
+                matches.append((total_score, job))
+            except Exception:
+                continue
 
-      matches.sort(key=lambda x: x[0], reverse=True)
-      recommendations = [item[1] for item in matches[:10]]
-      return recommendations
+        matches.sort(key=lambda x: x[0], reverse=True)
+        recommendations = [item[1] for item in matches[:10]]
+        return recommendations
 
-    
-    def get_hybrid_recommendations(self, student_data, courses, orgs, internships):
+    def get_hybrid_recommendations(self, student_data, courses, orgs, internships, skills=None):
         """
         Generate hybrid job recommendations combining both approaches.
         
@@ -270,6 +297,8 @@ class HybridRecommender:
             List of organization experiences
         internships : list
             List of internship experiences
+        skills : list
+            List of student skill preferences
             
         Returns:
         --------
@@ -285,13 +314,15 @@ class HybridRecommender:
             orgs = []
         if not isinstance(internships, list):
             internships = []
+        if not isinstance(skills, list):
+            skills = []
             
         # Get recommendations from both sources
         try:
-            alumni_recs = self.get_alumni_recommendations(student_data, courses)
+            alumni_recs = self.get_alumni_recommendations(student_data, courses, skills)
             
             # Even with empty orgs and internships, try to get recommendations
-            job_recs = self.get_job_recommendations(student_data, orgs, internships)
+            job_recs = self.get_job_recommendations(student_data, orgs, internships, skills)
         except Exception as e:
             # If there's an error but we don't want to fail completely,
             # return a "no recommendations" message

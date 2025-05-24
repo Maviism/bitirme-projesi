@@ -1,3 +1,7 @@
+## dev environment
+1. ubuntu 24.04
+2. python 3.12.3
+
 ## run django
 1. clone the repo
 ```

@@ -13,6 +13,37 @@
   #loadingSpinner .spinner-text {
     margin-top: 1rem;
   }
+  .skills-section {
+    margin-bottom: 1.5rem;
+  }
+  .skills-section-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #dee2e6;
+  }
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.75rem;
+  }
+  .skill-checkbox {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+  .skill-checkbox input {
+    margin-right: 0.5rem;
+  }
+  .accordion-button:not(.collapsed) {
+    background-color: #f8f9fa;
+    color: #212529;
+  }
+  .accordion-button:focus {
+    box-shadow: none;
+    border-color: rgba(0,0,0,.125);
+  }
 </style>
 {% endblock %}
 
@@ -75,6 +106,21 @@
           </div>
         </div>
         
+        <!-- Skills Preferences Section -->
+        <div class="card mb-4">
+          <div class="card-header bg-light">
+            <h3 class="h5 mb-0">Skill Preferences</h3>
+          </div>
+          <div class="card-body">
+            <p class="text-muted">Select the skills you have or are interested in based on job roles:</p>
+            <input type="hidden" id="skills_data" name="skills_data" value="[]">
+            
+            <div class="accordion" id="skillsAccordion">
+              <!-- Skill categories will be dynamically generated here -->
+            </div>
+          </div>
+        </div>
+        
         <!-- Organization Experience Section -->
         <div class="card mb-4">
           <div class="card-header bg-light">
@@ -133,6 +179,308 @@
 {% block extra_js %}
 <script src="{% static 'js/pdf.js/pdf.min.js' %}"></script>
 <script>
+  // Skills data structure - all skills organized by categories and sections
+  const skillsData = {
+    "Software Development": {
+      isExpanded: true, // first category starts expanded
+      sections: {
+        "Programming Languages": [
+          { id: "skill_python", value: "Python", label: "Python" },
+          { id: "skill_java", value: "Java", label: "Java" },
+          { id: "skill_cpp", value: "C++", label: "C++" },
+          { id: "skill_c", value: "C", label: "C" },
+          { id: "skill_javascript", value: "JavaScript", label: "JavaScript" },
+          { id: "skill_typescript", value: "TypeScript", label: "TypeScript" },
+          { id: "skill_csharp", value: "C#", label: "C#" },
+          { id: "skill_ruby", value: "Ruby", label: "Ruby" },
+          { id: "skill_php", value: "PHP", label: "PHP" },
+          { id: "skill_go", value: "Go", label: "Go" },
+          { id: "skill_swift", value: "Swift", label: "Swift" },
+          { id: "skill_kotlin", value: "Kotlin", label: "Kotlin" }
+        ],
+        "Web Development": [
+          { id: "skill_html", value: "HTML/CSS", label: "HTML/CSS" },
+          { id: "skill_react", value: "React", label: "React" },
+          { id: "skill_angular", value: "Angular", label: "Angular" },
+          { id: "skill_vue", value: "Vue.js", label: "Vue.js" },
+          { id: "skill_node", value: "Node.js", label: "Node.js" },
+          { id: "skill_express", value: "Express.js", label: "Express.js" },
+          { id: "skill_django", value: "Django", label: "Django" },
+          { id: "skill_flask", value: "Flask", label: "Flask" },
+          { id: "skill_spring", value: "Spring", label: "Spring" },
+          { id: "skill_rails", value: "Ruby on Rails", label: "Ruby on Rails" },
+          { id: "skill_laravel", value: "Laravel", label: "Laravel" },
+          { id: "skill_aspnet", value: "ASP.NET", label: "ASP.NET" }
+        ],
+        "UI/UX Design": [
+          { id: "skill_ux_research", value: "UX Research", label: "UX Research" },
+          { id: "skill_ui_design", value: "UI Design", label: "UI Design" },
+          { id: "skill_wireframing", value: "Wireframing", label: "Wireframing" },
+          { id: "skill_prototyping", value: "Prototyping", label: "Prototyping" },
+          { id: "skill_figma", value: "Figma", label: "Figma" },
+          { id: "skill_sketch", value: "Sketch", label: "Sketch" },
+          { id: "skill_adobe_xd", value: "Adobe XD", label: "Adobe XD" },
+          { id: "skill_invision", value: "InVision", label: "InVision" },
+          { id: "skill_usability_testing", value: "Usability Testing", label: "Usability Testing" },
+          { id: "skill_accessibility", value: "Accessibility (WCAG)", label: "Accessibility (WCAG)" },
+          { id: "skill_user_personas", value: "User Personas", label: "User Personas" },
+          { id: "skill_interaction_design", value: "Interaction Design", label: "Interaction Design" }
+        ],
+        "Mobile Development": [
+          { id: "skill_android", value: "Android", label: "Android" },
+          { id: "skill_ios", value: "iOS", label: "iOS" },
+          { id: "skill_flutter", value: "Flutter", label: "Flutter" },
+          { id: "skill_react_native", value: "React Native", label: "React Native" },
+          { id: "skill_xamarin", value: "Xamarin", label: "Xamarin" }
+        ]
+      }
+    },
+    "Data Science & AI": {
+      isExpanded: false,
+      sections: {
+        "Data Science": [
+          { id: "skill_data_analysis", value: "Data Analysis", label: "Data Analysis" },
+          { id: "skill_pandas", value: "Pandas", label: "Pandas" },
+          { id: "skill_numpy", value: "NumPy", label: "NumPy" },
+          { id: "skill_data_viz", value: "Data Visualization", label: "Data Visualization" },
+          { id: "skill_jupyter", value: "Jupyter", label: "Jupyter Notebooks" },
+          { id: "skill_r_lang", value: "R", label: "R" },
+          { id: "skill_tableau", value: "Tableau", label: "Tableau" },
+          { id: "skill_power_bi", value: "Power BI", label: "Power BI" },
+          { id: "skill_statistics", value: "Statistics", label: "Statistics" }
+        ],
+        "Data Analytics": [
+          { id: "skill_business_intelligence", value: "Business Intelligence", label: "Business Intelligence" },
+          { id: "skill_data_mining", value: "Data Mining", label: "Data Mining" },
+          { id: "skill_predictive_analytics", value: "Predictive Analytics", label: "Predictive Analytics" },
+          { id: "skill_ab_testing", value: "A/B Testing", label: "A/B Testing" },
+          { id: "skill_excel_analytics", value: "Excel Analytics", label: "Excel Analytics" },
+          { id: "skill_sql_analytics", value: "SQL Analytics", label: "SQL Analytics" },
+          { id: "skill_google_analytics", value: "Google Analytics", label: "Google Analytics" },
+          { id: "skill_looker", value: "Looker", label: "Looker" },
+          { id: "skill_customer_analytics", value: "Customer Analytics", label: "Customer Analytics" },
+          { id: "skill_marketing_analytics", value: "Marketing Analytics", label: "Marketing Analytics" },
+          { id: "skill_sales_analytics", value: "Sales Analytics", label: "Sales Analytics" },
+          { id: "skill_data_storytelling", value: "Data Storytelling", label: "Data Storytelling" }
+        ],
+        "Big Data & Analytics Platforms": [
+          { id: "skill_hadoop", value: "Hadoop", label: "Hadoop" },
+          { id: "skill_spark", value: "Apache Spark", label: "Apache Spark" },
+          { id: "skill_kafka", value: "Apache Kafka", label: "Apache Kafka" },
+          { id: "skill_airflow", value: "Apache Airflow", label: "Apache Airflow" },
+          { id: "skill_hive", value: "Apache Hive", label: "Apache Hive" },
+          { id: "skill_dataproc", value: "Google Dataproc", label: "Google Dataproc" },
+          { id: "skill_bigquery", value: "BigQuery", label: "BigQuery" },
+          { id: "skill_redshift", value: "Amazon Redshift", label: "Amazon Redshift" },
+          { id: "skill_snowflake", value: "Snowflake", label: "Snowflake" },
+          { id: "skill_databricks", value: "Databricks", label: "Databricks" }
+        ],
+        "Machine Learning": [
+          { id: "skill_machine_learning", value: "Machine Learning", label: "Machine Learning" },
+          { id: "skill_deep_learning", value: "Deep Learning", label: "Deep Learning" },
+          { id: "skill_scikit_learn", value: "Scikit-Learn", label: "Scikit-Learn" },
+          { id: "skill_tensorflow", value: "TensorFlow", label: "TensorFlow" },
+          { id: "skill_pytorch", value: "PyTorch", label: "PyTorch" },
+          { id: "skill_keras", value: "Keras", label: "Keras" },
+          { id: "skill_nlp", value: "NLP", label: "Natural Language Processing" },
+          { id: "skill_computer_vision", value: "Computer Vision", label: "Computer Vision" },
+          { id: "skill_reinforcement_learning", value: "Reinforcement Learning", label: "Reinforcement Learning" }
+        ]
+      }
+    },
+    "DevOps & Cloud Engineering": {
+      isExpanded: false,
+      sections: {
+        "DevOps": [
+          { id: "skill_devops", value: "DevOps", label: "DevOps" },
+          { id: "skill_ci_cd", value: "CI/CD", label: "CI/CD" },
+          { id: "skill_docker", value: "Docker", label: "Docker" },
+          { id: "skill_kubernetes", value: "Kubernetes", label: "Kubernetes" },
+          { id: "skill_jenkins", value: "Jenkins", label: "Jenkins" },
+          { id: "skill_ansible", value: "Ansible", label: "Ansible" },
+          { id: "skill_terraform", value: "Terraform", label: "Terraform" },
+          { id: "skill_prometheus", value: "Prometheus", label: "Prometheus" },
+          { id: "skill_grafana", value: "Grafana", label: "Grafana" }
+        ],
+        "Cloud Platforms": [
+          { id: "skill_aws", value: "AWS", label: "AWS" },
+          { id: "skill_azure", value: "Azure", label: "Microsoft Azure" },
+          { id: "skill_gcp", value: "GCP", label: "Google Cloud Platform" },
+          { id: "skill_serverless", value: "Serverless Architecture", label: "Serverless Architecture" },
+          { id: "skill_lambda", value: "AWS Lambda", label: "AWS Lambda" },
+          { id: "skill_ec2", value: "AWS EC2", label: "AWS EC2" }
+        ]
+      }
+    },
+    "Security & Networks": {
+      isExpanded: false,
+      sections: {
+        "Cybersecurity": [
+          { id: "skill_cybersecurity", value: "Cybersecurity", label: "Cybersecurity" },
+          { id: "skill_pentesting", value: "Penetration Testing", label: "Penetration Testing" },
+          { id: "skill_security_audit", value: "Security Auditing", label: "Security Auditing" },
+          { id: "skill_cryptography", value: "Cryptography", label: "Cryptography" },
+          { id: "skill_threat_analysis", value: "Threat Analysis", label: "Threat Analysis" },
+          { id: "skill_incident_response", value: "Incident Response", label: "Incident Response" }
+        ],
+        "Network Engineering": [
+          { id: "skill_network", value: "Network Engineering", label: "Network Engineering" },
+          { id: "skill_cisco", value: "Cisco", label: "Cisco" },
+          { id: "skill_routing_protocols", value: "Routing Protocols", label: "Routing Protocols" },
+          { id: "skill_firewall", value: "Firewall Configuration", label: "Firewall Configuration" },
+          { id: "skill_vpn", value: "VPN", label: "VPN" },
+          { id: "skill_load_balancing", value: "Load Balancing", label: "Load Balancing" }
+        ]
+      }
+    },
+    "Database Technologies": {
+      isExpanded: false,
+      sections: {
+        "SQL Databases": [
+          { id: "skill_sql", value: "SQL", label: "SQL" },
+          { id: "skill_mysql", value: "MySQL", label: "MySQL" },
+          { id: "skill_postgresql", value: "PostgreSQL", label: "PostgreSQL" },
+          { id: "skill_sql_server", value: "MS SQL Server", label: "MS SQL Server" },
+          { id: "skill_oracle", value: "Oracle DB", label: "Oracle DB" }
+        ],
+        "NoSQL Databases": [
+          { id: "skill_mongodb", value: "MongoDB", label: "MongoDB" },
+          { id: "skill_cassandra", value: "Cassandra", label: "Cassandra" },
+          { id: "skill_redis", value: "Redis", label: "Redis" },
+          { id: "skill_dynamodb", value: "DynamoDB", label: "DynamoDB" },
+          { id: "skill_elasticsearch", value: "Elasticsearch", label: "Elasticsearch" }
+        ]
+      }
+    },
+    "Specialized Engineering Fields": {
+      isExpanded: false,
+      sections: {
+        "Embedded Systems": [
+          { id: "skill_embedded", value: "Embedded Systems", label: "Embedded Systems" },
+          { id: "skill_arduino", value: "Arduino", label: "Arduino" },
+          { id: "skill_raspberry_pi", value: "Raspberry Pi", label: "Raspberry Pi" },
+          { id: "skill_arm", value: "ARM Architecture", label: "ARM Architecture" },
+          { id: "skill_rtos", value: "RTOS", label: "Real-Time OS" }
+        ],
+        "Robotics": [
+          { id: "skill_robotics", value: "Robotics", label: "Robotics" },
+          { id: "skill_ros", value: "ROS", label: "ROS (Robot Operating System)" },
+          { id: "skill_motor_control", value: "Motor Control", label: "Motor Control" },
+          { id: "skill_sensors", value: "Sensor Integration", label: "Sensor Integration" }
+        ],
+        "Other Specialized Fields": [
+          { id: "skill_iot", value: "IoT", label: "Internet of Things (IoT)" },
+          { id: "skill_blockchain", value: "Blockchain", label: "Blockchain" },
+          { id: "skill_parallel", value: "Parallel Computing", label: "Parallel Computing" },
+          { id: "skill_quantum", value: "Quantum Computing", label: "Quantum Computing" },
+          { id: "skill_ar_vr", value: "AR/VR Development", label: "AR/VR Development" }
+        ]
+      }
+    },
+    "General Professional Skills": {
+      isExpanded: false,
+      sections: {
+        "Development Tools & Practices": [
+          { id: "skill_git", value: "Git", label: "Git" },
+          { id: "skill_github", value: "GitHub", label: "GitHub" },
+          { id: "skill_jira", value: "Jira", label: "Jira" },
+          { id: "skill_agile", value: "Agile", label: "Agile Methodology" },
+          { id: "skill_scrum", value: "Scrum", label: "Scrum" },
+          { id: "skill_tdd", value: "TDD", label: "Test-Driven Development" },
+          { id: "skill_code_review", value: "Code Review", label: "Code Review" },
+          { id: "skill_unit_testing", value: "Unit Testing", label: "Unit Testing" },
+          { id: "skill_system_design", value: "System Design", label: "System Design" },
+          { id: "skill_algorithm", value: "Algorithms", label: "Algorithms" },
+          { id: "skill_data_structures", value: "Data Structures", label: "Data Structures" }
+        ]
+      }
+    }
+  };
+
+  // Function to generate skills sections dynamically
+  function generateSkillsSections() {
+    const accordion = document.getElementById('skillsAccordion');
+    
+    // Clear accordion first
+    accordion.innerHTML = '';
+    
+    // Generate content for each job role category
+    Object.entries(skillsData).forEach(([category, data], categoryIndex) => {
+      // Create unique ID for this category
+      const headingId = `heading${category.replace(/\W+/g, '')}`;
+      const collapseId = `collapse${category.replace(/\W+/g, '')}`;
+      const isExpanded = data.isExpanded;
+      
+      // Create accordion item
+      const accordionItem = document.createElement('div');
+      accordionItem.className = 'accordion-item';
+      
+      // Create header
+      accordionItem.innerHTML = `
+        <h2 class="accordion-header" id="${headingId}">
+          <button class="accordion-button ${isExpanded ? '' : 'collapsed'}" type="button" 
+                  data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
+                  aria-expanded="${isExpanded}" aria-controls="${collapseId}">
+            ${category}
+          </button>
+        </h2>
+        <div id="${collapseId}" class="accordion-collapse collapse ${isExpanded ? 'show' : ''}" 
+             aria-labelledby="${headingId}">
+          <div class="accordion-body">
+            <!-- Skills sections will be added here -->
+          </div>
+        </div>
+      `;
+      
+      // Add to accordion
+      accordion.appendChild(accordionItem);
+      
+      // Get body element to add sections to
+      const accordionBody = accordionItem.querySelector('.accordion-body');
+      
+      // Add each section for this category
+      Object.entries(data.sections).forEach(([sectionName, skills]) => {
+        // Create section container
+        const section = document.createElement('div');
+        section.className = 'skills-section';
+        
+        // Add section title
+        const title = document.createElement('h4');
+        title.className = 'skills-section-title';
+        title.textContent = sectionName;
+        section.appendChild(title);
+        
+        // Create skills grid
+        const skillsGrid = document.createElement('div');
+        skillsGrid.className = 'skills-grid';
+        
+        // Add each skill to the grid
+        skills.forEach(skill => {
+          const skillDiv = document.createElement('div');
+          skillDiv.className = 'skill-checkbox';
+          
+          skillDiv.innerHTML = `
+            <input type="checkbox" id="${skill.id}" class="skill-input" value="${skill.value}">
+            <label for="${skill.id}">${skill.label}</label>
+          `;
+          
+          skillsGrid.appendChild(skillDiv);
+        });
+        
+        // Add skills grid to section
+        section.appendChild(skillsGrid);
+        
+        // Add section to accordion body
+        accordionBody.appendChild(section);
+      });
+    });
+    
+    // Add event listeners to all generated checkboxes
+    document.querySelectorAll('.skill-input').forEach(checkbox => {
+      checkbox.addEventListener('change', updateSkillsData);
+    });
+  }
+
   pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'js/pdf.js/pdf.worker.min.js' %}";
   
   // PDF extraction and text cleaning function
@@ -349,14 +697,26 @@
       });
     });
   };
+
+  // Handle skill checkbox changes
+  function updateSkillsData() {
+    const selectedSkills = Array.from(document.querySelectorAll('.skill-input:checked')).map(cb => cb.value);
+    document.getElementById('skills_data').value = JSON.stringify(selectedSkills);
+  }
   
   // Event listeners
   document.addEventListener('DOMContentLoaded', function() {
+    // Generate skills sections dynamically
+    generateSkillsSections();
+    
     document.getElementById('add-organization').addEventListener('click', () => addExperienceInput('organization'));
     document.getElementById('add-internship').addEventListener('click', () => addExperienceInput('internship'));
     
     document.getElementById('applicationForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      
+      // Update skills data before submission
+      updateSkillsData();
       
       // Show loading spinner
       document.getElementById('loadingSpinner').style.display = 'block';

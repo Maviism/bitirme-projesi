@@ -56,6 +56,16 @@ def submit_application(request):
         else:
             print("[DEBUG] No courses data provided")
         
+        # Parse skills data from JSON string
+        skills_data = []
+        if 'skills_data' in request.POST:
+            try:
+                skills_data = json.loads(request.POST.get('skills_data'))
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid skills data format"}, status=400)
+        else:
+            print("[DEBUG] No skills data provided")
+        
         # Process organization experiences
         organizations = []
         org_fields = ['name', 'position', 'start_date', 'end_date', 'description']
@@ -97,7 +107,8 @@ def submit_application(request):
             student_data,
             courses_data,
             organizations,
-            internships
+            internships,
+            skills_data  # Add skills data to the recommender
         )
         
         # Format job recommendations for response
@@ -136,6 +147,7 @@ def submit_application(request):
                     'faculty': student_data['faculty'],
                     'program': student_data['program'],
                     'gpa': float(student_data['gpa']) if student_data['gpa'] else 0.0,
+                    'skills': skills_data,  # Save the skills data
                 }
             )
             
@@ -191,7 +203,8 @@ def submit_application(request):
                     company=job_data.get('company', ''),
                     defaults={
                         'description': job_data.get('description', ''),
-                        'required_majors': job_data.get('required_majors', [])
+                        'required_majors': job_data.get('required_majors', []),
+                        'required_skills': job_data.get('required_skills', []),  # Add required skills
                     }
                 )
                 
@@ -221,6 +234,7 @@ def submit_application(request):
             "data": {
                 "student": student_data,
                 "courses": courses_data,
+                "skills": skills_data,  # Include skills in the response
                 "organizations": organizations,
                 "internships": internships,
                 "job_recommendations": formatted_recommendations

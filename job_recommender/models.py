@@ -16,6 +16,9 @@ class Student(models.Model):
     
     # Add a flag to differentiate regular students from alumni
     is_alumni = models.BooleanField(default=False)
+    
+    # Student's skill preferences
+    skills = models.JSONField(default=list, blank=True)  # Store selected skills as JSON array
 
     def __str__(self):
         return f"{self.fullname} {self.last_name} ({self.student_id})"
@@ -94,6 +97,7 @@ class Job(models.Model):
     company = models.CharField(max_length=100)
     description = models.TextField()
     required_majors = models.JSONField(default=list)  # Stored as a JSON array
+    required_skills = models.JSONField(default=list, blank=True)  # Required skills for the job
     
     def __str__(self):
         return f"{self.title} at {self.company}"
