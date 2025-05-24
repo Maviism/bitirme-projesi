@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'job_recommender',
     'accounts',
+    'resume_generator',
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume for {{ job_title }}</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #ddd;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            background-color: #3498db;
+            color: white;
+            padding: 5px 10px;
+            margin-top: 0;
+        }
+        .job-details, .student-info {
+            margin-bottom: 20px;
+        }
+        .job-details p, .student-info p {
+            margin: 5px 0;
+        }
+        strong {
+            font-weight: bold;
+        }
+        ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+        li {
+            margin-bottom: 5px;
+        }
+        .skills-list li {
+            display: inline-block;
+            background-color: #e0e0e0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Resume for {{ student.fullname }} {{ student.last_name }}</h1>
+        <p style="text-align: center;">Applying for: <strong>{{ job_title }}</strong> at <strong>{{ job_company }}</strong></p>
+
+        <div class="section student-info">
+            <h2>Personal Information</h2>
+            <p><strong>Full Name:</strong> {{ student.fullname }} {{ student.last_name }}</p>
+            {# Add more personal details like email, phone, LinkedIn if available in student_data #}
+            <p><strong>Faculty:</strong> {{ student.faculty }}</p>
+            <p><strong>Program:</strong> {{ student.program }}</p>
+            <p><strong>GPA:</strong> {{ student.gpa }}</p>
+        </div>
+
+        <div class="section skills">
+            <h2>Skills</h2>
+            <ul class="skills-list">
+                {% for skill in student.skills %}
+                    <li>{{ skill }}</li>
+                {% empty %}
+                    <li>No skills listed.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section education">
+            <h2>Education & Courses</h2>
+            <p><strong>Program:</strong> {{ student.program }} ({{ student.faculty }})</p>
+            <p><strong>GPA:</strong> {{ student.gpa }}</p>
+            <h3>Relevant Courses:</h3>
+            <ul>
+                {% for course in student.courses %}
+                    <li>{{ course.name }} (Grade: {{ course.grade }})</li>
+                {% empty %}
+                    <li>No courses listed.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="section experience">
+            <h2>Experience</h2>
+            {% if student.internships %}
+                <h3>Internships:</h3>
+                <ul>
+                    {% for internship in student.internships %}
+                        <li>
+                            <strong>{{ internship.position }}</strong> at {{ internship.company }}<br>
+                            <em>{{ internship.description }}</em>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if student.organizations %}
+                <h3>Organizational Experience:</h3>
+                <ul>
+                    {% for org in student.organizations %}
+                        <li>
+                            <strong>{{ org.position }}</strong> at {{ org.name }}<br>
+                            <em>{{ org.description }}</em>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if not student.internships and not student.organizations %}
+                <p>No professional or organizational experience listed.</p>
+            {% endif %}
+        </div>
+
+        <div class="section job-application">
+            <h2>Applying for: {{ job_title }}</h2>
+            <p><strong>Company:</strong> {{ job_company }}</p>
+            <p><strong>Job Description Summary:</strong></p>
+            <p style="white-space: pre-wrap;">{{ job_description|slice:":500" }}{% if job_description|length > 500 %}...{% endif %}</p>
+        </div>
+
+    </div>
+</body>
+</html>

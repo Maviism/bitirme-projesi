@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Edit and Generate Resume{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row mb-4">
+        <div class="col-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'landing_page' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'job_recommendations' %}">Career Form</a></li>
+                    <li class="breadcrumb-item"><a href="javascript:history.back()">Recommendations</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Edit & Generate Resume</li>
+                </ol>
+            </nav>
+            <h1 class="display-5 mb-3">Edit Resume Details for: {{ job_title }}</h1>
+            <p class="lead text-muted">Company: {{ job_company }}</p>
+        </div>
+    </div>
+
+    <form method="POST" id="resumeForm">
+        {% csrf_token %}
+        {# Hidden fields for job details and student ID #}
+        <input type="hidden" name="job_title" value="{{ job_title }}">
+        <input type="hidden" name="job_company" value="{{ job_company }}">
+        <input type="hidden" name="job_description" value="{{ job_description }}">
+        <input type="hidden" name="job_id" value="{{ job_id }}">
+        <input type="hidden" name="student_id" value="{{ student.id }}">
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Job Details (for reference)
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ job_title }}</h5>
+                <h6 class="card-subtitle mb-2 text-muted">{{ job_company }}</h6>
+                <p class="card-text" style="white-space: pre-wrap;">{{ job_description }}</p>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Edit Your Information
+            </div>
+            <div class="card-body">
+                <h5 class="card-title mb-3">Personal Information</h5>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="student_fullname" class="form-label">Full Name</label>
+                        <input type="text" class="form-control" id="student_fullname" name="student_fullname" value="{{ student.fullname }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="student_last_name" class="form-label">Last Name (for filename)</label>
+                        <input type="text" class="form-control" id="student_last_name" name="student_last_name" value="{{ student.last_name }}">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="student_email" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="student_email" name="student_email" value="{{ student.email }}">
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="student_phone" class="form-label">Phone</label>
+                        <input type="tel" class="form-control" id="student_phone" name="student_phone" value="{{ student.phone }}">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="student_linkedin" class="form-label">LinkedIn Profile URL</label>
+                    <input type="url" class="form-control" id="student_linkedin" name="student_linkedin" value="{{ student.linkedin_profile }}">
+                </div>
+                <hr>
+                <h5 class="card-title mb-3">Academic Information (Reference)</h5>
+                <div class="row">
+                     <div class="col-md-4 mb-3">
+                        <label class="form-label">Faculty</label>
+                        <p class="form-control-plaintext">{{ student.faculty }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">Program</label>
+                        <p class="form-control-plaintext">{{ student.program }}</p>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label class="form-label">GPA</label>
+                        <p class="form-control-plaintext">{{ student.gpa }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <label for="student_summary" class="form-label">Professional Summary/Objective</label>
+                    <textarea class="form-control" id="student_summary" name="student_summary" rows="3">{{ student.summary }}</textarea>
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <label for="student_skills" class="form-label">Skills (comma-separated)</label>
+                    <textarea class="form-control" id="student_skills" name="student_skills" rows="3">{{ student.skills }}</textarea>
+                </div>
+
+                <hr>
+                <h5 class="card-title mb-3">Internships (Reference)</h5>
+                {% for internship in student.internships %}
+                    <div class="mb-2">
+                        <strong>{{ internship.position }}</strong> at {{ internship.company }} ({{ internship.start_date }} - {{ internship.end_date|default:"Present" }})<br>
+                        <em>{{ internship.description }}</em>
+                    </div>
+                {% empty %}
+                    <p>No internships on record.</p>
+                {% endfor %}
+
+                <hr>
+                <h5 class="card-title mb-3">Organizational Experience (Reference)</h5>
+                {% for org in student.organizations %}
+                     <div class="mb-2">
+                        <strong>{{ org.position }}</strong> at {{ org.name }} ({{ org.start_date }} - {{ org.end_date|default:"Present" }})<br>
+                        <em>{{ org.description }}</em>
+                    </div>
+                {% empty %}
+                    <p>No organizational experience on record.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                Resume Options
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="resume_template_style" class="form-label">Choose Resume Template:</label>
+                    <select class="form-select" id="resume_template_style" name="resume_template_style">
+                        <option value="ats" selected>ATS Friendly</option>
+                        <option value="modern">Modern</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <button type="submit" class="btn btn-info me-2 mt-3 mb-5" formaction="{% url 'resume_generator:preview_resume' %}" formmethod="POST" id="previewButton">Preview Resume</button>
+        <button type="submit" class="btn btn-success mt-3 mb-5" formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">Generate and Download Resume</button>
+    </form>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Optional: JavaScript to update form action based on button clicked, 
+// if formaction attribute isn't sufficiently supported or for more complex logic.
+// For modern browsers, formaction should work fine.
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('resumeForm');
+    const previewButton = document.getElementById('previewButton');
+    const downloadButton = document.getElementById('downloadButton');
+
+    // Ensure CSRF token is included if submitting via JS (though formaction handles this)
+    // This is more of a fallback or for complex scenarios.
+    // previewButton.addEventListener('click', function(event) {
+    //     form.action = "{% url 'resume_generator:preview_resume' %}";
+    //     // form.submit(); // Not needed if type="submit" and formaction is used
+    // });
+    // downloadButton.addEventListener('click', function(event) {
+    //     form.action = "{% url 'resume_generator:download_resume' %}";
+    //     // form.submit(); // Not needed if type="submit" and formaction is used
+    // });
+});
+</script>
+{% endblock %}

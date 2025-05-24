@@ -161,10 +161,27 @@
                                 ${sourceTags}
                             </div>
                         </div>
+                        <div class="card-footer">
+                            <button class="btn btn-primary btn-sm generate-resume-btn" data-job-id="${job.id}" data-job-title="${job.title}" data-job-company="${job.company}" data-job-description="${job.description}">Generate Resume</button>
+                        </div>
                     </div>
                 `;
                 
                 container.appendChild(col);
+
+                // Attach event listener to the button just created
+                const button = col.querySelector('.generate-resume-btn');
+                if (button) {
+                    button.addEventListener('click', function() {
+                        const jobId = this.dataset.jobId;
+                        const jobTitle = this.dataset.jobTitle;
+                        const jobCompany = this.dataset.jobCompany;
+                        const jobDescription = this.dataset.jobDescription;
+                        // Construct the URL for the resume generator, passing job details as query parameters
+                        const resumeGeneratorUrl = `{% url 'resume_generator:generate_resume' %}?job_id=${jobId}&title=${encodeURIComponent(jobTitle)}&company=${encodeURIComponent(jobCompany)}&description=${encodeURIComponent(jobDescription)}`;
+                        window.location.href = resumeGeneratorUrl;
+                    });
+                }
             }, index * 100); // Stagger the appearance of cards
         });
     }
