@@ -88,12 +88,27 @@
                 <hr>
                 <div class="mb-3">
                     <label for="student_summary" class="form-label">Professional Summary/Objective</label>
+                    <div class="d-flex gap-2 mb-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="generateAISummary()">
+                            <i class="fas fa-magic"></i> Generate AI Summary
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="improveSummary()">
+                            <i class="fas fa-edit"></i> Improve with AI
+                        </button>
+                    </div>
                     <textarea class="form-control" id="student_summary" name="student_summary" rows="3">{{ student.summary }}</textarea>
+                    <small class="form-text text-muted">AI can help generate or improve your professional summary based on your profile and the job description.</small>
                 </div>
                 <hr>
                 <div class="mb-3">
                     <label for="student_skills" class="form-label">Skills (comma-separated)</label>
+                    <div class="d-flex gap-2 mb-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="generateAISkills()">
+                            <i class="fas fa-magic"></i> Suggest AI Skills
+                        </button>
+                    </div>
                     <textarea class="form-control" id="student_skills" name="student_skills" rows="3">{{ student.skills }}</textarea>
+                    <small class="form-text text-muted">AI can suggest relevant skills based on your background and the target job.</small>
                 </div>
 
                 <hr>
@@ -121,6 +136,53 @@
         </div>
 
         <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-robot"></i> AI-Powered Resume Enhancement
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <button type="button" class="btn btn-primary w-100" onclick="generateFullAIResume()">
+                            <i class="fas fa-magic"></i> Generate Complete AI Resume
+                        </button>
+                        <small class="form-text text-muted">Generate all sections using AI based on your profile and job description</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <button type="button" class="btn btn-success w-100" onclick="generateCoverLetter()">
+                            <i class="fas fa-file-alt"></i> Generate Cover Letter
+                        </button>
+                        <small class="form-text text-muted">Create a personalized cover letter for this job</small>
+                    </div>
+                </div>
+                
+                <!-- AI Progress and Results -->
+                <div id="aiProgress" class="d-none">
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    </div>
+                    <div id="aiStatus" class="text-center text-muted">Initializing AI...</div>
+                </div>
+                
+                <!-- Cover Letter Display -->
+                <div id="coverLetterResult" class="d-none">
+                    <hr>
+                    <h6>Generated Cover Letter:</h6>
+                    <div class="border p-3 bg-light">
+                        <div id="coverLetterContent"></div>
+                    </div>
+                    <div class="mt-2">
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="copyCoverLetter()">
+                            <i class="fas fa-copy"></i> Copy to Clipboard
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="downloadCoverLetter()">
+                            <i class="fas fa-download"></i> Download as Text
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
             <div class="card-header">
                 Resume Options
             </div>
@@ -144,24 +206,276 @@
 
 {% block extra_js %}
 <script>
-// Optional: JavaScript to update form action based on button clicked, 
-// if formaction attribute isn't sufficiently supported or for more complex logic.
-// For modern browsers, formaction should work fine.
+// Get CSRF token for AJAX requests
+function getCSRFToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
+// Show/hide AI progress indicator
+function showAIProgress(message = 'Processing with AI...') {
+    const progressDiv = document.getElementById('aiProgress');
+    const statusDiv = document.getElementById('aiStatus');
+    const progressBar = progressDiv.querySelector('.progress-bar');
+    
+    progressDiv.classList.remove('d-none');
+    statusDiv.textContent = message;
+    progressBar.style.width = '30%';
+}
+
+function hideAIProgress() {
+    const progressDiv = document.getElementById('aiProgress');
+    progressDiv.classList.add('d-none');
+}
+
+function updateAIProgress(percentage, message) {
+    const statusDiv = document.getElementById('aiStatus');
+    const progressBar = document.querySelector('.progress-bar');
+    
+    progressBar.style.width = percentage + '%';
+    statusDiv.textContent = message;
+}
+
+// Generate AI Summary
+async function generateAISummary() {
+    try {
+        showAIProgress('Generating professional summary...');
+        updateAIProgress(50, 'Analyzing your profile...');
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCSRFToken());
+        formData.append('student_id', document.querySelector('[name=student_id]').value);
+        formData.append('job_description', document.querySelector('[name=job_description]').value);
+        
+        const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        updateAIProgress(80, 'Generating content...');
+        const data = await response.json();
+        
+        if (data.success && data.content.summary) {
+            document.getElementById('student_summary').value = data.content.summary;
+            updateAIProgress(100, 'Summary generated successfully!');
+            setTimeout(() => hideAIProgress(), 2000);
+        } else {
+            throw new Error(data.error || 'Failed to generate summary');
+        }
+    } catch (error) {
+        hideAIProgress();
+        alert('Error generating AI summary: ' + error.message);
+    }
+}
+
+// Improve Summary with AI
+async function improveSummary() {
+    try {
+        const currentSummary = document.getElementById('student_summary').value;
+        if (!currentSummary.trim()) {
+            alert('Please enter a summary first, then use AI to improve it.');
+            return;
+        }
+        
+        showAIProgress('Improving your summary...');
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCSRFToken());
+        formData.append('section_content', currentSummary);
+        formData.append('section_type', 'summary');
+        formData.append('job_context', document.querySelector('[name=job_description]').value);
+        
+        updateAIProgress(60, 'Enhancing content...');
+        
+        const response = await fetch('{% url "resume_generator:ai_improve_section" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('student_summary').value = data.improved_content;
+            updateAIProgress(100, 'Summary improved successfully!');
+            setTimeout(() => hideAIProgress(), 2000);
+        } else {
+            throw new Error(data.error || 'Failed to improve summary');
+        }
+    } catch (error) {
+        hideAIProgress();
+        alert('Error improving summary: ' + error.message);
+    }
+}
+
+// Generate AI Skills
+async function generateAISkills() {
+    try {
+        showAIProgress('Suggesting relevant skills...');
+        updateAIProgress(50, 'Analyzing job requirements...');
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCSRFToken());
+        formData.append('student_id', document.querySelector('[name=student_id]').value);
+        formData.append('job_description', document.querySelector('[name=job_description]').value);
+        
+        const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        updateAIProgress(80, 'Generating skills...');
+        const data = await response.json();
+        
+        if (data.success && data.content.skills) {
+            const currentSkills = document.getElementById('student_skills').value;
+            const newSkills = Array.isArray(data.content.skills) ? data.content.skills.join(', ') : data.content.skills;
+            
+            // Merge with existing skills if any
+            if (currentSkills.trim()) {
+                document.getElementById('student_skills').value = currentSkills + ', ' + newSkills;
+            } else {
+                document.getElementById('student_skills').value = newSkills;
+            }
+            
+            updateAIProgress(100, 'Skills suggested successfully!');
+            setTimeout(() => hideAIProgress(), 2000);
+        } else {
+            throw new Error(data.error || 'Failed to generate skills');
+        }
+    } catch (error) {
+        hideAIProgress();
+        alert('Error generating AI skills: ' + error.message);
+    }
+}
+
+// Generate Full AI Resume
+async function generateFullAIResume() {
+    try {
+        showAIProgress('Generating complete AI resume...');
+        updateAIProgress(30, 'Analyzing your profile...');
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCSRFToken());
+        formData.append('student_id', document.querySelector('[name=student_id]').value);
+        formData.append('job_description', document.querySelector('[name=job_description]').value);
+        
+        updateAIProgress(60, 'Generating all sections...');
+        
+        const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.content) {
+            updateAIProgress(90, 'Populating form fields...');
+            
+            // Update form fields with AI-generated content
+            if (data.content.summary) {
+                document.getElementById('student_summary').value = data.content.summary;
+            }
+            if (data.content.skills) {
+                const skills = Array.isArray(data.content.skills) ? data.content.skills.join(', ') : data.content.skills;
+                document.getElementById('student_skills').value = skills;
+            }
+            
+            updateAIProgress(100, 'Resume generated successfully!');
+            setTimeout(() => hideAIProgress(), 2000);
+            
+            alert('AI resume generation complete! Review the generated content and make any necessary adjustments.');
+        } else {
+            throw new Error(data.error || 'Failed to generate resume');
+        }
+    } catch (error) {
+        hideAIProgress();
+        alert('Error generating AI resume: ' + error.message);
+    }
+}
+
+// Generate Cover Letter
+async function generateCoverLetter() {
+    try {
+        showAIProgress('Generating personalized cover letter...');
+        updateAIProgress(40, 'Analyzing job requirements...');
+        
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCSRFToken());
+        formData.append('student_id', document.querySelector('[name=student_id]').value);
+        formData.append('job_title', document.querySelector('[name=job_title]').value);
+        formData.append('job_company', document.querySelector('[name=job_company]').value);
+        formData.append('job_description', document.querySelector('[name=job_description]').value);
+        
+        updateAIProgress(70, 'Crafting cover letter...');
+        
+        const response = await fetch('{% url "resume_generator:ai_cover_letter" %}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.cover_letter) {
+            updateAIProgress(100, 'Cover letter generated!');
+            
+            // Display the cover letter
+            document.getElementById('coverLetterContent').innerHTML = data.cover_letter.replace(/\n/g, '<br>');
+            document.getElementById('coverLetterResult').classList.remove('d-none');
+            
+            setTimeout(() => hideAIProgress(), 1000);
+        } else {
+            throw new Error(data.error || 'Failed to generate cover letter');
+        }
+    } catch (error) {
+        hideAIProgress();
+        alert('Error generating cover letter: ' + error.message);
+    }
+}
+
+// Copy Cover Letter to Clipboard
+function copyCoverLetter() {
+    const content = document.getElementById('coverLetterContent').textContent;
+    navigator.clipboard.writeText(content).then(() => {
+        alert('Cover letter copied to clipboard!');
+    }).catch(err => {
+        alert('Failed to copy to clipboard');
+    });
+}
+
+// Download Cover Letter as Text File
+function downloadCoverLetter() {
+    const content = document.getElementById('coverLetterContent').textContent;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    
+    const jobTitle = document.querySelector('[name=job_title]').value || 'Job';
+    const jobCompany = document.querySelector('[name=job_company]').value || 'Company';
+    const studentName = document.getElementById('student_last_name').value || 'Student';
+    
+    a.href = url;
+    a.download = `cover_letter_${studentName}_${jobCompany}_${jobTitle}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+}
+
+// Initialize page
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('resumeForm');
     const previewButton = document.getElementById('previewButton');
     const downloadButton = document.getElementById('downloadButton');
 
-    // Ensure CSRF token is included if submitting via JS (though formaction handles this)
-    // This is more of a fallback or for complex scenarios.
-    // previewButton.addEventListener('click', function(event) {
-    //     form.action = "{% url 'resume_generator:preview_resume' %}";
-    //     // form.submit(); // Not needed if type="submit" and formaction is used
-    // });
-    // downloadButton.addEventListener('click', function(event) {
-    //     form.action = "{% url 'resume_generator:download_resume' %}";
-    //     // form.submit(); // Not needed if type="submit" and formaction is used
-    // });
+    // Add loading states for form submission buttons
+    previewButton.addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
+        this.disabled = true;
+    });
+    
+    downloadButton.addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+        this.disabled = true;
+    });
 });
 </script>
 {% endblock %}

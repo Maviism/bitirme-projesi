@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'job_recommender',
     'accounts',
     'resume_generator',
+    'utils',
 ]
 
 MIDDLEWARE = [
@@ -141,3 +142,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'landing_page'
 LOGIN_URL = 'login'
+
+# LLM Configuration
+DEFAULT_LLM_PROVIDER = os.environ.get('DEFAULT_LLM_PROVIDER', 'openai')
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# Cache configuration for LLM responses
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'llm-cache',
+        'TIMEOUT': 3600,  # 1 hour
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}

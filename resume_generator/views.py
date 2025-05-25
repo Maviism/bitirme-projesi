@@ -1,9 +1,14 @@
 from django.shortcuts import render
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse, JsonResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML
 from job_recommender.models import Student, Course, Internship, Organization # Assuming models are in job_recommender
 from django.shortcuts import get_object_or_404 # For fetching student
+from utils.llm_utils import get_llm_instance, cache_llm_response
+import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 # A placeholder function to simulate getting a student.
 # In a real app, you\'d get this from the logged-in user.
@@ -184,3 +189,150 @@ def preview_resume_view(request: HttpRequest):
     
     # Return as HTML response for preview
     return HttpResponse(html_string)
+
+
+@cache_llm_response("resume_content")
+def generate_ai_resume_content(request: HttpRequest):
+    """Generate AI-enhanced resume content"""
+    if request.method != 'POST':
+        return HttpResponse("Invalid request method.", status=405)
+    
+    try:
+        # Get student data
+        student_id = request.POST.get('student_id')
+        if not student_id:
+            return JsonResponse({'error': 'Student ID missing'}, status=400)
+        
+        student_obj = get_object_or_404(Student, pk=student_id)
+        
+        # Prepare user data for LLM
+        user_data = {
+            'personal_info': {
+                'name': f"{student_obj.fullname} {student_obj.last_name}",
+                'faculty': student_obj.faculty,
+                'program': student_obj.program,
+                'gpa': str(student_obj.gpa)
+            },
+            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills],
+            'courses': [
+                {
+                    'name': course.course_name,
+                    'grade': getattr(course, 'grade', 'N/A')
+                } for course in Course.objects.filter(student=student_obj)
+            ],
+            'internships': [
+                {
+                    'company': internship.company_name,
+                    'position': getattr(internship, 'position', 'Intern'),
+                    'duration': getattr(internship, 'duration', 'N/A'),
+                    'description': getattr(internship, 'description', '')
+                } for internship in Internship.objects.filter(student=student_obj)
+            ],
+            'organizations': [
+                {
+                    'name': org.organization_name,
+                    'role': getattr(org, 'role', 'Member')
+                } for org in Organization.objects.filter(student=student_obj)
+            ]
+        }
+        
+        # Get job description if provided
+        job_description = request.POST.get('job_description', '')
+        
+        # Get LLM instance and generate content
+        llm = get_llm_instance()
+        ai_content = llm.generate_resume_content(user_data, job_description)
+        
+        return JsonResponse({
+            'success': True,
+            'content': ai_content
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating AI resume content: {e}")
+        return JsonResponse({
+            'error': 'Failed to generate AI content',
+            'details': str(e)
+        }, status=500)
+
+
+def improve_resume_section(request: HttpRequest):
+    """Improve a specific resume section using AI"""
+    if request.method != 'POST':
+        return HttpResponse("Invalid request method.", status=405)
+    
+    try:
+        section_content = request.POST.get('section_content', '')
+        section_type = request.POST.get('section_type', '')
+        job_context = request.POST.get('job_context', '')
+        
+        if not section_content or not section_type:
+            return JsonResponse({'error': 'Missing required fields'}, status=400)
+        
+        # Get LLM instance and improve section
+        llm = get_llm_instance()
+        improved_content = llm.improve_resume_section(section_content, section_type, job_context)
+        
+        return JsonResponse({
+            'success': True,
+            'improved_content': improved_content
+        })
+        
+    except Exception as e:
+        logger.error(f"Error improving resume section: {e}")
+        return JsonResponse({
+            'error': 'Failed to improve section',
+            'details': str(e)
+        }, status=500)
+
+
+def generate_cover_letter(request: HttpRequest):
+    """Generate a cover letter using AI"""
+    if request.method != 'POST':
+        return HttpResponse("Invalid request method.", status=405)
+    
+    try:
+        # Get student data
+        student_id = request.POST.get('student_id')
+        if not student_id:
+            return JsonResponse({'error': 'Student ID missing'}, status=400)
+        
+        student_obj = get_object_or_404(Student, pk=student_id)
+        
+        # Prepare user data
+        user_data = {
+            'name': f"{student_obj.fullname} {student_obj.last_name}",
+            'faculty': student_obj.faculty,
+            'program': student_obj.program,
+            'gpa': str(student_obj.gpa),
+            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills],
+            'experience': [
+                {
+                    'company': internship.company_name,
+                    'position': getattr(internship, 'position', 'Intern')
+                } for internship in Internship.objects.filter(student=student_obj)
+            ]
+        }
+        
+        # Get job data
+        job_data = {
+            'title': request.POST.get('job_title', ''),
+            'company': request.POST.get('job_company', ''),
+            'description': request.POST.get('job_description', '')
+        }
+        
+        # Generate cover letter
+        llm = get_llm_instance()
+        cover_letter = llm.generate_cover_letter(user_data, job_data)
+        
+        return JsonResponse({
+            'success': True,
+            'cover_letter': cover_letter
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating cover letter: {e}")
+        return JsonResponse({
+            'error': 'Failed to generate cover letter',
+            'details': str(e)
+        }, status=500)
