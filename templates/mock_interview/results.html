@@ -1,0 +1,444 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Interview Results - {{ session.job_position }}{% endblock %}
+
+{% block extra_css %}
+<!-- Fo                <div class="progress-custom mb-3">
+                    <div class="progress-bar-custom bg-warning" 
+                         data-score="{{ feedback.technical_score|default:0 }}"></div>
+                </div>esome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+<style>
+    .results-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    .score-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 20px;
+        transition: transform 0.3s;
+    }
+    .score-card:hover {
+        transform: translateY(-2px);
+    }
+    .score-circle {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0 auto 15px;
+    }
+    .score-excellent { background: linear-gradient(45deg, #28a745, #20c997); color: white; }
+    .score-good { background: linear-gradient(45deg, #17a2b8, #20c997); color: white; }
+    .score-fair { background: linear-gradient(45deg, #ffc107, #fd7e14); color: white; }
+    .score-poor { background: linear-gradient(45deg, #dc3545, #e83e8c); color: white; }
+    
+    .progress-custom {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+    }
+    .progress-bar-custom {
+        border-radius: 4px;
+        transition: width 0.8s ease;
+    }
+    
+    .question-card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+        border-radius: 10px;
+    }
+    .question-header {
+        background: #f8f9fa;
+        border-radius: 10px 10px 0 0;
+        padding: 15px 20px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .feedback-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+    }
+    
+    .strength-item {
+        background: #d4edda;
+        color: #155724;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin: 5px;
+        display: inline-block;
+    }
+    
+    .improvement-item {
+        background: #fff3cd;
+        color: #856404;
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        margin: 5px;
+        display: inline-block;
+    }
+    
+    .action-buttons {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Results Header -->
+    <div class="results-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">Interview Results</h1>
+                <p class="mb-2">{{ session.job_position }} - {{ session.get_difficulty_level_display }} Level</p>
+                <small class="opacity-75">
+                    Completed on {{ session.completed_at|date:"F d, Y \a\t g:i A" }}
+                    | Duration: {{ session.duration_minutes }} minutes
+                </small>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if feedback %}
+                <div class="score-circle 
+                    {% if feedback.overall_score >= 8 %}score-excellent
+                    {% elif feedback.overall_score >= 6 %}score-good
+                    {% elif feedback.overall_score >= 4 %}score-fair
+                    {% else %}score-poor{% endif %}">
+                    {{ feedback.overall_score|floatformat:1 }}/10
+                </div>
+                <p class="mb-0">Overall Score</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Score Breakdown -->
+    {% if feedback %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Performance Breakdown</h4>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="score-card text-center">
+                <h6 class="text-muted mb-3">Communication</h6>
+                <div class="progress-custom mb-3">
+                    <div class="progress-bar-custom bg-info" 
+                         data-score="{{ feedback.communication_score|default:0 }}"></div>
+                </div>
+                <h5 class="mb-0 text-info">{{ feedback.communication_score|default:0|floatformat:1 }}/10</h5>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="score-card text-center">
+                <h6 class="text-muted mb-3">Technical Knowledge</h6>
+                <div class="progress-custom mb-3">
+                    <div class="progress-bar-custom bg-warning" 
+                         data-score="{{ feedback.technical_score|default:0 }}"></div>
+                </div>
+                <h5 class="mb-0 text-warning">{{ feedback.technical_score|default:0|floatformat:1 }}/10</h5>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="score-card text-center">
+                <h6 class="text-muted mb-3">Confidence</h6>
+                <div class="progress-custom mb-3">
+                    <div class="progress-bar-custom bg-success" 
+                         data-score="{{ feedback.confidence_score|default:0 }}"></div>
+                </div>
+                <h5 class="mb-0 text-success">{{ feedback.confidence_score|default:0|floatformat:1 }}/10</h5>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Feedback Section -->
+    {% if feedback %}
+    <div class="row">
+        <!-- Strengths -->
+        <div class="col-md-6 mb-4">
+            <div class="feedback-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-star text-success me-2"></i>Your Strengths
+                </h5>
+                {% if feedback.strengths %}
+                    {% for strength in feedback.strengths %}
+                        <span class="strength-item">{{ strength }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Keep practicing to identify your strengths!</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Areas for Improvement -->
+        <div class="col-md-6 mb-4">
+            <div class="feedback-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-arrow-up text-warning me-2"></i>Areas for Improvement
+                </h5>
+                {% if feedback.areas_for_improvement %}
+                    {% for improvement in feedback.areas_for_improvement %}
+                        <span class="improvement-item">{{ improvement }}</span>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Great job! No specific areas for improvement identified.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Detailed Feedback -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="feedback-section">
+                <h5 class="mb-3">
+                    <i class="fas fa-comment-alt text-primary me-2"></i>Detailed Feedback
+                </h5>
+                <div class="text-muted">
+                    {{ feedback.detailed_feedback|linebreaks }}
+                </div>
+                
+                {% if feedback.recommendations %}
+                <div class="mt-3">
+                    <h6>Recommendations:</h6>
+                    <div class="text-muted">
+                        {{ feedback.recommendations|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Question-by-Question Analysis -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h4 class="mb-3">Question-by-Question Analysis</h4>
+            
+            {% for question in questions %}
+            <div class="question-card">
+                <div class="question-header">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">Question {{ question.question_order }}</h6>
+                            <p class="mb-0 text-muted">{{ question.question_text }}</p>
+                        </div>
+                        {% if question.score %}
+                        <div class="text-end">
+                            <span class="badge 
+                                {% if question.score >= 8 %}bg-success
+                                {% elif question.score >= 6 %}bg-info
+                                {% elif question.score >= 4 %}bg-warning
+                                {% else %}bg-danger{% endif %}">
+                                {{ question.score|floatformat:1 }}/10
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    {% if question.response_transcript %}
+                    <div class="mb-3">
+                        <h6 class="text-muted mb-2">Your Response:</h6>
+                        <p class="bg-light p-3 rounded">{{ question.response_transcript }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if question.response_analysis %}
+                    <div class="row">
+                        {% if question.response_analysis.content_quality %}
+                        <div class="col-md-4">
+                            <small class="text-muted">Content Quality</small>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-primary" 
+                                     data-score="{{ question.response_analysis.content_quality|floatformat:0 }}0"></div>
+                            </div>
+                            <small>{{ question.response_analysis.content_quality|floatformat:1 }}/10</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if question.response_analysis.communication_clarity %}
+                        <div class="col-md-4">
+                            <small class="text-muted">Clarity</small>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-info" 
+                                     data-score="{{ question.response_analysis.communication_clarity|floatformat:0 }}0"></div>
+                            </div>
+                            <small>{{ question.response_analysis.communication_clarity|floatformat:1 }}/10</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if question.response_analysis.confidence_level %}
+                        <div class="col-md-4">
+                            <small class="text-muted">Confidence</small>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar bg-success" 
+                                     data-score="{{ question.response_analysis.confidence_level|floatformat:0 }}0"></div>
+                            </div>
+                            <small>{{ question.response_analysis.confidence_level|floatformat:1 }}/10</small>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if question.response_analysis.suggestions %}
+                    <div class="mt-3">
+                        <h6 class="small text-muted mb-2">Suggestions:</h6>
+                        <ul class="small text-muted mb-0">
+                            {% for suggestion in question.response_analysis.suggestions %}
+                            <li>{{ suggestion }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row">
+        <div class="col-12">
+            <div class="action-buttons">
+                <h5 class="mb-3">What's Next?</h5>
+                <div class="d-flex flex-wrap justify-content-center gap-3">
+                    <a href="{% url 'mock_interview:create_interview' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-redo me-2"></i>Take Another Interview
+                    </a>
+                    <a href="{% url 'mock_interview:dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-tachometer-alt me-2"></i>Back to Dashboard
+                    </a>
+                    <button class="btn btn-outline-info btn-lg" onclick="shareResults()">
+                        <i class="fas fa-share me-2"></i>Share Results
+                    </button>
+                    <button class="btn btn-outline-success btn-lg" onclick="downloadReport()">
+                        <i class="fas fa-download me-2"></i>Download Report
+                    </button>
+                </div>
+                
+                <div class="mt-4">
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-lightbulb me-1"></i>
+                        Tip: Regular practice improves your interview performance. Schedule weekly mock interviews for best results!
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Set progress bar widths from data attributes
+    // Initially set width to 0
+    $('.progress-bar-custom, .progress-bar').css('width', '0%');
+    
+    // Animate progress bars
+    setTimeout(function() {
+        // Performance breakdown bars
+        $('.progress-bar-custom').each(function() {
+            const score = $(this).data('score');
+            $(this).animate({'width': score + '0%'}, 1000);
+        });
+        
+        // Question analysis bars
+        $('.progress-bar').not('.progress-bar-custom').each(function() {
+            const score = $(this).data('score');
+            $(this).animate({'width': score + '%'}, 1000);
+        });
+    }, 500);
+    
+    // Initialize tooltips if needed
+    $('[data-bs-toggle="tooltip"]').tooltip();
+});
+
+function shareResults() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'My Interview Results',
+            text: `I just completed a mock interview for {{ session.job_position }} and scored {{ feedback.overall_score|default:0|floatformat:1 }}/10!`,
+            url: window.location.href
+        }).catch(console.error);
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        const url = window.location.href;
+        navigator.clipboard.writeText(url).then(function() {
+            showNotification('Results link copied to clipboard!', 'success');
+        }, function() {
+            showNotification('Could not copy link', 'error');
+        });
+    }
+}
+
+function downloadReport() {
+    // Create a simple report (in a real app, this would generate a PDF)
+    const reportData = {
+        jobPosition: '{{ session.job_position }}',
+        date: '{{ session.completed_at|date:"Y-m-d" }}',
+        overallScore: '{{ feedback.overall_score|default:0 }}',
+        communicationScore: '{{ feedback.communication_score|default:0 }}',
+        technicalScore: '{{ feedback.technical_score|default:0 }}',
+        confidenceScore: '{{ feedback.confidence_score|default:0 }}'
+    };
+    
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(reportData, null, 2));
+    const downloadElement = document.createElement('a');
+    downloadElement.setAttribute("href", dataStr);
+    downloadElement.setAttribute("download", `interview_report_{{ session.id }}.json`);
+    document.body.appendChild(downloadElement);
+    downloadElement.click();
+    downloadElement.remove();
+    
+    showNotification('Report downloaded successfully!', 'success');
+}
+
+function showNotification(message, type) {
+    const alertClass = type === 'error' ? 'alert-danger' : 
+                      type === 'success' ? 'alert-success' : 
+                      type === 'info' ? 'alert-info' : 'alert-warning';
+    
+    const notification = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(notification);
+    
+    setTimeout(() => {
+        notification.alert('close');
+    }, 3000);
+}
+</script>
+{% endblock %}

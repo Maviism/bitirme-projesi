@@ -4,6 +4,7 @@ certifi==2025.1.31
 cffi==1.17.1
 charset-normalizer==3.4.1
 cssselect2==0.8.0
+deepgram-sdk==3.7.2
 Django==5.2
 filelock==3.18.0
 fonttools==4.58.0

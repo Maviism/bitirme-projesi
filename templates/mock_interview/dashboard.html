@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mock Interview Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+    .interview-card {
+        transition: transform 0.2s;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .interview-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+    }
+    .btn-interview {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+    .btn-interview:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 4px 12px;
+        border-radius: 15px;
+    }
+    .status-pending { background-color: #ffc107; color: #000; }
+    .status-in_progress { background-color: #17a2b8; color: #fff; }
+    .status-completed { background-color: #28a745; color: #fff; }
+    .status-cancelled { background-color: #dc3545; color: #fff; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2 mb-0">Mock Interview Dashboard</h1>
+            <p class="text-muted">Practice your interview skills with AI-powered mock interviews</p>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ total_sessions }}</h3>
+                    <p class="mb-0">Total Interviews</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{{ completed_sessions }}</h3>
+                    <p class="mb-0">Completed</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stats-card">
+                <div class="card-body text-center">
+                    <h3 class="mb-1">{% if avg_score %}{{ avg_score|floatformat:1 }}{% else %}0{% endif %}</h3>
+                    <p class="mb-0">Avg Score</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body text-center py-4">
+                    <h5 class="card-title">Ready for your next interview?</h5>
+                    <p class="card-text text-muted">Start a new mock interview session with AI-powered questions</p>
+                    <a href="{% url 'mock_interview:create_interview' %}" class="btn btn-interview">
+                        <i class="fas fa-microphone me-2"></i>Start New Interview
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Interview Sessions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4>Recent Interview Sessions</h4>
+                <a href="{% url 'mock_interview:interview_history' %}" class="btn btn-outline-primary btn-sm">
+                    View All History
+                </a>
+            </div>
+
+            {% if sessions %}
+                <div class="row">
+                    {% for session in sessions %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card interview-card h-100">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title mb-0">{{ session.job_position }}</h6>
+                                    <span class="badge status-{{ session.status }} status-badge">
+                                        {{ session.get_status_display }}
+                                    </span>
+                                </div>
+                                
+                                <p class="card-text text-muted small mb-2">
+                                    <i class="fas fa-calendar me-1"></i>{{ session.created_at|date:"M d, Y" }}
+                                    <br>
+                                    <i class="fas fa-clock me-1"></i>{{ session.duration_minutes }} minutes
+                                    <br>
+                                    <i class="fas fa-layer-group me-1"></i>{{ session.get_difficulty_level_display }}
+                                </p>
+
+                                {% if session.status == 'completed' %}
+                                    {% if session.feedback %}
+                                        <div class="mb-2">
+                                            <small class="text-muted">Overall Score:</small>
+                                            <!-- <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-success" 
+                                                     style="width: {{ session.feedback.overall_score|floatformat:1|floatformat:'g'|floatformat:0 }}%"></div>
+                                            </div> -->
+                                            <small class="text-success">{{ session.feedback.overall_score|floatformat:1 }}/10</small>
+                                        </div>
+                                    {% endif %}
+                                    <a href="{% url 'mock_interview:interview_results' session.id %}" 
+                                       class="btn btn-outline-success btn-sm">
+                                        <i class="fas fa-chart-line me-1"></i>View Results
+                                    </a>
+                                {% elif session.status == 'in_progress' %}
+                                    <a href="{% url 'mock_interview:interview_room' session.id %}" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fas fa-play me-1"></i>Continue
+                                    </a>
+                                {% elif session.status == 'pending' %}
+                                    <a href="{% url 'mock_interview:interview_room' session.id %}" 
+                                       class="btn btn-success btn-sm">
+                                        <i class="fas fa-play me-1"></i>Start
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Pagination -->
+                {% if sessions.has_other_pages %}
+                <nav aria-label="Interview sessions pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if sessions.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1">&laquo; First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ sessions.previous_page_number }}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in sessions.paginator.page_range %}
+                            {% if sessions.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > sessions.number|add:'-3' and num < sessions.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if sessions.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ sessions.next_page_number }}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ sessions.paginator.num_pages }}">Last &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-microphone-alt fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No interview sessions yet</h5>
+                    <p class="text-muted">Create your first mock interview to get started!</p>
+                    <a href="{% url 'mock_interview:create_interview' %}" class="btn btn-interview">
+                        Start Your First Interview
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Available Templates Preview -->
+    {% if templates %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h4 class="mb-3">Available Interview Templates</h4>
+            <div class="row">
+                {% for template in templates|slice:":3" %}
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">{{ template.title }}</h6>
+                            <p class="card-text text-muted small">
+                                {{ template.job_position }} - {{ template.get_difficulty_level_display }}
+                                <br>
+                                <i class="fas fa-clock me-1"></i>~{{ template.estimated_duration }} minutes
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh for in-progress sessions using vanilla JavaScript
+document.addEventListener('DOMContentLoaded', function() {
+    const inProgressSessions = document.querySelectorAll('.status-in_progress').length;
+    if (inProgressSessions > 0) {
+        setTimeout(function() {
+            location.reload();
+        }, 30000); // Refresh every 30 seconds
+    }
+});
+</script>
+{% endblock %}

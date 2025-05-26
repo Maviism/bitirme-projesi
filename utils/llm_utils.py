@@ -360,26 +360,6 @@ class LLMUtils:
         return self.provider.generate_text(prompt)
 
 
-# Convenience function to get LLM instance
-def get_llm_instance(provider: str = None) -> LLMUtils:
-    """
-    Get LLM instance with the specified provider
-    
-    Args:
-        provider: Provider name ('openai' or 'gemini')
-                 If None, will use settings from Django configuration
-    """
-    if provider is None:
-        # Try to get from Django settings
-        try:
-            from django.conf import settings
-            provider = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'openai')
-        except:
-            provider = 'openai'  # Default fallback
-    
-    return LLMUtils(provider=provider)
-
-
 # Decorator for caching LLM responses (optional)
 def cache_llm_response(cache_key_prefix: str = "llm"):
     """
@@ -415,3 +395,311 @@ def cache_llm_response(cache_key_prefix: str = "llm"):
         
         return wrapper
     return decorator
+
+
+# Mock Interview specific functions
+
+@cache_llm_response()
+def generate_interview_questions(job_position: str, difficulty_level: str = "intermediate", num_questions: int = 5) -> List[Dict]:
+    """
+    Generate interview questions for a specific job position and difficulty level
+    """
+    try:
+        provider = get_llm_provider()
+        
+        prompt = f"""
+        Generate {num_questions} interview questions for a {job_position} position at {difficulty_level} level.
+        
+        Requirements:
+        - Questions should be relevant to the job position
+        - Appropriate for {difficulty_level} level candidates
+        - Mix of behavioral, technical, and situational questions
+        - Each question should be clear and well-structured
+        
+        Return a JSON array where each question has:
+        - "text": The question text
+        - "type": "behavioral", "technical", or "situational"
+        - "expected_duration": Expected response time in seconds
+        - "key_points": Array of key points to look for in answers
+        
+        Job Position: {job_position}
+        Difficulty: {difficulty_level}
+        Number of Questions: {num_questions}
+        """
+        
+        schema = {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "type": {"type": "string", "enum": ["behavioral", "technical", "situational"]},
+                    "expected_duration": {"type": "integer"},
+                    "key_points": {"type": "array", "items": {"type": "string"}}
+                },
+                "required": ["text", "type", "expected_duration", "key_points"]
+            }
+        }
+        
+        response = provider.generate_json(prompt, schema)
+        
+        if isinstance(response, list):
+            return response
+        elif isinstance(response, dict) and 'questions' in response:
+            return response['questions']
+        else:
+            logger.error(f"Unexpected response format: {response}")
+            return _get_fallback_questions(job_position, difficulty_level, num_questions)
+            
+    except Exception as e:
+        logger.error(f"Error generating interview questions: {str(e)}")
+        return _get_fallback_questions(job_position, difficulty_level, num_questions)
+
+def _get_fallback_questions(job_position: str, difficulty_level: str, num_questions: int) -> List[Dict]:
+    """Fallback questions when LLM fails"""
+    fallback_questions = [
+        {
+            "text": f"Tell me about yourself and why you're interested in this {job_position} role.",
+            "type": "behavioral",
+            "expected_duration": 120,
+            "key_points": ["relevant experience", "passion for role", "clear communication"]
+        },
+        {
+            "text": f"What relevant experience do you have for this {job_position} position?",
+            "type": "technical",
+            "expected_duration": 180,
+            "key_points": ["specific examples", "technical skills", "achievements"]
+        },
+        {
+            "text": "Describe a challenging situation you faced at work and how you handled it.",
+            "type": "behavioral",
+            "expected_duration": 150,
+            "key_points": ["problem-solving", "resilience", "learning from challenges"]
+        },
+        {
+            "text": "Where do you see yourself in 5 years?",
+            "type": "behavioral",
+            "expected_duration": 90,
+            "key_points": ["career goals", "growth mindset", "alignment with role"]
+        },
+        {
+            "text": f"What do you think are the most important skills for a {job_position}?",
+            "type": "technical",
+            "expected_duration": 120,
+            "key_points": ["industry knowledge", "relevant skills", "understanding of role"]
+        }
+    ]
+    
+    return fallback_questions[:num_questions]
+
+@cache_llm_response()
+def analyze_interview_response(question: str, response: str, job_position: str) -> Dict:
+    """
+    Analyze an interview response and provide detailed feedback
+    """
+    try:
+        provider = get_llm_provider()
+        
+        prompt = f"""
+        Analyze this interview response and provide detailed feedback.
+        
+        Job Position: {job_position}
+        Question: {question}
+        Candidate Response: {response}
+        
+        Analyze the response for:
+        1. Content Quality (0-10): Relevance, depth, and accuracy of the response
+        2. Communication Clarity (0-10): How clear and well-structured the response is
+        3. Technical Accuracy (0-10): Technical correctness (if applicable)
+        4. Confidence Level (0-10): How confident the candidate sounds
+        5. Overall Score (0-10): Overall quality of the response
+        
+        Also provide:
+        - Strengths: What the candidate did well
+        - Areas for Improvement: Specific areas to work on
+        - Suggestions: Actionable advice for improvement
+        - Key Missing Elements: Important points not addressed
+        
+        Return a JSON object with the analysis.
+        """
+        
+        schema = {
+            "type": "object",
+            "properties": {
+                "content_quality": {"type": "number", "minimum": 0, "maximum": 10},
+                "communication_clarity": {"type": "number", "minimum": 0, "maximum": 10},
+                "technical_accuracy": {"type": "number", "minimum": 0, "maximum": 10},
+                "confidence_level": {"type": "number", "minimum": 0, "maximum": 10},
+                "overall_score": {"type": "number", "minimum": 0, "maximum": 10},
+                "strengths": {"type": "array", "items": {"type": "string"}},
+                "areas_for_improvement": {"type": "array", "items": {"type": "string"}},
+                "suggestions": {"type": "array", "items": {"type": "string"}},
+                "key_missing_elements": {"type": "array", "items": {"type": "string"}}
+            },
+            "required": ["content_quality", "communication_clarity", "technical_accuracy", 
+                        "confidence_level", "overall_score", "strengths", "areas_for_improvement", 
+                        "suggestions", "key_missing_elements"]
+        }
+        
+        analysis = provider.generate_json(prompt, schema)
+        
+        # Validate scores are in range
+        for score_key in ["content_quality", "communication_clarity", "technical_accuracy", 
+                         "confidence_level", "overall_score"]:
+            if score_key in analysis:
+                analysis[score_key] = max(0, min(10, analysis[score_key]))
+        
+        return analysis
+        
+    except Exception as e:
+        logger.error(f"Error analyzing interview response: {str(e)}")
+        return _get_fallback_analysis(response)
+
+def _get_fallback_analysis(response: str) -> Dict:
+    """Fallback analysis when LLM fails"""
+    word_count = len(response.split())
+    
+    # Basic scoring based on response length and structure
+    content_score = min(10, max(2, word_count / 10))
+    clarity_score = 7.0 if word_count > 20 else 4.0
+    technical_score = 6.0  # Neutral score
+    confidence_score = 8.0 if "I" in response and len(response) > 50 else 5.0
+    overall_score = (content_score + clarity_score + technical_score + confidence_score) / 4
+    
+    return {
+        "content_quality": content_score,
+        "communication_clarity": clarity_score,
+        "technical_accuracy": technical_score,
+        "confidence_level": confidence_score,
+        "overall_score": overall_score,
+        "strengths": ["Provided a response", "Engaged with the question"],
+        "areas_for_improvement": ["Provide more detailed examples", "Structure responses more clearly"],
+        "suggestions": ["Practice answering with specific examples", "Work on organizing thoughts before speaking"],
+        "key_missing_elements": ["Specific examples", "Quantifiable achievements"]
+    }
+
+@cache_llm_response()
+def generate_interview_feedback(session_data: Dict) -> Dict:
+    """
+    Generate comprehensive feedback for an entire interview session
+    """
+    try:
+        provider = get_llm_provider()
+        
+        job_position = session_data.get('job_position', '')
+        difficulty_level = session_data.get('difficulty_level', 'intermediate')
+        questions = session_data.get('questions', [])
+        responses = session_data.get('responses', [])
+        
+        # Prepare question-response pairs
+        qa_pairs = []
+        for i, (question, response) in enumerate(zip(questions, responses)):
+            qa_pairs.append(f"Q{i+1}: {question}\nA{i+1}: {response}\n")
+        
+        qa_text = "\n".join(qa_pairs)
+        
+        prompt = f"""
+        Provide comprehensive feedback for this complete interview session.
+        
+        Job Position: {job_position}
+        Difficulty Level: {difficulty_level}
+        
+        Questions and Responses:
+        {qa_text}
+        
+        Analyze the overall performance and provide:
+        1. Overall Assessment: General performance summary
+        2. Top Strengths: What the candidate excelled at
+        3. Key Areas for Improvement: Main areas needing work
+        4. Communication Skills: How well they communicated
+        5. Technical Competency: Technical knowledge demonstrated
+        6. Interview Readiness: How ready they are for real interviews
+        7. Next Steps: Specific recommendations for improvement
+        8. Overall Score: 0-10 rating
+        
+        Provide actionable, constructive feedback that helps the candidate improve.
+        """
+        
+        schema = {
+            "type": "object",
+            "properties": {
+                "overall_assessment": {"type": "string"},
+                "top_strengths": {"type": "array", "items": {"type": "string"}},
+                "key_areas_for_improvement": {"type": "array", "items": {"type": "string"}},
+                "communication_skills": {"type": "string"},
+                "technical_competency": {"type": "string"},
+                "interview_readiness": {"type": "string"},
+                "next_steps": {"type": "array", "items": {"type": "string"}},
+                "overall_score": {"type": "number", "minimum": 0, "maximum": 10}
+            }
+        }
+        
+        feedback = provider.generate_json(prompt, schema)
+        return feedback
+        
+    except Exception as e:
+        logger.error(f"Error generating interview feedback: {str(e)}")
+        return {
+            "overall_assessment": "Unable to generate detailed feedback at this time.",
+            "top_strengths": ["Completed the interview session"],
+            "key_areas_for_improvement": ["Continue practicing interview skills"],
+            "communication_skills": "Keep working on clear communication.",
+            "technical_competency": "Continue building technical knowledge.",
+            "interview_readiness": "More practice recommended.",
+            "next_steps": ["Take more mock interviews", "Practice common interview questions"],
+            "overall_score": 6.0
+        }
+
+def create_interview_template(title: str, job_position: str, difficulty_level: str, 
+                            estimated_duration: int = 30) -> Dict:
+    """
+    Create a new interview template with pre-generated questions
+    """
+    try:
+        questions = generate_interview_questions(
+            job_position=job_position,
+            difficulty_level=difficulty_level,
+            num_questions=max(1, estimated_duration // 6)  # ~6 minutes per question
+        )
+        
+        template_data = {
+            "title": title,
+            "job_position": job_position,
+            "difficulty_level": difficulty_level,
+            "estimated_duration": estimated_duration,
+            "questions": questions,
+            "is_active": True
+        }
+        
+        return template_data
+        
+    except Exception as e:
+        logger.error(f"Error creating interview template: {str(e)}")
+        return {
+            "title": title,
+            "job_position": job_position,
+            "difficulty_level": difficulty_level,
+            "estimated_duration": estimated_duration,
+            "questions": _get_fallback_questions(job_position, difficulty_level, 3),
+            "is_active": True
+        }
+
+
+# Convenience function to get LLM instance
+def get_llm_instance(provider: str = None) -> LLMUtils:
+    """
+    Get LLM instance with the specified provider
+    
+    Args:
+        provider: Provider name ('openai' or 'gemini')
+                 If None, will use settings from Django configuration
+    """
+    if provider is None:
+        # Try to get from Django settings
+        try:
+            from django.conf import settings
+            provider = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'openai')
+        except:
+            provider = 'openai'  # Default fallback
+    
+    return LLMUtils(provider=provider)

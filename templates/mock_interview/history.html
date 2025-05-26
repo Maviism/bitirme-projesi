@@ -1,0 +1,361 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Interview History{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filter-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .history-card {
+        background: white;
+        border-radius: 10px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 15px;
+        transition: all 0.3s;
+        border: none;
+    }
+    .history-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 4px 12px;
+        border-radius: 15px;
+    }
+    .status-pending { background-color: #ffc107; color: #000; }
+    .status-in_progress { background-color: #17a2b8; color: #fff; }
+    .status-completed { background-color: #28a745; color: #fff; }
+    .status-cancelled { background-color: #dc3545; color: #fff; }
+    
+    .score-display {
+        font-size: 1.1rem;
+        font-weight: bold;
+    }
+    .score-excellent { color: #28a745; }
+    .score-good { color: #17a2b8; }
+    .score-fair { color: #ffc107; }
+    .score-poor { color: #dc3545; }
+    
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="h2 mb-1">Interview History</h1>
+            <p class="text-muted mb-0">Track your interview performance over time</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <a href="{% url 'mock_interview:create_interview' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>New Interview
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="status_filter" class="form-label">Filter by Status</label>
+                    <select class="form-select" id="status_filter" name="status" onchange="this.form.submit()">
+                        <option value="">All Interviews</option>
+                        <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                        <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="search" class="form-label">Search by Position</label>
+                    <input type="text" class="form-control" id="search" name="search" 
+                           placeholder="e.g., Software Engineer" value="{{ request.GET.search }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">&nbsp;</label>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-outline-primary">
+                            <i class="fas fa-search me-1"></i>Search
+                        </button>
+                        <a href="{% url 'mock_interview:interview_history' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Interview Sessions -->
+    {% if sessions %}
+        <div class="row">
+            {% for session in sessions %}
+            <div class="col-12 mb-3">
+                <div class="card history-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <!-- Interview Info -->
+                            <div class="col-md-5">
+                                <h6 class="card-title mb-1">{{ session.job_position }}</h6>
+                                <div class="text-muted small">
+                                    <i class="fas fa-calendar me-1"></i>{{ session.created_at|date:"M d, Y" }}
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-clock me-1"></i>{{ session.duration_minutes }} min
+                                    <span class="mx-2">•</span>
+                                    <i class="fas fa-layer-group me-1"></i>{{ session.get_difficulty_level_display }}
+                                </div>
+                            </div>
+                            
+                            <!-- Status -->
+                            <div class="col-md-2 text-center">
+                                <span class="badge status-{{ session.status }} status-badge">
+                                    {{ session.get_status_display }}
+                                </span>
+                            </div>
+                            
+                            <!-- Score -->
+                            <div class="col-md-2 text-center">
+                                {% if session.status == 'completed' and session.feedback %}
+                                    <div class="score-display
+                                        {% if session.feedback.overall_score >= 8 %}score-excellent
+                                        {% elif session.feedback.overall_score >= 6 %}score-good
+                                        {% elif session.feedback.overall_score >= 4 %}score-fair
+                                        {% else %}score-poor{% endif %}">
+                                        {{ session.feedback.overall_score|floatformat:1 }}/10
+                                    </div>
+                                    <small class="text-muted">Overall Score</small>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Actions -->
+                            <div class="col-md-3 text-end">
+                                {% if session.status == 'completed' %}
+                                    <a href="{% url 'mock_interview:interview_results' session.id %}" 
+                                       class="btn btn-sm btn-outline-success me-2">
+                                        <i class="fas fa-chart-line me-1"></i>View Results
+                                    </a>
+                                {% elif session.status == 'in_progress' %}
+                                    <a href="{% url 'mock_interview:interview_room' session.id %}" 
+                                       class="btn btn-sm btn-primary me-2">
+                                        <i class="fas fa-play me-1"></i>Continue
+                                    </a>
+                                {% elif session.status == 'pending' %}
+                                    <a href="{% url 'mock_interview:interview_room' session.id %}" 
+                                       class="btn btn-sm btn-success me-2">
+                                        <i class="fas fa-play me-1"></i>Start
+                                    </a>
+                                {% endif %}
+                                
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {% if session.status == 'completed' %}
+                                            <li><a class="dropdown-item" href="#" onclick="shareSession('{{ session.id }}')">
+                                                <i class="fas fa-share me-2"></i>Share
+                                            </a></li>
+                                            <li><a class="dropdown-item" href="#" onclick="downloadReport('{{ session.id }}')">
+                                                <i class="fas fa-download me-2"></i>Download Report
+                                            </a></li>
+                                        {% endif %}
+                                        {% if session.status in 'pending,in_progress' %}
+                                            <li><a class="dropdown-item text-danger" href="#" onclick="cancelSession('{{ session.id }}')">
+                                                <i class="fas fa-times me-2"></i>Cancel
+                                            </a></li>
+                                        {% endif %}
+                                        <li><a class="dropdown-item" href="#" onclick="retakeInterview('{{ session.job_position }}', '{{ session.difficulty_level }}')">
+                                            <i class="fas fa-redo me-2"></i>Retake Interview
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Details for Completed Interviews -->
+                        {% if session.status == 'completed' and session.feedback %}
+                        <div class="row mt-3 pt-3 border-top">
+                            <div class="col-md-4">
+                                <small class="text-muted">Communication</small>
+                                <div class="progress progress-sm">
+                                    <div class="progress-bar bg-info" 
+                                         style="width: '{{ session.feedback.communication_score|default:0|floatformat:0 }}0%'"></div>
+                                </div>
+                                <small>{{ session.feedback.communication_score|default:0|floatformat:1 }}/10</small>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">Technical</small>
+                                <div class="progress progress-sm">
+                                    <div class="progress-bar bg-warning" 
+                                         style="width: '{{ session.feedback.technical_score|default:0|floatformat:0 }}0%'"></div>
+                                </div>
+                                <small>{{ session.feedback.technical_score|default:0|floatformat:1 }}/10</small>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">Confidence</small>
+                                <div class="progress progress-sm">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: '{{ session.feedback.confidence_score|default:0|floatformat:0 }}0%'"></div>
+                                </div>
+                                <small>{{ session.feedback.confidence_score|default:0|floatformat:1 }}/10</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if sessions.has_other_pages %}
+        <nav aria-label="Interview history pagination" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if sessions.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1{% if status_filter %}&status={{ status_filter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">&laquo; First</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sessions.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Previous</a>
+                    </li>
+                {% endif %}
+
+                {% for num in sessions.paginator.page_range %}
+                    {% if sessions.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > sessions.number|add:'-3' and num < sessions.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if sessions.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sessions.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Next</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ sessions.paginator.num_pages }}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}">Last &raquo;</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+            <i class="fas fa-history fa-4x mb-3"></i>
+            <h4>No Interview History</h4>
+            {% if status_filter or request.GET.search %}
+                <p>No interviews found matching your filters.</p>
+                <a href="{% url 'mock_interview:interview_history' %}" class="btn btn-outline-primary">
+                    <i class="fas fa-times me-2"></i>Clear Filters
+                </a>
+            {% else %}
+                <p>You haven't taken any mock interviews yet.</p>
+                <a href="{% url 'mock_interview:create_interview' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-microphone me-2"></i>Start Your First Interview
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function shareSession(sessionId) {
+    const url = `${window.location.origin}/mock-interview/results/${sessionId}/`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'My Interview Results',
+            text: 'Check out my mock interview results!',
+            url: url
+        }).catch(console.error);
+    } else {
+        navigator.clipboard.writeText(url).then(function() {
+            showNotification('Results link copied to clipboard!', 'success');
+        }, function() {
+            showNotification('Could not copy link', 'error');
+        });
+    }
+}
+
+function downloadReport(sessionId) {
+    // Redirect to results page with download parameter
+    window.location.href = `/mock-interview/results/${sessionId}/?download=1`;
+}
+
+function cancelSession(sessionId) {
+    if (confirm('Are you sure you want to cancel this interview session?')) {
+        $.post(`/mock-interview/api/cancel/${sessionId}/`, {
+            csrfmiddlewaretoken: $('[name=csrfmiddlewaretoken]').val()
+        })
+        .done(function() {
+            location.reload();
+        })
+        .fail(function() {
+            showNotification('Failed to cancel interview', 'error');
+        });
+    }
+}
+
+function retakeInterview(jobPosition, difficultyLevel) {
+    // Redirect to create interview page with pre-filled data
+    const url = new URL('/mock-interview/create/', window.location.origin);
+    url.searchParams.set('job_position', jobPosition);
+    url.searchParams.set('difficulty_level', difficultyLevel);
+    window.location.href = url.toString();
+}
+
+function showNotification(message, type) {
+    const alertClass = type === 'error' ? 'alert-danger' : 
+                      type === 'success' ? 'alert-success' : 
+                      type === 'info' ? 'alert-info' : 'alert-warning';
+    
+    const notification = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(notification);
+    
+    setTimeout(() => {
+        notification.alert('close');
+    }, 3000);
+}
+
+// Auto-refresh for in-progress sessions
+$(document).ready(function() {
+    const inProgressSessions = $('.status-in_progress').length;
+    if (inProgressSessions > 0) {
+        setTimeout(function() {
+            location.reload();
+        }, 30000); // Refresh every 30 seconds
+    }
+});
+</script>
+{% endblock %}
