@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'job_recommender',
     'accounts',
     'resume_generator',
-    'mock_interview',
     'utils',
 ]
 
