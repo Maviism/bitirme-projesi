@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Deepgram Voice Agent</title>
+    <meta charset="UTF-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 20px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .connected { background-color: #d4edda; color: #155724; }
+        .disconnected { background-color: #f8d7da; color: #721c24; }
+        .connecting { background-color: #fff3cd; color: #856404; }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px;
+        }
+        .start-btn { background-color: #4CAF50; color: white; }
+        .stop-btn { background-color: #f44336; color: white; }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .volume-control {
+            margin: 20px 0;
+        }
+        input[type="range"] {
+            width: 200px;
+        }
+        .debug-info {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Deepgram Voice Agent (Fixed)</h1>
+    <p>Enable microphone to start conversation with proper PCM audio.</p>
+
+    <div id="status" class="status disconnected">Ready to connect</div>
+    
+    <button id="startBtn" class="start-btn">Start Conversation</button>
+    <button id="stopBtn" class="stop-btn" disabled>Stop Conversation</button>
+
+    <div class="volume-control">
+        <label for="volumeSlider">Volume: </label>
+        <input type="range" id="volumeSlider" min="0" max="2" step="0.1" value="1">
+        <span id="volumeValue">100%</span>
+    </div>
+
+    <div id="debugInfo" class="debug-info">
+        Audio format: Not started<br>
+        Bytes sent: 0<br>
+        Samples processed: 0
+    </div>
+
+    <script>
+        let socket, mediaStream, audioContext, sourceNode, processorNode;
+        let isConnected = false;
+        let isRecording = false;
+        let volumeMultiplier = 1.0;
+        let bytesSent = 0;
+        let samplesProcessed = 0;
+        
+        // Audio buffering untuk output (tetap sama)
+        let audioBuffer = [];
+        let bufferSize = 0;
+        let minBufferSize = 8000;
+        let isPlaying = false;
+
+        const statusDiv = document.getElementById('status');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const volumeValue = document.getElementById('volumeValue');
+        const debugInfo = document.getElementById('debugInfo');
+
+        volumeSlider.addEventListener('input', (e) => {
+            volumeMultiplier = parseFloat(e.target.value);
+            volumeValue.textContent = Math.round(volumeMultiplier * 100) + '%';
+        });
+
+        function updateDebugInfo() {
+            debugInfo.innerHTML = `
+                Audio format: ${audioContext ? audioContext.sampleRate + 'Hz, PCM 16-bit' : 'Not started'}<br>
+                Bytes sent: ${bytesSent}<br>
+                Samples processed: ${samplesProcessed}<br>
+                Recording: ${isRecording}
+            `;
+        }
+
+        function updateStatus(message, className) {
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${className}`;
+            console.log(`Status: ${message}`);
+            updateDebugInfo();
+        }
+
+        async function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)({
+                    sampleRate: 16000 // Force 16kHz
+                });
+                console.log('AudioContext created, sample rate:', audioContext.sampleRate);
+            }
+            if (audioContext.state === 'suspended') {
+                await audioContext.resume();
+                console.log('AudioContext resumed');
+            }
+        }
+
+        // Convert Float32 to Int16 PCM
+        function float32ToInt16(float32Array) {
+            const int16Array = new Int16Array(float32Array.length);
+            for (let i = 0; i < float32Array.length; i++) {
+                // Clamp to [-1, 1] and convert to 16-bit
+                const clamped = Math.max(-1, Math.min(1, float32Array[i]));
+                int16Array[i] = Math.round(clamped * 32767);
+            }
+            return int16Array;
+        }
+
+        // Resample audio to 16kHz if needed
+        function resampleTo16kHz(inputBuffer, inputSampleRate) {
+            if (inputSampleRate === 16000) {
+                return inputBuffer;
+            }
+            
+            const ratio = inputSampleRate / 16000;
+            const outputLength = Math.round(inputBuffer.length / ratio);
+            const outputBuffer = new Float32Array(outputLength);
+            
+            for (let i = 0; i < outputLength; i++) {
+                const inputIndex = i * ratio;
+                const index = Math.floor(inputIndex);
+                const fraction = inputIndex - index;
+                
+                if (index + 1 < inputBuffer.length) {
+                    // Linear interpolation
+                    outputBuffer[i] = inputBuffer[index] * (1 - fraction) + 
+                                    inputBuffer[index + 1] * fraction;
+                } else {
+                    outputBuffer[i] = inputBuffer[index];
+                }
+            }
+            
+            return outputBuffer;
+        }
+
+        // Audio processing function
+        function processAudioData(event) {
+            if (!isRecording || !socket || socket.readyState !== WebSocket.OPEN) {
+                return;
+            }
+
+            try {
+                const inputBuffer = event.inputBuffer;
+                const inputData = inputBuffer.getChannelData(0); // Mono channel
+                const sampleRate = inputBuffer.sampleRate;
+                
+                // Resample to 16kHz if needed
+                const resampledData = resampleTo16kHz(inputData, sampleRate);
+                
+                // Convert to 16-bit PCM
+                const pcmData = float32ToInt16(resampledData);
+                
+                // Send as raw bytes
+                socket.send(pcmData.buffer);
+                
+                bytesSent += pcmData.buffer.byteLength;
+                samplesProcessed += resampledData.length;
+                
+                // Update debug info periodically
+                if (samplesProcessed % 16000 === 0) { // Every second
+                    updateDebugInfo();
+                }
+                
+            } catch (error) {
+                console.error('Error processing audio:', error);
+            }
+        }
+
+        // Audio playback functions (tetap sama)
+        function addToAudioBuffer(audioData) {
+            try {
+                const int16Array = new Int16Array(audioData);
+                audioBuffer.push(...int16Array);
+                bufferSize += int16Array.length;
+                
+                if (bufferSize >= minBufferSize || isPlaying) {
+                    processAudioBuffer();
+                }
+            } catch (error) {
+                console.error('Error adding to audio buffer:', error);
+            }
+        }
+
+        async function processAudioBuffer() {
+            if (audioBuffer.length === 0 || isPlaying) return;
+            
+            try {
+                await initAudioContext();
+                isPlaying = true;
+                
+                const samples = new Int16Array(audioBuffer);
+                audioBuffer = [];
+                bufferSize = 0;
+                
+                const float32Array = new Float32Array(samples.length);
+                for (let i = 0; i < samples.length; i++) {
+                    float32Array[i] = (samples[i] / 32768.0) * volumeMultiplier;
+                }
+                
+                const audioBufferNode = audioContext.createBuffer(1, samples.length, 16000);
+                audioBufferNode.copyToChannel(float32Array, 0);
+                
+                const source = audioContext.createBufferSource();
+                source.buffer = audioBufferNode;
+                source.connect(audioContext.destination);
+                
+                source.onended = () => {
+                    isPlaying = false;
+                    if (audioBuffer.length > 0) {
+                        setTimeout(processAudioBuffer, 10);
+                    }
+                };
+                
+                source.start(0);
+                console.log(`Playing buffered audio: ${samples.length} samples`);
+                
+            } catch (error) {
+                console.error('Error playing buffered audio:', error);
+                isPlaying = false;
+            }
+        }
+
+        function startConnection() {
+            console.log('Connecting to WebSocket...');
+            updateStatus("Connecting...", "connecting");
+            
+            socket = new WebSocket('ws://' + window.location.host + '/ws/agent/');
+
+            socket.onopen = () => {
+                console.log('WebSocket connected');
+                isConnected = true;
+                updateStatus("Connected - Requesting microphone...", "connecting");
+                startRecording();
+            };
+
+            socket.onmessage = async (event) => {
+                if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+                    let arrayBuffer;
+                    if (event.data instanceof Blob) {
+                        arrayBuffer = await event.data.arrayBuffer();
+                    } else {
+                        arrayBuffer = event.data;
+                    }
+                    
+                    if (arrayBuffer.byteLength > 0) {
+                        addToAudioBuffer(arrayBuffer);
+                    }
+                } else {
+                    console.log('Server message:', event.data);
+                }
+            };
+
+            socket.onerror = error => {
+                console.error('WebSocket error:', error);
+                updateStatus("Connection error", "disconnected");
+            };
+
+            socket.onclose = event => {
+                console.log('WebSocket closed:', event.code);
+                isConnected = false;
+                updateStatus("Disconnected", "disconnected");
+                cleanup();
+                resetUI();
+            };
+        }
+
+        async function startRecording() {
+            try {
+                console.log('Requesting microphone access...');
+                
+                // Request microphone with specific constraints
+                mediaStream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000, // Prefer 16kHz but browser might ignore this
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        latency: 0.01 // Low latency
+                    }
+                });
+                
+                console.log('Microphone access granted');
+                await initAudioContext();
+                
+                // Create audio source
+                sourceNode = audioContext.createMediaStreamSource(mediaStream);
+                
+                // Create processor node (deprecated but still works)
+                // ScriptProcessorNode for compatibility
+                const bufferSize = 4096; // Good balance between latency and processing
+                processorNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
+                processorNode.onaudioprocess = processAudioData;
+                
+                // Connect nodes
+                sourceNode.connect(processorNode);
+                processorNode.connect(audioContext.destination); // Required for processing
+                
+                isRecording = true;
+                console.log('Recording started with sample rate:', audioContext.sampleRate);
+                
+                updateStatus("Recording and listening...", "connected");
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                updateDebugInfo();
+
+            } catch (err) {
+                console.error('Microphone error:', err);
+                updateStatus("Microphone access denied", "disconnected");
+                alert("Microphone error: " + err.message);
+                resetUI();
+            }
+        }
+
+        function stopConnection() {
+            console.log('Stopping connection...');
+            isRecording = false;
+            
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close(1000, "User stop");
+            }
+            
+            cleanup();
+            resetUI();
+        }
+
+        function cleanup() {
+            isRecording = false;
+            
+            // Stop audio processing
+            if (processorNode) {
+                processorNode.disconnect();
+                processorNode = null;
+            }
+            
+            if (sourceNode) {
+                sourceNode.disconnect();
+                sourceNode = null;
+            }
+            
+            // Stop media stream
+            if (mediaStream) {
+                mediaStream.getTracks().forEach(track => track.stop());
+                mediaStream = null;
+            }
+            
+            // Clear audio buffers
+            audioBuffer = [];
+            bufferSize = 0;
+            isPlaying = false;
+            
+            // Reset counters
+            bytesSent = 0;
+            samplesProcessed = 0;
+            
+            // Close audio context after delay
+            if (audioContext) {
+                setTimeout(() => {
+                    if (audioContext && audioContext.state !== 'closed') {
+                        audioContext.close().then(() => {
+                            console.log('AudioContext closed');
+                        });
+                        audioContext = null;
+                    }
+                }, 1000);
+            }
+        }
+
+        function resetUI() {
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateStatus("Ready to connect", "disconnected");
+            updateDebugInfo();
+        }
+
+        // Event listeners
+        startBtn.onclick = startConnection;
+        stopBtn.onclick = stopConnection;
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (socket) socket.close();
+            cleanup();
+        });
+
+        console.log('Fixed Voice Agent ready');
+        updateDebugInfo();
+    </script>
+</body>
+</html>
