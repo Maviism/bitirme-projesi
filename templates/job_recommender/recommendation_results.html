@@ -1,221 +1,355 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Job Recommendations{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/career-form.css' %}">
 <style>
-    .loading-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(255, 255, 255, 0.9);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex-direction: column;
-        z-index: 1000;
+  /* Loading animation */
+  .loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    z-index: 1000;
+  }
+
+  .loader {
+    border: 6px solid #f3f3f3;
+    border-top: 6px solid var(--primary-color);
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1.5s linear infinite;
+    margin-bottom: 20px;
+  }
+
+  @keyframes spin {
+    0% {
+      transform: rotate(0deg);
     }
-    
-    .loader {
-        border: 6px solid #f3f3f3;
-        border-top: 6px solid #3498db;
-        border-radius: 50%;
-        width: 50px;
-        height: 50px;
-        animation: spin 1.5s linear infinite;
-        margin-bottom: 20px;
+
+    100% {
+      transform: rotate(360deg);
     }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
+  }
+
+  /* Recommendation Cards */
+  .recommendation-card {
+    border-radius: 15px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+    transition: var(--transition);
+    box-shadow: var(--card-shadow);
+    border: none;
+  }
+
+  .recommendation-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1), 0 8px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .card-header {
+    border-bottom: none;
+    background: linear-gradient(to right, #f8f9fa, white);
+    padding: 1rem 1.25rem;
+  }
+
+  .job-title {
+    font-weight: 600;
+    color: var(--primary-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 0;
+  }
+
+  .match-badge {
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .card-footer {
+    background-color: transparent;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  /* Fade in animation */
+  .fade-in {
+    animation: fadeIn 0.8s;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
     }
-    
-    .recommendation-card {
-        transition: transform 0.3s ease;
+
+    to {
+      opacity: 1;
     }
-    
-    .recommendation-card:hover {
-        transform: translateY(-5px);
-    }
-    
-    .fade-in {
-        animation: fadeIn 0.8s;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
+  }
+
+  .generate-resume-btn {
+    padding: 0.6rem 1.2rem;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Loading overlay -->
 <div id="loadingOverlay" class="loading-overlay">
-    <div class="loader"></div>
-    <h3 class="mt-3">Analyzing your profile</h3>
-    <p class="text-muted" id="loadingText">Finding the best job matches for you...</p>
+  <div class="loader"></div>
+  <h3 class="mt-3">Analyzing your profile</h3>
+  <p class="text-muted" id="loadingText">Finding the best job matches for you...</p>
 </div>
 
-<div class="container mt-5 fade-in" id="resultsContainer" style="display: none;">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'landing_page' %}">Home</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'job_recommendations' %}">Career Form</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Recommendations</li>
-                </ol>
-            </nav>
-            <h1 class="display-5 mb-3">Your Job Recommendations</h1>
-            <p class="lead text-muted">Based on your academic background and experience</p>
+<div class="hero-section">
+  <div class="container py-4">
+    <h1 class="hero-title display-4">Your Career Recommendations</h1>
+    <p class="hero-subtitle lead">Personalized job matches based on your academic profile</p>
+  </div>
+</div>
+
+<div class="container py-4 fade-in" id="resultsContainer" style="display: none;">
+  <div class="row">
+    <div class="col-12 mb-4">
+      <div class="form-card">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-briefcase"></i>
+          </div>
+          <h2 class="h4 mb-0">Your Career Matches</h2>
         </div>
-    </div>
-    
-    <div id="recommendationsList" class="row">
-        <!-- Recommendations will be populated here via JavaScript -->
-    </div>
-</div>
+        <div class="card-body">
+          <div class="alert alert-light border-start border-4 mb-4">
+            <i class="fas fa-info-circle text-primary me-2"></i>
+            These job recommendations are personalized based on your academic background and skills profile.
+          </div>
 
+          <div id="recommendationsList" class="row mt-4">
+            <!-- Recommendations will be populated here via JavaScript -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-12">
+      <div class="text-center">
+        <a href="{% url 'job_recommendations' %}" class="btn btn-custom btn-primary">
+          <i class="fas fa-arrow-left me-2"></i>Back to Career Form
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Loading animation messages
-    const loadingMessages = [
-        "Analyzing your academic background...",
-        "Processing your skills and experience...",
-        "Finding alumni with similar profiles...",
-        "Matching you with job opportunities...",
-        "Calculating compatibility scores...",
-        "Preparing your personalized recommendations..."
-    ];
-    
-    let messageIndex = 0;
-    let loadingTextElement = document.getElementById('loadingText');
-    
-    // Function to change loading message
-    function changeLoadingMessage() {
-        if (messageIndex < loadingMessages.length) {
-            loadingTextElement.textContent = loadingMessages[messageIndex];
-            messageIndex++;
-            setTimeout(changeLoadingMessage, 2000);
-        }
+  // Loading animation messages
+  const loadingMessages = [
+    "Analyzing your academic background...",
+    "Evaluating your skills profile...",
+    "Finding career path patterns...",
+    "Matching with suitable job roles...",
+    "Calculating fit scores...",
+    "Ranking your top opportunities..."
+  ];
+
+  let messageIndex = 0;
+  let loadingTextElement = document.getElementById('loadingText');
+
+  // Function to change loading message with fade effect
+  function changeLoadingMessage() {
+    if (messageIndex < loadingMessages.length) {
+      // Fade out current message
+      loadingTextElement.style.opacity = '0';
+      loadingTextElement.style.transition = 'opacity 0.3s ease';
+
+      setTimeout(() => {
+        // Update text and fade in
+        loadingTextElement.textContent = loadingMessages[messageIndex];
+        loadingTextElement.style.opacity = '1';
+        messageIndex++;
+        setTimeout(changeLoadingMessage, 2000);
+      }, 300);
     }
-    
-    // Start cycling through messages
-    changeLoadingMessage();
-    
-    // Parse URL parameters function
-    function getUrlParameter(name) {
-        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
-        var results = regex.exec(location.search);
-        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+  }
+
+  // Start cycling through messages
+  setTimeout(changeLoadingMessage, 500);
+
+  // Parse URL parameters function
+  function getUrlParameter(name) {
+    name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+    var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+    var results = regex.exec(location.search);
+    return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+  }
+
+  // Function to display recommendations
+  function displayRecommendations(recommendations) {
+    const container = document.getElementById('recommendationsList');
+    container.innerHTML = '';
+
+    if (!recommendations || recommendations.length === 0) {
+      container.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-info d-flex align-items-center">
+                        <i class="fas fa-info-circle fs-4 me-3"></i>
+                        <div>No job recommendations found for your profile. Please try adding more courses or experience information.</div>
+                    </div>
+                </div>`;
+      return;
     }
-    
-    // Function to display recommendations
-    function displayRecommendations(recommendations) {
-        const container = document.getElementById('recommendationsList');
-        container.innerHTML = '';
-        
-        if (!recommendations || recommendations.length === 0) {
-            container.innerHTML = '<div class="col-12"><div class="alert alert-info">No job recommendations found for your profile. Please try adding more courses or experience information.</div></div>';
-            return;
+
+    recommendations.forEach((job, index) => {
+      // Add delay for sequential animation
+      setTimeout(() => {
+        const col = document.createElement('div');
+        col.className = 'col-md-6 col-lg-4 mb-4 fade-in';
+
+        // Determine the badge class based on match score
+        let badgeClass = 'bg-success';
+        let badgeIcon = 'fa-check-circle';
+        let matchText = 'Strong Match';
+
+        if (job.match_score < 50) {
+          badgeClass = 'bg-danger';
+          badgeIcon = 'fa-exclamation-circle';
+          matchText = 'Low Match';
+        } else if (job.match_score < 75) {
+          badgeClass = 'bg-warning text-dark';
+          badgeIcon = 'fa-star-half-alt';
+          matchText = 'Moderate Match';
         }
-        
-        recommendations.forEach((job, index) => {
-            // Add delay for sequential animation
-            setTimeout(() => {
-                const col = document.createElement('div');
-                col.className = 'col-md-6 col-lg-4 mb-4 fade-in';
-                
-                // Determine the badge class based on match score
-                let badgeClass = 'bg-success';
-                if (job.match_score < 50) {
-                    badgeClass = 'bg-danger';
-                } else if (job.match_score < 75) {
-                    badgeClass = 'bg-warning text-dark';
-                }
-                
-                // Create the source tags with Bootstrap badges
-                const sourceTags = job.recommendation_sources.map(source => {
-                    const sourceText = source === 'alumni' ? 'Alumni Profile Match' : (source === 'job_posting' ? 'Experience Match' : 'Hybrid Match');
-                    return `<span class="badge bg-info text-dark me-2 mb-2">${sourceText}</span>`;
-                }).join('');
-                
-                col.innerHTML = `
-                    <div class="card h-100 shadow recommendation-card">
+
+        // Create the source tags with Bootstrap badges
+        const sourceTags = job.recommendation_sources.map(source => {
+          const sourceText = source === 'alumni' ? 'Alumni Match' : (source === 'job_posting' ? 'Experience Match' : 'Combined Match');
+          const sourceIcon = source === 'alumni' ? 'fa-user-graduate' : (source === 'job_posting' ? 'fa-briefcase' : 'fa-layer-group');
+          return `<span class="badge bg-info text-dark me-2 mb-2"><i class="fas ${sourceIcon} me-1"></i> ${sourceText}</span>`;
+        }).join('');
+
+        // Truncate description if too long
+        const description = job.description.length > 150 ?
+          job.description.substring(0, 150) + '...' :
+          job.description;
+
+        col.innerHTML = `
+                    <div class="recommendation-card h-100">
                         <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="h5 mb-0">${job.title}</h3>
-                            <span class="badge rounded-pill ${badgeClass}">${job.match_score}% Match</span>
+                            <h3 class="job-title h5"><i class="fas fa-briefcase text-primary"></i>${job.title}</h3>
+                            <span class="match-badge badge rounded-pill ${badgeClass}">
+                                <i class="fas ${badgeIcon} me-1"></i>${job.match_score}%
+                            </span>
                         </div>
                         <div class="card-body">
-                            <h6 class="card-subtitle mb-3 text-muted">${job.company}</h6>
-                            <p class="card-text">${job.description}</p>
+                            <p class="card-text">${description}</p>
                             <div class="mt-3">
-                                <strong>Matched by:</strong><br>
+                                <div class="d-flex align-items-center mb-2">
+                                    <i class="fas fa-link text-primary me-2"></i>
+                                    <strong>Matched by:</strong>
+                                </div>
                                 ${sourceTags}
                             </div>
                         </div>
-                        <div class="card-footer">
-                            <button class="btn btn-primary btn-sm generate-resume-btn" data-job-id="${job.id}" data-job-title="${job.title}" data-job-company="${job.company}" data-job-description="${job.description}">Generate Resume</button>
+                        <div class="card-footer px-3">
+                            <button class="btn btn-custom btn-primary generate-resume-btn w-100" data-job-id="${job.id}" data-job-title="${job.title}" data-job-company="${job.company}" data-job-description="${job.description}">
+                                <i class="fas fa-file-alt me-2"></i>Generate Resume
+                            </button>
                         </div>
                     </div>
                 `;
-                
-                container.appendChild(col);
 
-                // Attach event listener to the button just created
-                const button = col.querySelector('.generate-resume-btn');
-                if (button) {
-                    button.addEventListener('click', function() {
-                        const jobId = this.dataset.jobId;
-                        const jobTitle = this.dataset.jobTitle;
-                        const jobCompany = this.dataset.jobCompany;
-                        const jobDescription = this.dataset.jobDescription;
-                        // Construct the URL for the resume generator, passing job details as query parameters
-                        const resumeGeneratorUrl = `{% url 'resume_generator:generate_resume' %}?job_id=${jobId}&title=${encodeURIComponent(jobTitle)}&company=${encodeURIComponent(jobCompany)}&description=${encodeURIComponent(jobDescription)}`;
-                        window.location.href = resumeGeneratorUrl;
-                    });
-                }
-            }, index * 100); // Stagger the appearance of cards
-        });
-    }
-    
-    // Function to simulate loading and then display results
-    function processResults() {
-        // Get recommendations from session storage (if available)
-        const recommendationsData = sessionStorage.getItem('jobRecommendations');
-        
-        if (recommendationsData) {
-            // Parse the data
-            const recommendations = JSON.parse(recommendationsData);
-            
-            // Simulate loading for a minimum time to show the animation
-            setTimeout(() => {
-                // Hide loading overlay
-                document.getElementById('loadingOverlay').style.display = 'none';
-                // Show results container
-                document.getElementById('resultsContainer').style.display = 'block';
-                // Display the recommendations
-                displayRecommendations(recommendations);
-            }, 5000); // Show loading for at least 5 seconds
-        } else {
-            // If no data is available, show an error message
-            setTimeout(() => {
-                document.getElementById('loadingOverlay').style.display = 'none';
-                document.getElementById('resultsContainer').style.display = 'block';
-                document.getElementById('recommendationsList').innerHTML = 
-                    '<div class="col-12"><div class="alert alert-danger">No recommendation data found. Please return to the career form and try again.</div></div>';
-            }, 2000);
+        container.appendChild(col);
+
+        // Attach event listener to the button just created
+        const button = col.querySelector('.generate-resume-btn');
+        if (button) {
+          button.addEventListener('click', function () {
+            const jobId = this.dataset.jobId;
+            const jobTitle = this.dataset.jobTitle;
+            const jobCompany = this.dataset.jobCompany;
+            const jobDescription = this.dataset.jobDescription;
+            // Show a simple loading indicator on the button
+            this.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Generating...';
+            this.disabled = true;
+            // Construct the URL for the resume generator, passing job details as query parameters
+            const resumeGeneratorUrl = `{% url 'resume_generator:generate_resume' %}?job_id=${jobId}&title=${encodeURIComponent(jobTitle)}&company=${encodeURIComponent(jobCompany)}&description=${encodeURIComponent(jobDescription)}`;
+            window.location.href = resumeGeneratorUrl;
+          });
         }
+      }, index * 120); // Stagger the appearance of cards for better visual effect
+    });
+  }
+
+  // Function to simulate loading and then display results
+  function processResults() {
+    // Get recommendations from session storage (if available)
+    const recommendationsData = sessionStorage.getItem('jobRecommendations');
+
+    if (recommendationsData) {
+      // Parse the data
+      const recommendations = JSON.parse(recommendationsData);
+
+      // Sort recommendations by match score (highest first)
+      recommendations.sort((a, b) => b.match_score - a.match_score);
+
+      // Simulate loading for a minimum time to show the animation
+      setTimeout(() => {
+        // Hide loading overlay with a fade effect
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        loadingOverlay.style.opacity = '0';
+        loadingOverlay.style.transition = 'opacity 0.5s ease';
+
+        setTimeout(() => {
+          // Hide the overlay completely after fade
+          loadingOverlay.style.display = 'none';
+          // Show results container
+          document.getElementById('resultsContainer').style.display = 'block';
+          // Display the recommendations
+          displayRecommendations(recommendations);
+
+          // Scroll animation to the results
+          setTimeout(() => {
+            window.scrollTo({
+              top: document.querySelector('.hero-section').offsetHeight - 70,
+              behavior: 'smooth'
+            });
+          }, 200);
+        }, 500);
+      }, 4000); // Show loading for at least 4 seconds
+    } else {
+      // If no data is available, show an error message
+      setTimeout(() => {
+        document.getElementById('loadingOverlay').style.display = 'none';
+        document.getElementById('resultsContainer').style.display = 'block';
+        document.getElementById('recommendationsList').innerHTML = `
+                    <div class="col-12">
+                        <div class="alert alert-danger d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle fs-4 me-3"></i>
+                            <div>
+                                <strong>No recommendation data found.</strong><br>
+                                Please return to the career form and try again.
+                            </div>
+                        </div>
+                    </div>`;
+      }, 2000);
     }
-    
-    // Execute when DOM is fully loaded
-    document.addEventListener('DOMContentLoaded', processResults);
+  }
+
+  // Execute when DOM is fully loaded
+  document.addEventListener('DOMContentLoaded', processResults);
 </script>
 {% endblock %}
