@@ -1,4 +1,4 @@
-/* Career Form CSS - Modern UI with Animations */
+/* Global Theme CSS - Modern UI with Animations */
 
 :root {
   --primary-color: #4361ee;
@@ -486,5 +486,11 @@ hr.my-4 {
   transform: translateY(-20px);
 }
 
-
-
+/* Activity icons for dashboard */
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
