@@ -1,481 +1,649 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}Edit and Generate Resume{% endblock %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/career-form.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container mt-5">
-    <div class="row mb-4">
-        <div class="col-12">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{% url 'landing_page' %}">Home</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'job_recommendations' %}">Career Form</a></li>
-                    <li class="breadcrumb-item"><a href="javascript:history.back()">Recommendations</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Edit & Generate Resume</li>
-                </ol>
-            </nav>
-            <h1 class="display-5 mb-3">Edit Resume Details for: {{ job_title }}</h1>
-            <p class="lead text-muted">Company: {{ job_company }}</p>
+<div class="hero-section">
+  <div class="container py-4">
+    <h1 class="hero-title display-4">Create Your Tailored Resume</h1>
+    <p class="hero-subtitle lead">Customize and generate a professional resume optimized for: {{ job_title }} at {{
+      job_company }}</p>
+  </div>
+</div>
+
+<div class="container py-4">
+
+  <form method="POST" id="resumeForm">
+    {% csrf_token %}
+    {# Hidden fields for job details and student ID #}
+    <input type="hidden" name="job_title" value="{{ job_title }}">
+    <input type="hidden" name="job_company" value="{{ job_company }}">
+    <input type="hidden" name="job_description" value="{{ job_description }}">
+    <input type="hidden" name="job_id" value="{{ job_id }}">
+    <input type="hidden" name="student_id" value="{{ student.id }}">
+
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-building"></i>
         </div>
+        <h3 class="h5 mb-0">Job Details</h3>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+          <i class="fas fa-info-circle me-3 fs-4"></i>
+          <div>
+            <strong>Target Position:</strong> Your resume will be tailored for this specific job position.
+          </div>
+        </div>
+        <h5 class="card-title">{{ job_title }}</h5>
+        <h6 class="card-subtitle mb-2 text-muted">{{ job_company }}</h6>
+        <p class="card-text" style="white-space: pre-wrap;">{{ job_description }}</p>
+      </div>
+    </div>
+    
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-robot"></i>
+        </div>
+        <h3 class="h5 mb-0">AI-Powered Resume Enhancement</h3>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+          <i class="fas fa-magic me-3 fs-4"></i>
+          <div>
+            <strong>Let AI do the work!</strong> Our AI can generate a complete resume tailored to this job or create a
+            personalized cover letter.
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="card h-100 border-0 bg-light">
+              <div class="card-body text-center">
+                <i class="fas fa-file-alt text-primary mb-3 fa-3x"></i>
+                <h5 class="card-title">Complete Resume</h5>
+                <p class="card-text">Generate all resume sections using AI based on your profile</p>
+                <button type="button" class="btn btn-custom btn-primary" onclick="generateFullAIResume()">
+                  <i class="fas fa-magic me-2"></i> Generate AI Resume
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="card h-100 border-0 bg-light">
+              <div class="card-body text-center">
+                <i class="fas fa-envelope-open-text text-success mb-3 fa-3x"></i>
+                <h5 class="card-title">Cover Letter</h5>
+                <p class="card-text">Create a personalized cover letter for this specific job</p>
+                <button type="button" class="btn btn-custom btn-success" onclick="generateCoverLetter()">
+                  <i class="fas fa-file-alt me-2"></i> Generate Cover Letter
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Progress and Results -->
+        <div id="aiProgress" class="d-none">
+          <div class="py-3 my-3 text-center">
+            <div class="spinner-grow text-primary mb-3" role="status">
+              <span class="visually-hidden">Loading...</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
+              </div>
+            </div>
+            <div id="aiStatus" class="text-center mt-3">Initializing AI...</div>
+          </div>
+        </div>
+
+        <!-- Cover Letter Display -->
+        <div id="coverLetterResult" class="d-none">
+          <hr>
+          <div class="d-flex align-items-center mb-3">
+            <div class="fs-5 me-2">
+              <i class="fas fa-envelope-open-text text-success"></i>
+            </div>
+            <h4 class="mb-0">Generated Cover Letter</h4>
+          </div>
+          <div class="border p-4 bg-light rounded shadow-sm">
+            <div id="coverLetterContent"></div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-custom btn-outline-primary" onclick="copyCoverLetter()">
+              <i class="fas fa-copy me-2"></i> Copy to Clipboard
+            </button>
+            <button type="button" class="btn btn-custom btn-outline-secondary" onclick="downloadCoverLetter()">
+              <i class="fas fa-download me-2"></i> Download as Text
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <form method="POST" id="resumeForm">
-        {% csrf_token %}
-        {# Hidden fields for job details and student ID #}
-        <input type="hidden" name="job_title" value="{{ job_title }}">
-        <input type="hidden" name="job_company" value="{{ job_company }}">
-        <input type="hidden" name="job_description" value="{{ job_description }}">
-        <input type="hidden" name="job_id" value="{{ job_id }}">
-        <input type="hidden" name="student_id" value="{{ student.id }}">
-
-        <div class="card mb-4">
-            <div class="card-header">
-                Job Details (for reference)
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-user"></i>
+        </div>
+        <h3 class="h5 mb-0">Personal Information</h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="form-floating">
+              <input type="text" class="form-control" id="student_fullname" name="student_fullname"
+                value="{{ student.fullname }}" placeholder="Your full name">
+              <label for="student_fullname"><i class="fas fa-user me-2"></i>Full Name</label>
             </div>
-            <div class="card-body">
-                <h5 class="card-title">{{ job_title }}</h5>
-                <h6 class="card-subtitle mb-2 text-muted">{{ job_company }}</h6>
-                <p class="card-text" style="white-space: pre-wrap;">{{ job_description }}</p>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="form-floating">
+              <input type="text" class="form-control" id="student_last_name" name="student_last_name"
+                value="{{ student.last_name }}" placeholder="Your last name">
+              <label for="student_last_name"><i class="fas fa-id-card me-2"></i>Last Name (for filename)</label>
             </div>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <div class="form-floating">
+              <input type="email" class="form-control" id="student_email" name="student_email"
+                value="{{ student.email }}" placeholder="your@email.com">
+              <label for="student_email"><i class="fas fa-envelope me-2"></i>Email</label>
+            </div>
+          </div>
+          <div class="col-md-6 mb-3">
+            <div class="form-floating">
+              <input type="tel" class="form-control" id="student_phone" name="student_phone" value="{{ student.phone }}"
+                placeholder="Your phone number">
+              <label for="student_phone"><i class="fas fa-phone me-2"></i>Phone</label>
+            </div>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="form-floating">
+            <input type="url" class="form-control" id="student_linkedin" name="student_linkedin"
+              value="{{ student.linkedin_profile }}" placeholder="https://linkedin.com/in/yourprofile">
+            <label for="student_linkedin"><i class="fab fa-linkedin me-2"></i>LinkedIn Profile URL</label>
+          </div>
+        </div>
+        <hr>
+        <div class="d-flex align-items-center mb-3">
+          <div class="fs-5 me-2">
+            <i class="fas fa-graduation-cap text-primary"></i>
+          </div>
+          <h4 class="mb-0">Academic Information</h4>
+        </div>
+        <div class="row">
+          <div class="col-md-4 mb-3">
+            <div class="card h-100 bg-light border-0">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-university me-2"></i>Faculty</h6>
+                <p class="card-text fw-bold">{{ student.faculty }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <div class="card h-100 bg-light border-0">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-book me-2"></i>Program</h6>
+                <p class="card-text fw-bold">{{ student.program }}</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4 mb-3">
+            <div class="card h-100 bg-light border-0">
+              <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-chart-line me-2"></i>GPA</h6>
+                <p class="card-text fw-bold">{{ student.gpa }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <hr>
+        <div class="mb-3">
+          <div class="d-flex align-items-center mb-2">
+            <div class="fs-5 me-2">
+              <i class="fas fa-user-tie text-primary"></i>
+            </div>
+            <h5 class="mb-0">Professional Summary/Objective</h5>
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <button type="button" class="btn btn-custom btn-primary btn-sm" onclick="generateAISummary()">
+              <i class="fas fa-magic me-2"></i> Generate AI Summary
+            </button>
+            <button type="button" class="btn btn-custom btn-secondary btn-sm" onclick="improveSummary()">
+              <i class="fas fa-edit me-2"></i> Improve with AI
+            </button>
+          </div>
+          <textarea class="form-control" id="student_summary" name="student_summary"
+            rows="3">{{ student.summary }}</textarea>
+          <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> AI can help generate or
+            improve your professional summary based on your profile and the job description.</small>
+        </div>
+        <hr>
+        <div class="mb-4">
+          <div class="d-flex align-items-center mb-2">
+            <div class="fs-5 me-2">
+              <i class="fas fa-code text-primary"></i>
+            </div>
+            <h5 class="mb-0">Skills</h5>
+          </div>
+          <div class="alert alert-light border-start border-4 mb-3">
+            <i class="fas fa-lightbulb text-warning me-2"></i>
+            Add skills that are relevant to the position. Highlight technical and soft skills that match job
+            requirements.
+          </div>
+          <div class="d-flex gap-2 mb-2">
+            <button type="button" class="btn btn-custom btn-primary btn-sm" onclick="generateAISkills()">
+              <i class="fas fa-magic me-2"></i> Suggest AI Skills
+            </button>
+          </div>
+          <textarea class="form-control" id="student_skills" name="student_skills" rows="3"
+            placeholder="e.g., Python, SQL, Project Management, Communication">{{ student.skills }}</textarea>
+          <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> AI can suggest relevant
+            skills based on your background and the target job.</small>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header">
-                Edit Your Information
-            </div>
-            <div class="card-body">
-                <h5 class="card-title mb-3">Personal Information</h5>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="student_fullname" class="form-label">Full Name</label>
-                        <input type="text" class="form-control" id="student_fullname" name="student_fullname" value="{{ student.fullname }}">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="student_last_name" class="form-label">Last Name (for filename)</label>
-                        <input type="text" class="form-control" id="student_last_name" name="student_last_name" value="{{ student.last_name }}">
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="student_email" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="student_email" name="student_email" value="{{ student.email }}">
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="student_phone" class="form-label">Phone</label>
-                        <input type="tel" class="form-control" id="student_phone" name="student_phone" value="{{ student.phone }}">
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="student_linkedin" class="form-label">LinkedIn Profile URL</label>
-                    <input type="url" class="form-control" id="student_linkedin" name="student_linkedin" value="{{ student.linkedin_profile }}">
-                </div>
-                <hr>
-                <h5 class="card-title mb-3">Academic Information (Reference)</h5>
-                <div class="row">
-                     <div class="col-md-4 mb-3">
-                        <label class="form-label">Faculty</label>
-                        <p class="form-control-plaintext">{{ student.faculty }}</p>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">Program</label>
-                        <p class="form-control-plaintext">{{ student.program }}</p>
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label class="form-label">GPA</label>
-                        <p class="form-control-plaintext">{{ student.gpa }}</p>
-                    </div>
-                </div>
-                <hr>
-                <div class="mb-3">
-                    <label for="student_summary" class="form-label">Professional Summary/Objective</label>
-                    <div class="d-flex gap-2 mb-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="generateAISummary()">
-                            <i class="fas fa-magic"></i> Generate AI Summary
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="improveSummary()">
-                            <i class="fas fa-edit"></i> Improve with AI
-                        </button>
-                    </div>
-                    <textarea class="form-control" id="student_summary" name="student_summary" rows="3">{{ student.summary }}</textarea>
-                    <small class="form-text text-muted">AI can help generate or improve your professional summary based on your profile and the job description.</small>
-                </div>
-                <hr>
-                <div class="mb-3">
-                    <label for="student_skills" class="form-label">Skills (comma-separated)</label>
-                    <div class="d-flex gap-2 mb-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="generateAISkills()">
-                            <i class="fas fa-magic"></i> Suggest AI Skills
-                        </button>
-                    </div>
-                    <textarea class="form-control" id="student_skills" name="student_skills" rows="3">{{ student.skills }}</textarea>
-                    <small class="form-text text-muted">AI can suggest relevant skills based on your background and the target job.</small>
-                </div>
-
-                <hr>
-                <h5 class="card-title mb-3">Internships (Reference)</h5>
-                {% for internship in student.internships %}
-                    <div class="mb-2">
-                        <strong>{{ internship.position }}</strong> at {{ internship.company }} ({{ internship.start_date }} - {{ internship.end_date|default:"Present" }})<br>
-                        <em>{{ internship.description }}</em>
-                    </div>
-                {% empty %}
-                    <p>No internships on record.</p>
-                {% endfor %}
-
-                <hr>
-                <h5 class="card-title mb-3">Organizational Experience (Reference)</h5>
-                {% for org in student.organizations %}
-                     <div class="mb-2">
-                        <strong>{{ org.position }}</strong> at {{ org.name }} ({{ org.start_date }} - {{ org.end_date|default:"Present" }})<br>
-                        <em>{{ org.description }}</em>
-                    </div>
-                {% empty %}
-                    <p>No organizational experience on record.</p>
-                {% endfor %}
-            </div>
+        <hr>
+        <div class="d-flex align-items-center mb-3">
+          <div class="fs-5 me-2">
+            <i class="fas fa-briefcase text-primary"></i>
+          </div>
+          <h4 class="mb-0">Experience</h4>
         </div>
 
-        <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
-                <i class="fas fa-robot"></i> AI-Powered Resume Enhancement
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <button type="button" class="btn btn-primary w-100" onclick="generateFullAIResume()">
-                            <i class="fas fa-magic"></i> Generate Complete AI Resume
-                        </button>
-                        <small class="form-text text-muted">Generate all sections using AI based on your profile and job description</small>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <button type="button" class="btn btn-success w-100" onclick="generateCoverLetter()">
-                            <i class="fas fa-file-alt"></i> Generate Cover Letter
-                        </button>
-                        <small class="form-text text-muted">Create a personalized cover letter for this job</small>
-                    </div>
-                </div>
-                
-                <!-- AI Progress and Results -->
-                <div id="aiProgress" class="d-none">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
-                    </div>
-                    <div id="aiStatus" class="text-center text-muted">Initializing AI...</div>
-                </div>
-                
-                <!-- Cover Letter Display -->
-                <div id="coverLetterResult" class="d-none">
-                    <hr>
-                    <h6>Generated Cover Letter:</h6>
-                    <div class="border p-3 bg-light">
-                        <div id="coverLetterContent"></div>
-                    </div>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="copyCoverLetter()">
-                            <i class="fas fa-copy"></i> Copy to Clipboard
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="downloadCoverLetter()">
-                            <i class="fas fa-download"></i> Download as Text
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <ul class="nav nav-pills mb-4" id="experienceTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="internship-tab" data-bs-toggle="pill"
+              data-bs-target="#internship-tab-content" type="button" role="tab" aria-controls="internship-tab-content"
+              aria-selected="true">
+              <i class="fas fa-laptop-code me-2"></i>Internships
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="organization-tab" data-bs-toggle="pill"
+              data-bs-target="#organization-tab-content" type="button" role="tab"
+              aria-controls="organization-tab-content" aria-selected="false">
+              <i class="fas fa-users me-2"></i>Organizations
+            </button>
+          </li>
+        </ul>
 
-        <div class="card mb-4">
-            <div class="card-header">
-                Resume Options
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label for="resume_template_style" class="form-label">Choose Resume Template:</label>
-                    <select class="form-select" id="resume_template_style" name="resume_template_style">
-                        <option value="ats" selected>ATS Friendly</option>
-                        <option value="modern">Modern</option>
-                    </select>
+        <div class="tab-content" id="experienceTabsContent">
+          <!-- Internship Experience -->
+          <div class="tab-pane fade show active" id="internship-tab-content" role="tabpanel"
+            aria-labelledby="internship-tab">
+            {% for internship in student.internships %}
+            <div class="card mb-3 border-0 shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h5 class="card-title mb-1">{{ internship.position }}</h5>
+                    <h6 class="card-subtitle text-muted">{{ internship.company }}</h6>
+                  </div>
+                  <span class="badge bg-light text-dark">{{ internship.start_date }} - {{
+                    internship.end_date|default:"Present" }}</span>
                 </div>
+                <p class="card-text mt-2">{{ internship.description }}</p>
+              </div>
             </div>
+            {% empty %}
+            <div class="alert alert-light">
+              <i class="fas fa-info-circle me-2"></i>
+              No internships on record.
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Organization Experience -->
+          <div class="tab-pane fade" id="organization-tab-content" role="tabpanel" aria-labelledby="organization-tab">
+            {% for org in student.organizations %}
+            <div class="card mb-3 border-0 shadow-sm">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start">
+                  <div>
+                    <h5 class="card-title mb-1">{{ org.position }}</h5>
+                    <h6 class="card-subtitle text-muted">{{ org.name }}</h6>
+                  </div>
+                  <span class="badge bg-light text-dark">{{ org.start_date }} - {{ org.end_date|default:"Present"
+                    }}</span>
+                </div>
+                <p class="card-text mt-2">{{ org.description }}</p>
+              </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-light">
+              <i class="fas fa-info-circle me-2"></i>
+              No organizational experience on record.
+            </div>
+            {% endfor %}
+          </div>
         </div>
-        
-        <button type="submit" class="btn btn-info me-2 mt-3 mb-5" formaction="{% url 'resume_generator:preview_resume' %}" formmethod="POST" id="previewButton">Preview Resume</button>
-        <button type="submit" class="btn btn-success mt-3 mb-5" formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">Generate and Download Resume</button>
-    </form>
+      </div>
+    </div>
+
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-sliders-h"></i>
+        </div>
+        <h3 class="h5 mb-0">Resume Options</h3>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 offset-md-3">
+            <div class="mb-3">
+              <label for="resume_template_style" class="form-label fw-bold"><i class="fas fa-file-alt me-2"></i>Choose
+                Resume Template:</label>
+              <select class="form-select form-control-lg" id="resume_template_style" name="resume_template_style">
+                <option value="ats" selected>ATS Friendly (Recommended)</option>
+                <option value="modern">Modern Design</option>
+              </select>
+              <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> ATS friendly templates
+                are optimized for applicant tracking systems used by employers.</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="d-grid gap-2 col-lg-8 mx-auto mb-5">
+      <button type="submit" class="btn btn-custom btn-info btn-lg"
+        formaction="{% url 'resume_generator:preview_resume' %}" formmethod="POST" id="previewButton">
+        <i class="fas fa-eye me-2"></i> Preview Resume
+      </button>
+      <button type="submit" class="btn btn-custom btn-success btn-lg"
+        formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">
+        <i class="fas fa-download me-2"></i> Generate and Download Resume
+      </button>
+    </div>
+  </form>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Get CSRF token for AJAX requests
-function getCSRFToken() {
+  // Get CSRF token for AJAX requests
+  function getCSRFToken() {
     return document.querySelector('[name=csrfmiddlewaretoken]').value;
-}
+  }
 
-// Show/hide AI progress indicator
-function showAIProgress(message = 'Processing with AI...') {
+  // Show/hide AI progress indicator
+  function showAIProgress(message = 'Processing with AI...') {
     const progressDiv = document.getElementById('aiProgress');
     const statusDiv = document.getElementById('aiStatus');
     const progressBar = progressDiv.querySelector('.progress-bar');
-    
+
     progressDiv.classList.remove('d-none');
     statusDiv.textContent = message;
     progressBar.style.width = '30%';
-}
+  }
 
-function hideAIProgress() {
+  function hideAIProgress() {
     const progressDiv = document.getElementById('aiProgress');
     progressDiv.classList.add('d-none');
-}
+  }
 
-function updateAIProgress(percentage, message) {
+  function updateAIProgress(percentage, message) {
     const statusDiv = document.getElementById('aiStatus');
     const progressBar = document.querySelector('.progress-bar');
-    
+
     progressBar.style.width = percentage + '%';
     statusDiv.textContent = message;
-}
+  }
 
-// Generate AI Summary
-async function generateAISummary() {
+  // Generate AI Summary
+  async function generateAISummary() {
     try {
-        showAIProgress('Generating professional summary...');
-        updateAIProgress(50, 'Analyzing your profile...');
-        
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCSRFToken());
-        formData.append('student_id', document.querySelector('[name=student_id]').value);
-        formData.append('job_description', document.querySelector('[name=job_description]').value);
-        
-        const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
-            method: 'POST',
-            body: formData
-        });
-        
-        updateAIProgress(80, 'Generating content...');
-        const data = await response.json();
-        
-        if (data.success && data.content.summary) {
-            document.getElementById('student_summary').value = data.content.summary;
-            updateAIProgress(100, 'Summary generated successfully!');
-            setTimeout(() => hideAIProgress(), 2000);
-        } else {
-            throw new Error(data.error || 'Failed to generate summary');
-        }
-    } catch (error) {
-        hideAIProgress();
-        alert('Error generating AI summary: ' + error.message);
-    }
-}
+      showAIProgress('Generating professional summary...');
+      updateAIProgress(50, 'Analyzing your profile...');
 
-// Improve Summary with AI
-async function improveSummary() {
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCSRFToken());
+      formData.append('student_id', document.querySelector('[name=student_id]').value);
+      formData.append('job_description', document.querySelector('[name=job_description]').value);
+
+      const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+        method: 'POST',
+        body: formData
+      });
+
+      updateAIProgress(80, 'Generating content...');
+      const data = await response.json();
+
+      if (data.success && data.content.summary) {
+        document.getElementById('student_summary').value = data.content.summary;
+        updateAIProgress(100, 'Summary generated successfully!');
+        setTimeout(() => hideAIProgress(), 2000);
+      } else {
+        throw new Error(data.error || 'Failed to generate summary');
+      }
+    } catch (error) {
+      hideAIProgress();
+      alert('Error generating AI summary: ' + error.message);
+    }
+  }
+
+  // Improve Summary with AI
+  async function improveSummary() {
     try {
-        const currentSummary = document.getElementById('student_summary').value;
-        if (!currentSummary.trim()) {
-            alert('Please enter a summary first, then use AI to improve it.');
-            return;
-        }
-        
-        showAIProgress('Improving your summary...');
-        
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCSRFToken());
-        formData.append('section_content', currentSummary);
-        formData.append('section_type', 'summary');
-        formData.append('job_context', document.querySelector('[name=job_description]').value);
-        
-        updateAIProgress(60, 'Enhancing content...');
-        
-        const response = await fetch('{% url "resume_generator:ai_improve_section" %}', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            document.getElementById('student_summary').value = data.improved_content;
-            updateAIProgress(100, 'Summary improved successfully!');
-            setTimeout(() => hideAIProgress(), 2000);
-        } else {
-            throw new Error(data.error || 'Failed to improve summary');
-        }
-    } catch (error) {
-        hideAIProgress();
-        alert('Error improving summary: ' + error.message);
-    }
-}
+      const currentSummary = document.getElementById('student_summary').value;
+      if (!currentSummary.trim()) {
+        alert('Please enter a summary first, then use AI to improve it.');
+        return;
+      }
 
-// Generate AI Skills
-async function generateAISkills() {
+      showAIProgress('Improving your summary...');
+
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCSRFToken());
+      formData.append('section_content', currentSummary);
+      formData.append('section_type', 'summary');
+      formData.append('job_context', document.querySelector('[name=job_description]').value);
+
+      updateAIProgress(60, 'Enhancing content...');
+
+      const response = await fetch('{% url "resume_generator:ai_improve_section" %}', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        document.getElementById('student_summary').value = data.improved_content;
+        updateAIProgress(100, 'Summary improved successfully!');
+        setTimeout(() => hideAIProgress(), 2000);
+      } else {
+        throw new Error(data.error || 'Failed to improve summary');
+      }
+    } catch (error) {
+      hideAIProgress();
+      alert('Error improving summary: ' + error.message);
+    }
+  }
+
+  // Generate AI Skills
+  async function generateAISkills() {
     try {
-        showAIProgress('Suggesting relevant skills...');
-        updateAIProgress(50, 'Analyzing job requirements...');
-        
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCSRFToken());
-        formData.append('student_id', document.querySelector('[name=student_id]').value);
-        formData.append('job_description', document.querySelector('[name=job_description]').value);
-        
-        const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
-            method: 'POST',
-            body: formData
-        });
-        
-        updateAIProgress(80, 'Generating skills...');
-        const data = await response.json();
-        
-        if (data.success && data.content.skills) {
-            const currentSkills = document.getElementById('student_skills').value;
-            const newSkills = Array.isArray(data.content.skills) ? data.content.skills.join(', ') : data.content.skills;
-            
-            // Merge with existing skills if any
-            if (currentSkills.trim()) {
-                document.getElementById('student_skills').value = currentSkills + ', ' + newSkills;
-            } else {
-                document.getElementById('student_skills').value = newSkills;
-            }
-            
-            updateAIProgress(100, 'Skills suggested successfully!');
-            setTimeout(() => hideAIProgress(), 2000);
-        } else {
-            throw new Error(data.error || 'Failed to generate skills');
-        }
-    } catch (error) {
-        hideAIProgress();
-        alert('Error generating AI skills: ' + error.message);
-    }
-}
+      showAIProgress('Suggesting relevant skills...');
+      updateAIProgress(50, 'Analyzing job requirements...');
 
-// Generate Full AI Resume
-async function generateFullAIResume() {
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCSRFToken());
+      formData.append('student_id', document.querySelector('[name=student_id]').value);
+      formData.append('job_description', document.querySelector('[name=job_description]').value);
+
+      const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+        method: 'POST',
+        body: formData
+      });
+
+      updateAIProgress(80, 'Generating skills...');
+      const data = await response.json();
+
+      if (data.success && data.content.skills) {
+        const currentSkills = document.getElementById('student_skills').value;
+        const newSkills = Array.isArray(data.content.skills) ? data.content.skills.join(', ') : data.content.skills;
+
+        // Merge with existing skills if any
+        if (currentSkills.trim()) {
+          document.getElementById('student_skills').value = currentSkills + ', ' + newSkills;
+        } else {
+          document.getElementById('student_skills').value = newSkills;
+        }
+
+        updateAIProgress(100, 'Skills suggested successfully!');
+        setTimeout(() => hideAIProgress(), 2000);
+      } else {
+        throw new Error(data.error || 'Failed to generate skills');
+      }
+    } catch (error) {
+      hideAIProgress();
+      alert('Error generating AI skills: ' + error.message);
+    }
+  }
+
+  // Generate Full AI Resume
+  async function generateFullAIResume() {
     try {
-        showAIProgress('Generating complete AI resume...');
-        updateAIProgress(30, 'Analyzing your profile...');
-        
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCSRFToken());
-        formData.append('student_id', document.querySelector('[name=student_id]').value);
-        formData.append('job_description', document.querySelector('[name=job_description]').value);
-        
-        updateAIProgress(60, 'Generating all sections...');
-        
-        const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.content) {
-            updateAIProgress(90, 'Populating form fields...');
-            
-            // Update form fields with AI-generated content
-            if (data.content.summary) {
-                document.getElementById('student_summary').value = data.content.summary;
-            }
-            if (data.content.skills) {
-                const skills = Array.isArray(data.content.skills) ? data.content.skills.join(', ') : data.content.skills;
-                document.getElementById('student_skills').value = skills;
-            }
-            
-            updateAIProgress(100, 'Resume generated successfully!');
-            setTimeout(() => hideAIProgress(), 2000);
-            
-            alert('AI resume generation complete! Review the generated content and make any necessary adjustments.');
-        } else {
-            throw new Error(data.error || 'Failed to generate resume');
-        }
-    } catch (error) {
-        hideAIProgress();
-        alert('Error generating AI resume: ' + error.message);
-    }
-}
+      showAIProgress('Generating complete AI resume...');
+      updateAIProgress(30, 'Analyzing your profile...');
 
-// Generate Cover Letter
-async function generateCoverLetter() {
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCSRFToken());
+      formData.append('student_id', document.querySelector('[name=student_id]').value);
+      formData.append('job_description', document.querySelector('[name=job_description]').value);
+
+      updateAIProgress(60, 'Generating all sections...');
+
+      const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.content) {
+        updateAIProgress(90, 'Populating form fields...');
+
+        // Update form fields with AI-generated content
+        if (data.content.summary) {
+          document.getElementById('student_summary').value = data.content.summary;
+        }
+        if (data.content.skills) {
+          const skills = Array.isArray(data.content.skills) ? data.content.skills.join(', ') : data.content.skills;
+          document.getElementById('student_skills').value = skills;
+        }
+
+        updateAIProgress(100, 'Resume generated successfully!');
+        setTimeout(() => hideAIProgress(), 2000);
+
+        alert('AI resume generation complete! Review the generated content and make any necessary adjustments.');
+      } else {
+        throw new Error(data.error || 'Failed to generate resume');
+      }
+    } catch (error) {
+      hideAIProgress();
+      alert('Error generating AI resume: ' + error.message);
+    }
+  }
+
+  // Generate Cover Letter
+  async function generateCoverLetter() {
     try {
-        showAIProgress('Generating personalized cover letter...');
-        updateAIProgress(40, 'Analyzing job requirements...');
-        
-        const formData = new FormData();
-        formData.append('csrfmiddlewaretoken', getCSRFToken());
-        formData.append('student_id', document.querySelector('[name=student_id]').value);
-        formData.append('job_title', document.querySelector('[name=job_title]').value);
-        formData.append('job_company', document.querySelector('[name=job_company]').value);
-        formData.append('job_description', document.querySelector('[name=job_description]').value);
-        
-        updateAIProgress(70, 'Crafting cover letter...');
-        
-        const response = await fetch('{% url "resume_generator:ai_cover_letter" %}', {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        if (data.success && data.cover_letter) {
-            updateAIProgress(100, 'Cover letter generated!');
-            
-            // Display the cover letter
-            document.getElementById('coverLetterContent').innerHTML = data.cover_letter.replace(/\n/g, '<br>');
-            document.getElementById('coverLetterResult').classList.remove('d-none');
-            
-            setTimeout(() => hideAIProgress(), 1000);
-        } else {
-            throw new Error(data.error || 'Failed to generate cover letter');
-        }
-    } catch (error) {
-        hideAIProgress();
-        alert('Error generating cover letter: ' + error.message);
-    }
-}
+      showAIProgress('Generating personalized cover letter...');
+      updateAIProgress(40, 'Analyzing job requirements...');
 
-// Copy Cover Letter to Clipboard
-function copyCoverLetter() {
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCSRFToken());
+      formData.append('student_id', document.querySelector('[name=student_id]').value);
+      formData.append('job_title', document.querySelector('[name=job_title]').value);
+      formData.append('job_company', document.querySelector('[name=job_company]').value);
+      formData.append('job_description', document.querySelector('[name=job_description]').value);
+
+      updateAIProgress(70, 'Crafting cover letter...');
+
+      const response = await fetch('{% url "resume_generator:ai_cover_letter" %}', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.cover_letter) {
+        updateAIProgress(100, 'Cover letter generated!');
+
+        // Display the cover letter
+        document.getElementById('coverLetterContent').innerHTML = data.cover_letter.replace(/\n/g, '<br>');
+        document.getElementById('coverLetterResult').classList.remove('d-none');
+
+        setTimeout(() => hideAIProgress(), 1000);
+      } else {
+        throw new Error(data.error || 'Failed to generate cover letter');
+      }
+    } catch (error) {
+      hideAIProgress();
+      alert('Error generating cover letter: ' + error.message);
+    }
+  }
+
+  // Copy Cover Letter to Clipboard
+  function copyCoverLetter() {
     const content = document.getElementById('coverLetterContent').textContent;
     navigator.clipboard.writeText(content).then(() => {
-        alert('Cover letter copied to clipboard!');
+      alert('Cover letter copied to clipboard!');
     }).catch(err => {
-        alert('Failed to copy to clipboard');
+      alert('Failed to copy to clipboard');
     });
-}
+  }
 
-// Download Cover Letter as Text File
-function downloadCoverLetter() {
+  // Download Cover Letter as Text File
+  function downloadCoverLetter() {
     const content = document.getElementById('coverLetterContent').textContent;
     const blob = new Blob([content], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-    
+
     const jobTitle = document.querySelector('[name=job_title]').value || 'Job';
     const jobCompany = document.querySelector('[name=job_company]').value || 'Company';
     const studentName = document.getElementById('student_last_name').value || 'Student';
-    
+
     a.href = url;
     a.download = `cover_letter_${studentName}_${jobCompany}_${jobTitle}.txt`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
-}
+  }
 
-// Initialize page
-document.addEventListener('DOMContentLoaded', function() {
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('resumeForm');
     const previewButton = document.getElementById('previewButton');
     const downloadButton = document.getElementById('downloadButton');
 
     // Add loading states for form submission buttons
-    previewButton.addEventListener('click', function() {
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
-        this.disabled = true;
+    previewButton.addEventListener('click', function () {
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
+      this.disabled = true;
     });
-    
-    downloadButton.addEventListener('click', function() {
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
-        this.disabled = true;
+
+    downloadButton.addEventListener('click', function () {
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+      this.disabled = true;
     });
-});
+  });
 </script>
 {% endblock %}
