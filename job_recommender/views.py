@@ -20,14 +20,14 @@ recommender = HybridRecommender(alumni_weight=0.6, job_weight=0.4)
 
 # Create your views here.
 def landing_page(request):
-    return render(request, 'landing_page.html')
+    return render(request, 'common/landing_page.html')
 
 def career_form(request):
-    return render(request, 'career_form.html')
+    return render(request, 'job_recommender/career_form.html')
 
 # View for the recommendation results page
 def recommendation_results(request):
-    return render(request, 'recommendation_results.html')
+    return render(request, 'job_recommender/recommendation_results.html')
 
 # View to handle form submission
 @csrf_exempt

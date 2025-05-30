@@ -1,0 +1,347 @@
+<!-- landing page with particles.js background -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+  body {
+    background: #ffffff;
+    color: #333333;
+  }
+  #particles-js {
+    position: fixed;
+    width: 100vw;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+  /* Make sure the canvas created by particles.js is interactive */
+  #particles-js canvas {
+    position: absolute;
+    width: 100vw;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 0;
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    padding: 8rem 0 4rem; /* Added top padding for navbar */
+    pointer-events: none; /* Allow interactions to pass through to particles */
+  }
+  
+  /* But make sure buttons and text are still clickable */
+  .hero-content * {
+    pointer-events: auto;
+  }
+  
+  /* Ensure navbar always has pointer-events */
+  header, nav.navbar, .navbar-collapse, 
+  .navbar-toggler, .navbar-brand,
+  .nav-link, .navbar-nav {
+    pointer-events: auto !important;
+    z-index: 1000;
+  }
+  .hero-heading {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    position: relative;
+    display: inline-block;
+  }
+  .hero-heading:after {
+    content: '';
+    position: absolute;
+    width: 30%;
+    height: 5px;
+    background: linear-gradient(90deg, #3498db, #2980b9);
+    bottom: -10px;
+    left: 35%;
+    border-radius: 5px;
+  }
+  .hero-subtext {
+    font-size: 1.25rem;
+    margin-bottom: 2.5rem;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.8;
+  }
+  .highlight {
+    background: linear-gradient(180deg, rgba(255,255,255,0) 65%, rgba(52, 152, 219, 0.3) 65%);
+    padding: 0 5px;
+    font-weight: 600;
+  }
+  .cta-button {
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    transition: all 0.3s ease;
+  }
+  .cta-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Feature Cards */
+  .features-section {
+    padding: 4rem 0;
+    margin-top: 4px;
+    position: relative;
+    z-index: 1;
+  }
+  .feature-card {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    height: 100%;
+    position: relative;
+  }
+  .feature-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.15);
+  }
+  .feature-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+  }
+  .feature-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: #2c3e50;
+  }
+  .feature-card .card-body {
+    padding: 2rem;
+    text-align: center;
+  }
+  .feature-card p {
+    color: #666;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div id="particles-js"></div>
+<div class="hero-content">
+  <div class="row justify-content-center mt-5">
+    <div class="col-md-10 text-center">
+      <h1 class="display-4 hero-heading">Ne İş Olsa Demeyelim Diye...</h1>
+      <p class="hero-subtext mt-4">
+        <span class="highlight">Ne istediğini bulmana</span>, <span class="highlight">CV'ni düzene sokmana</span> ve 
+        <span class="highlight">görüşmelere hazırlanmana</span> yardımcı oluyoruz. 
+        Kolay mı? <strong>Değil</strong>. Ama birlikte daha az stresli olabilir.
+      </p>
+      <div class="mt-5">
+        <a href="{% url 'job_recommendations' %}" class="btn btn-primary btn-lg cta-button">
+          Bir Göz At <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Features Section -->
+<section class="features-section">
+  <div class="container">
+    <div class="row justify-content-center mb-5">
+      <div class="col-md-8 text-center">
+        <h2 class="mb-4">Kariyerinize Nasıl Yardımcı Oluyoruz?</h2>
+        <p class="lead">İşeYarıyo ile kariyerinizi yönetmenin üç adımı</p>
+      </div>
+    </div>
+    
+    <div class="row g-4">
+      <!-- Feature 1: Job Recommendations -->
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="card-body">
+            <div class="feature-icon">
+              <i class="fas fa-search"></i>
+            </div>
+            <h3 class="feature-title">Kişiselleştirilmiş İş Önerileri</h3>
+            <p>Profiliniz ve becerilerinize göre size en uygun iş önerilerini sunuyoruz. Yapay zeka algoritmamız, eğitiminiz, becerileriniz ve tercihleriniz doğrultusunda en uygun eşleşmeleri bulur.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Feature 2: Resume Generator -->
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="card-body">
+            <div class="feature-icon">
+              <i class="fas fa-file-alt"></i>
+            </div>
+            <h3 class="feature-title">Profesyonel CV Oluşturucu</h3>
+            <p>Etkileyici ve profesyonel bir CV oluşturmanıza yardımcı oluyoruz. Siz sadece bilgilerinizi girin, işe alım uzmanlarının dikkatini çekecek bir CV'yi sizin için hazırlayalım.</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Feature 3: Interview Preparation -->
+      <div class="col-md-4">
+        <div class="feature-card">
+          <div class="card-body">
+            <div class="feature-icon">
+              <i class="fas fa-comments"></i>
+            </div>
+            <h3 class="feature-title">Görüşme Simülasyonu</h3>
+            <p>Sanal görüşme hazırlıkları ile mülakatlar için hazırlanın. Yapay zeka destekli sistemimiz sizi gerçek mülakat senaryolarına hazırlayarak özgüveninizi artırır.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="row mt-5">
+      <div class="col-12 text-center">
+        <a href="{% url 'job_recommendations' %}" class="btn btn-primary btn-lg cta-button">
+          Hemen Başlayın <i class="fas fa-rocket ms-1"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/particles.js/particles.min.js' %}"></script>
+<script>
+  function setParticlesHeight() {
+    var particlesDiv = document.getElementById('particles-js');
+    if (particlesDiv) {
+      particlesDiv.style.height = document.body.scrollHeight + 'px';
+    }
+  }
+  document.addEventListener("DOMContentLoaded", function() {
+    setParticlesHeight();
+    window.addEventListener('resize', setParticlesHeight);
+
+    try {
+      particlesJS('particles-js', {
+        "particles": {
+          "number": {
+            "value": 100,
+            "density": {
+              "enable": true,
+              "value_area": 800
+            }
+          },
+          "color": {
+            "value": "#3498db"
+          },
+          "shape": {
+            "type": "circle",
+            "stroke": {
+              "width": 0,
+              "color": "#000000"
+            },
+            "polygon": {
+              "nb_sides": 5
+            }
+          },
+          "opacity": {
+            "value": 0.5,
+            "random": false,
+            "anim": {
+              "enable": false,
+              "speed": 0.5,
+              "opacity_min": 0.1,
+              "sync": false
+            }
+          },
+          "size": {
+            "value": 3,
+            "random": true,
+            "anim": {
+              "enable": false,
+              "speed": 40,
+              "size_min": 0.1,
+              "sync": false
+            }
+          },
+          "line_linked": {
+            "enable": true,
+            "distance": 150,
+            "color": "#3498db",
+            "opacity": 0.4,
+            "width": 1
+          },
+          "move": {
+            "enable": true,
+            "speed": 2,
+            "direction": "none",
+            "random": false,
+            "straight": false,
+            "out_mode": "out",
+            "bounce": false,
+            "attract": {
+              "enable": false,
+              "rotateX": 600,
+              "rotateY": 1200
+            }
+          }
+        },
+        "interactivity": {
+          "detect_on": "window",
+          "events": {
+            "onhover": {
+              "enable": true,
+              "mode": "grab"
+            },
+            "onclick": {
+              "enable": true,
+              "mode": "push"
+            },
+            "resize": true
+          },
+          "modes": {
+            "grab": {
+              "distance": 140,
+              "line_linked": {
+                "opacity": 1
+              }
+            },
+            "bubble": {
+              "distance": 400,
+              "size": 40,
+              "duration": 2,
+              "opacity": 8,
+              "speed": 3
+            },
+            "repulse": {
+              "distance": 200,
+              "duration": 0.4
+            },
+            "push": {
+              "particles_nb": 4
+            },
+            "remove": {
+              "particles_nb": 2
+            }
+          }
+        },
+        "retina_detect": true
+      });
+      console.log("Particles initialized successfully");
+    } catch (e) {
+      console.error("Error initializing particles: ", e);
+    }
+  });
+</script>
+{% endblock %}
