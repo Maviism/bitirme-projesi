@@ -18,20 +18,30 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            padding-top: 0;
         }
         main {
             flex: 1 0 auto;
+            margin-top: 56px; /* Height of navbar */
         }
-        /* Transparent navbar */
+        /* Navbar styling */
         .navbar.navbar-transparent {
-            background: transparent !important;
+            background-color: transparent;
             box-shadow: none;
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
             right: 0;
-            z-index: 100;
-            padding-top: 1.5rem;
+            z-index: 1030;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            height: 56px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.navbar-scrolled {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .navbar.navbar-transparent .navbar-brand,
         .navbar.navbar-transparent .nav-link {
@@ -40,7 +50,7 @@
             font-weight: 500;
         }
         .navbar.navbar-transparent .nav-link:hover {
-            color: rgba(0,0,0,0.7);
+            color: #007bff;
         }
         .navbar.navbar-transparent .navbar-toggler {
             border-color: rgba(0,0,0,0.2);
@@ -48,6 +58,7 @@
         .navbar.navbar-transparent .navbar-toggler-icon {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 0, 0, 0.5)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
         }
+        /* Remove duplicate spacing */
         /* Transparent footer */
         .footer.footer-transparent {
             background: transparent !important;
@@ -109,7 +120,7 @@
     </header>
 
     <main class="flex-shrink-0">
-        <div class="container mt-4">
+        <div class="container {% block container_class %}mt-5{% endblock %}">
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -131,6 +142,36 @@
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    
+    <!-- Navbar Scroll Effect -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navbar = document.querySelector('.navbar');
+            let lastScrollTop = 0;
+            
+            // Function to handle scroll
+            function handleScroll() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                // Add background when scrolling down
+                if (scrollTop > 10) {
+                    navbar.classList.add('navbar-scrolled');
+                } else {
+                    navbar.classList.remove('navbar-scrolled');
+                }
+                
+                // Save current scroll position
+                lastScrollTop = scrollTop;
+            }
+            
+            // Listen for scroll events
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            
+            // Check initial state
+            handleScroll();
+        });
+    </script>
+    
     <!-- Custom JavaScript -->
     {% block extra_js %}{% endblock %}
 </body>
