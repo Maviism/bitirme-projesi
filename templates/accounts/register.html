@@ -1,9 +1,12 @@
 {% extends "base.html" %}
+{% block particles_bg %}
+{% include "common/particles_include.html" %}
+{% endblock %}
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
+<div class="container">
+    <div class="row min-vh-100 align-items-center justify-content-center pt-5">
         <div class="col-md-6">
-            <div class="card">
+            <div class="card shadow-lg bg-white bg-opacity-90">
                 <div class="card-header text-center">
                     <h2>Register</h2>
                 </div>
@@ -77,3 +80,5 @@
     </div>
 </div>
 {% endblock content %}
+
+{% block extra_js_particles %}{% endblock %}
