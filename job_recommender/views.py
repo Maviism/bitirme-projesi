@@ -1,9 +1,10 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from datetime import datetime
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
 
 # Import our recommender system
 from .recommender import HybridRecommender
@@ -22,15 +23,18 @@ recommender = HybridRecommender(alumni_weight=0.6, job_weight=0.4)
 def landing_page(request):
     return render(request, 'common/landing_page.html')
 
+@login_required
 def career_form(request):
     return render(request, 'job_recommender/career_form.html')
 
 # View for the recommendation results page
+@login_required
 def recommendation_results(request):
     return render(request, 'job_recommender/recommendation_results.html')
 
 # View to handle form submission
 @csrf_exempt
+@login_required
 def submit_application(request):
     """
     View to receive POST data from career form and return JSON response with job recommendations
@@ -254,6 +258,7 @@ def submit_application(request):
 
 
 @cache_llm_response("job_compatibility")
+@login_required
 def analyze_job_compatibility(request):
     """Analyze compatibility between student profile and specific job using AI"""
     if request.method != 'POST':
@@ -330,6 +335,7 @@ def analyze_job_compatibility(request):
         }, status=500)
 
 
+@login_required
 def get_ai_job_recommendations(request):
     """Get AI-powered job recommendations for a student"""
     if request.method != 'POST':
@@ -391,6 +397,7 @@ def get_ai_job_recommendations(request):
         }, status=500)
 
 
+@login_required
 def get_career_advice(request):
     """Get personalized career advice using AI"""
     if request.method != 'POST':
@@ -458,6 +465,7 @@ def get_career_advice(request):
         }, status=500)
 
 
+@login_required
 def get_skill_gap_analysis(request):
     """Analyze skill gaps for specific job or career path"""
     if request.method != 'POST':
