@@ -5,796 +5,1192 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'js/pdf.js/pdf.min.css' %}">
-<style>
-  #loadingSpinner {
-    text-align: center;
-    padding: 2rem;
-  }
-  #loadingSpinner .spinner-text {
-    margin-top: 1rem;
-  }
-  .skills-section {
-    margin-bottom: 1.5rem;
-  }
-  .skills-section-title {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #dee2e6;
-  }
-  .skills-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 0.75rem;
-  }
-  .skill-checkbox {
-    display: flex;
-    align-items: center;
-    margin-bottom: 0.5rem;
-  }
-  .skill-checkbox input {
-    margin-right: 0.5rem;
-  }
-  .accordion-button:not(.collapsed) {
-    background-color: #f8f9fa;
-    color: #212529;
-  }
-  .accordion-button:focus {
-    box-shadow: none;
-    border-color: rgba(0,0,0,.125);
-  }
-</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/career-form.css' %}">
 {% endblock %}
 
 {% block content %}
-<div class="container py-4">
-  <h1 class="mb-4">Upload PDF Transcript</h1>
+<div class="hero-section">
+  <div class="container py-4">
+    <h1 class="hero-title display-4">Find Your Perfect Career Path</h1>
+    <p class="hero-subtitle lead">Upload your transcript and let our AI match you with the best job opportunities based
+      on your academic achievements and skills.</p>
+  </div>
+</div>
 
-  <div class="card mb-4 shadow-sm">
-    <div class="card-body">
-      <input type="file" id="pdfInput" class="form-control" accept="application/pdf">
+<div class="container py-4">
+  <!-- Progress steps indicator -->
+  <div class="progress-bar-container">
+    <div class="progress-steps">
+      <div class="progress-step active" data-step="1">
+        <div class="step-icon">1</div>
+        <div class="step-text">Upload</div>
+      </div>
+      <div class="progress-step" data-step="2">
+        <div class="step-icon">2</div>
+        <div class="step-text">Info</div>
+      </div>
+      <div class="progress-step" data-step="3">
+        <div class="step-icon">3</div>
+        <div class="step-text">Skills</div>
+      </div>
+      <div class="progress-step" data-step="4">
+        <div class="step-icon">4</div>
+        <div class="step-text">Experience</div>
+      </div>
+      <div class="progress-step" data-step="5">
+        <div class="step-icon">5</div>
+        <div class="step-text">Submit</div>
+      </div>
+      <div class="progress-line"></div>
     </div>
   </div>
-  
-  <div id="formContainer" class="card shadow-sm">
-    <div class="card-header bg-primary text-white">
-      <h2 class="h4 mb-0">Submit Application Data</h2>
+
+  <!-- Upload Section -->
+  <div class="form-card mb-4 animate-fade-in">
+    <div class="form-section-header">
+      <div class="form-section-icon">
+        <i class="fas fa-file-upload"></i>
+      </div>
+      <h2 class="h4 mb-0">Upload Your Transcript</h2>
     </div>
     <div class="card-body">
-      <form id="applicationForm">
-        {% csrf_token %}
-        
-        <!-- Student Info Section -->
-        <div class="card mb-4">
-          <div class="card-header bg-light">
-            <h3 class="h5 mb-0">Student Information</h3>
+      <div class="upload-container" id="uploadContainer">
+        <div class="upload-icon">
+          <i class="fas fa-cloud-upload-alt"></i>
+        </div>
+        <h3 class="upload-text">Drag & Drop your PDF transcript here</h3>
+        <p>or</p>
+        <button class="btn btn-custom btn-primary" type="button">Browse Files</button>
+        <input type="file" id="pdfInput" class="file-input" accept="application/pdf">
+      </div>
+      <p class="text-center text-muted mt-3"><small>Your transcript will be automatically processed to extract your
+          academic information</small></p>
+    </div>
+  </div>
+
+  <form id="applicationForm">
+    {% csrf_token %}
+
+    <!-- Student Info and Academic Courses Section -->
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-user-graduate"></i>
+        </div>
+        <h3 class="h5 mb-0">Student Information & Academic Courses</h3>
+      </div>
+      <div class="card-body">
+        <input type="hidden" id="student_id" name="student_id">
+        <input type="hidden" id="id_number" name="id_number">
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3 form-floating">
+              <input type="text" id="fullname" name="fullname" class="form-control" required
+                placeholder="Your first name">
+              <label for="fullname">
+                <i class="fas fa-user me-2"></i>First Name
+              </label>
+            </div>
           </div>
-          <div class="card-body">
-            <input type="hidden" id="student_id" name="student_id">
-            <input type="hidden" id="id_number" name="id_number">
-            
-            <div class="mb-3">
-              <label for="fullname" class="form-label">Full Name:</label>
-              <input type="text" id="fullname" name="fullname" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-              <label for="last_name" class="form-label">Last Name:</label>
-              <input type="text" id="last_name" name="last_name" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-              <label for="birth_date" class="form-label">Date of Birth:</label>
-              <input type="text" id="birth_date" name="birth_date" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-              <label for="faculty" class="form-label">Faculty:</label>
-              <input type="text" id="faculty" name="faculty" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-              <label for="program" class="form-label">Program:</label>
-              <input type="text" id="program" name="program" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-              <label for="gpa" class="form-label">GPA:</label>
-              <input type="text" id="gpa" name="gpa" class="form-control" required>
+
+          <div class="col-md-6">
+            <div class="mb-3 form-floating">
+              <input type="text" id="last_name" name="last_name" class="form-control" required
+                placeholder="Your last name">
+              <label for="last_name"><i class="fas fa-user me-2"></i>Last Name</label>
             </div>
           </div>
         </div>
-        
-        <!-- Skills Preferences Section -->
-        <div class="card mb-4">
-          <div class="card-header bg-light">
-            <h3 class="h5 mb-0">Skill Preferences</h3>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3 form-floating">
+              <input type="text" id="birth_date" name="birth_date" class="form-control" required
+                placeholder="DD/MM/YYYY">
+              <label for="birth_date"><i class="fas fa-calendar me-2"></i>Date of Birth</label>
+            </div>
           </div>
-          <div class="card-body">
-            <p class="text-muted">Select the skills you have or are interested in based on job roles:</p>
-            <input type="hidden" id="skills_data" name="skills_data" value="[]">
-            
-            <div class="accordion" id="skillsAccordion">
-              <!-- Skill categories will be dynamically generated here -->
+
+          <div class="col-md-6">
+            <div class="mb-3 form-floating">
+              <input type="text" id="gpa" name="gpa" class="form-control" required placeholder="0.00">
+              <label for="gpa"><i class="fas fa-chart-line me-2"></i>GPA</label>
             </div>
           </div>
         </div>
-        
-        <!-- Organization Experience Section -->
-        <div class="card mb-4">
-          <div class="card-header bg-light">
-            <h3 class="h5 mb-0">Organization Experience</h3>
+
+        <div class="row">
+          <div class="col-md-6">
+            <div class="mb-3 form-floating">
+              <input type="text" id="faculty" name="faculty" class="form-control" required placeholder="Your faculty">
+              <label for="faculty"><i class="fas fa-university me-2"></i>Faculty</label>
+            </div>
           </div>
-          <div class="card-body">
+
+          <div class="col-md-6">
+            <div class="mb-3 form-floating">
+              <input type="text" id="program" name="program" class="form-control" required placeholder="Your program">
+              <label for="program"><i class="fas fa-graduation-cap me-2"></i>Program</label>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <!-- Academic Courses Subsection -->
+        <div class="d-flex align-items-center mb-3">
+          <div class="fs-5 me-2">
+            <i class="fas fa-book text-primary"></i>
+          </div>
+          <h4 class="mb-0">Academic Courses</h4>
+        </div>
+        <div id="courses-container">
+          <input type="hidden" id="courses_data" name="courses_data">
+          <div class="text-center py-4">
+            <p class="mt-3">Your courses will be automatically displayed here after uploading your transcript.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Skills Preferences Section -->
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-code"></i>
+        </div>
+        <h3 class="h5 mb-0">Skill Preferences</h3>
+      </div>
+      <div class="card-body">
+        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+          <i class="fas fa-info-circle me-3 fs-4"></i>
+          <div>
+            <strong>Highlight your expertise!</strong> Select the skills you have or are interested in to help us match
+            you with the most relevant job opportunities.
+          </div>
+        </div>
+        <input type="hidden" id="skills_data" name="skills_data" value="[]">
+
+        <div class="accordion" id="skillsAccordion">
+          <!-- Skill categories will be dynamically generated here -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Experience Section -->
+    <div class="form-card mb-4">
+      <div class="form-section-header">
+        <div class="form-section-icon">
+          <i class="fas fa-briefcase"></i>
+        </div>
+        <h3 class="h5 mb-0">Experience</h3>
+      </div>
+      <div class="card-body">
+        <ul class="nav nav-pills mb-4" id="experienceTabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="organization-tab" data-bs-toggle="pill"
+              data-bs-target="#organization-tab-content" type="button" role="tab"
+              aria-controls="organization-tab-content" aria-selected="true">
+              <i class="fas fa-users me-2"></i>Organizations
+            </button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="internship-tab" data-bs-toggle="pill" data-bs-target="#internship-tab-content"
+              type="button" role="tab" aria-controls="internship-tab-content" aria-selected="false">
+              <i class="fas fa-laptop-code me-2"></i>Internships
+            </button>
+          </li>
+        </ul>
+
+        <div class="tab-content" id="experienceTabsContent">
+          <!-- Organization Experience -->
+          <div class="tab-pane fade show active" id="organization-tab-content" role="tabpanel"
+            aria-labelledby="organization-tab">
+            <div class="alert alert-light border-start border-4 mb-4">
+              <i class="fas fa-lightbulb text-warning me-2"></i>
+              Showcase your leadership and teamwork skills by adding your organizational experiences.
+            </div>
             <div id="organization-inputs" class="mb-3"></div>
-            <button type="button" id="add-organization" class="btn btn-primary">
-              <i class="bi bi-plus-circle"></i> Add Organization Experience
+            <button type="button" id="add-organization" class="btn btn-custom btn-primary">
+              <i class="fas fa-plus-circle me-2"></i>Add Organization Experience
             </button>
           </div>
-        </div>
-        
-        <!-- Internship Experience Section -->
-        <div class="card mb-4">
-          <div class="card-header bg-light">
-            <h3 class="h5 mb-0">Internship Experience</h3>
-          </div>
-          <div class="card-body">
-            <div id="internship-inputs" class="mb-3"></div>
-            <button type="button" id="add-internship" class="btn btn-primary">
-              <i class="bi bi-plus-circle"></i> Add Internship Experience
-            </button>
-          </div>
-        </div>
-        
-        <!-- Course Data Section -->
-        <div class="card mb-4">
-          <div class="card-header bg-light">
-            <h3 class="h5 mb-0">Course Data</h3>
-          </div>
-          <div class="card-body">
-            <div id="courses-container">
-              <input type="hidden" id="courses_data" name="courses_data">
+
+          <!-- Internship Experience -->
+          <div class="tab-pane fade" id="internship-tab-content" role="tabpanel" aria-labelledby="internship-tab">
+            <div class="alert alert-light border-start border-4 mb-4">
+              <i class="fas fa-lightbulb text-warning me-2"></i>
+              Highlight your professional experience with internships that showcase your practical skills.
             </div>
+            <div id="internship-inputs" class="mb-3"></div>
+            <button type="button" id="add-internship" class="btn btn-custom btn-primary">
+              <i class="fas fa-plus-circle me-2"></i>Add Internship Experience
+            </button>
           </div>
         </div>
-        
-        <div class="d-grid">
-          <button type="submit" id="submitBtn" class="btn btn-success btn-lg">Submit Application</button>
+      </div>
+    </div>
+
+    <div class="d-grid">
+      <button type="submit" id="submitBtn" class="btn btn-custom btn-success btn-lg">
+        <i class="fas fa-rocket me-2"></i>Get My Career Recommendations
+      </button>
+    </div>
+  </form>
+
+  <!-- Loading Spinner -->
+  <div id="loadingSpinner">
+    <div class="py-5 my-5 text-center">
+      <div class="spinner-grow text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <div class="spinner-text mt-4">
+        <h4>Finding Your Perfect Career Match</h4>
+        <p class="text-muted">Our AI is analyzing your profile to identify the best job opportunities...</p>
+      </div>
+      <div class="progress mt-4">
+        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar">
         </div>
-      </form>
-      
-      <!-- Loading Spinner -->
-      <div id="loadingSpinner" style="display: none;">
-        <div class="spinner-border text-primary" role="status">
-          <span class="visually-hidden">Loading...</span>
-        </div>
-        <div class="spinner-text">Processing your data...</div>
       </div>
     </div>
   </div>
-</div>
-{% endblock %}
+  {% endblock %}
 
-{% block extra_js %}
-<script src="{% static 'js/pdf.js/pdf.min.js' %}"></script>
-<script>
-  // Skills data structure - all skills organized by categories and sections
-  const skillsData = {
-    "Software Development": {
-      isExpanded: true, // first category starts expanded
-      sections: {
-        "Programming Languages": [
+  {% block extra_js %}
+  <script src="{% static 'js/pdf.js/pdf.min.js' %}"></script>
+  <script>
+    // Skills data structure - simplified as flat lists within categories
+    const skillsData = {
+      "Programming Languages": {
+        isExpanded: true, // first category starts expanded
+        skills: [
           { id: "skill_python", value: "Python", label: "Python" },
           { id: "skill_java", value: "Java", label: "Java" },
           { id: "skill_cpp", value: "C++", label: "C++" },
           { id: "skill_c", value: "C", label: "C" },
+          { id: "skill_csharp", value: "C#", label: "C#" },
           { id: "skill_javascript", value: "JavaScript", label: "JavaScript" },
           { id: "skill_typescript", value: "TypeScript", label: "TypeScript" },
-          { id: "skill_csharp", value: "C#", label: "C#" },
-          { id: "skill_ruby", value: "Ruby", label: "Ruby" },
-          { id: "skill_php", value: "PHP", label: "PHP" },
           { id: "skill_go", value: "Go", label: "Go" },
-          { id: "skill_swift", value: "Swift", label: "Swift" },
-          { id: "skill_kotlin", value: "Kotlin", label: "Kotlin" }
-        ],
-        "Web Development": [
+          { id: "skill_php", value: "PHP", label: "PHP" },
+          { id: "skill_ruby", value: "Ruby", label: "Ruby" }
+        ]
+      },
+      "Web Development": {
+        isExpanded: false,
+        skills: [
           { id: "skill_html", value: "HTML/CSS", label: "HTML/CSS" },
           { id: "skill_react", value: "React", label: "React" },
           { id: "skill_angular", value: "Angular", label: "Angular" },
           { id: "skill_vue", value: "Vue.js", label: "Vue.js" },
+          { id: "skill_bootstrap", value: "Bootstrap", label: "Bootstrap" },
+          { id: "skill_sass", value: "SASS/SCSS", label: "SASS/SCSS" },
           { id: "skill_node", value: "Node.js", label: "Node.js" },
           { id: "skill_express", value: "Express.js", label: "Express.js" },
           { id: "skill_django", value: "Django", label: "Django" },
           { id: "skill_flask", value: "Flask", label: "Flask" },
           { id: "skill_spring", value: "Spring", label: "Spring" },
-          { id: "skill_rails", value: "Ruby on Rails", label: "Ruby on Rails" },
-          { id: "skill_laravel", value: "Laravel", label: "Laravel" },
-          { id: "skill_aspnet", value: "ASP.NET", label: "ASP.NET" }
-        ],
-        "UI/UX Design": [
-          { id: "skill_ux_research", value: "UX Research", label: "UX Research" },
-          { id: "skill_ui_design", value: "UI Design", label: "UI Design" },
-          { id: "skill_wireframing", value: "Wireframing", label: "Wireframing" },
-          { id: "skill_prototyping", value: "Prototyping", label: "Prototyping" },
-          { id: "skill_figma", value: "Figma", label: "Figma" },
-          { id: "skill_sketch", value: "Sketch", label: "Sketch" },
-          { id: "skill_adobe_xd", value: "Adobe XD", label: "Adobe XD" },
-          { id: "skill_invision", value: "InVision", label: "InVision" },
-          { id: "skill_usability_testing", value: "Usability Testing", label: "Usability Testing" },
-          { id: "skill_accessibility", value: "Accessibility (WCAG)", label: "Accessibility (WCAG)" },
-          { id: "skill_user_personas", value: "User Personas", label: "User Personas" },
-          { id: "skill_interaction_design", value: "Interaction Design", label: "Interaction Design" }
-        ],
-        "Mobile Development": [
-          { id: "skill_android", value: "Android", label: "Android" },
-          { id: "skill_ios", value: "iOS", label: "iOS" },
-          { id: "skill_flutter", value: "Flutter", label: "Flutter" },
-          { id: "skill_react_native", value: "React Native", label: "React Native" },
-          { id: "skill_xamarin", value: "Xamarin", label: "Xamarin" }
+          { id: "skill_api", value: "API Development", label: "API Development" },
+          { id: "skill_graphql", value: "GraphQL", label: "GraphQL" }
         ]
-      }
-    },
-    "Data Science & AI": {
-      isExpanded: false,
-      sections: {
-        "Data Science": [
-          { id: "skill_data_analysis", value: "Data Analysis", label: "Data Analysis" },
-          { id: "skill_pandas", value: "Pandas", label: "Pandas" },
-          { id: "skill_numpy", value: "NumPy", label: "NumPy" },
-          { id: "skill_data_viz", value: "Data Visualization", label: "Data Visualization" },
-          { id: "skill_jupyter", value: "Jupyter", label: "Jupyter Notebooks" },
-          { id: "skill_r_lang", value: "R", label: "R" },
-          { id: "skill_tableau", value: "Tableau", label: "Tableau" },
-          { id: "skill_power_bi", value: "Power BI", label: "Power BI" },
-          { id: "skill_statistics", value: "Statistics", label: "Statistics" }
-        ],
-        "Data Analytics": [
-          { id: "skill_business_intelligence", value: "Business Intelligence", label: "Business Intelligence" },
-          { id: "skill_data_mining", value: "Data Mining", label: "Data Mining" },
-          { id: "skill_predictive_analytics", value: "Predictive Analytics", label: "Predictive Analytics" },
-          { id: "skill_ab_testing", value: "A/B Testing", label: "A/B Testing" },
-          { id: "skill_excel_analytics", value: "Excel Analytics", label: "Excel Analytics" },
-          { id: "skill_sql_analytics", value: "SQL Analytics", label: "SQL Analytics" },
-          { id: "skill_google_analytics", value: "Google Analytics", label: "Google Analytics" },
-          { id: "skill_looker", value: "Looker", label: "Looker" },
-          { id: "skill_customer_analytics", value: "Customer Analytics", label: "Customer Analytics" },
-          { id: "skill_marketing_analytics", value: "Marketing Analytics", label: "Marketing Analytics" },
-          { id: "skill_sales_analytics", value: "Sales Analytics", label: "Sales Analytics" },
-          { id: "skill_data_storytelling", value: "Data Storytelling", label: "Data Storytelling" }
-        ],
-        "Big Data & Analytics Platforms": [
-          { id: "skill_hadoop", value: "Hadoop", label: "Hadoop" },
-          { id: "skill_spark", value: "Apache Spark", label: "Apache Spark" },
-          { id: "skill_kafka", value: "Apache Kafka", label: "Apache Kafka" },
-          { id: "skill_airflow", value: "Apache Airflow", label: "Apache Airflow" },
-          { id: "skill_hive", value: "Apache Hive", label: "Apache Hive" },
-          { id: "skill_dataproc", value: "Google Dataproc", label: "Google Dataproc" },
-          { id: "skill_bigquery", value: "BigQuery", label: "BigQuery" },
-          { id: "skill_redshift", value: "Amazon Redshift", label: "Amazon Redshift" },
-          { id: "skill_snowflake", value: "Snowflake", label: "Snowflake" },
-          { id: "skill_databricks", value: "Databricks", label: "Databricks" }
-        ],
-        "Machine Learning": [
-          { id: "skill_machine_learning", value: "Machine Learning", label: "Machine Learning" },
-          { id: "skill_deep_learning", value: "Deep Learning", label: "Deep Learning" },
-          { id: "skill_scikit_learn", value: "Scikit-Learn", label: "Scikit-Learn" },
-          { id: "skill_tensorflow", value: "TensorFlow", label: "TensorFlow" },
-          { id: "skill_pytorch", value: "PyTorch", label: "PyTorch" },
-          { id: "skill_keras", value: "Keras", label: "Keras" },
-          { id: "skill_nlp", value: "NLP", label: "Natural Language Processing" },
-          { id: "skill_computer_vision", value: "Computer Vision", label: "Computer Vision" },
-          { id: "skill_reinforcement_learning", value: "Reinforcement Learning", label: "Reinforcement Learning" }
-        ]
-      }
-    },
-    "DevOps & Cloud Engineering": {
-      isExpanded: false,
-      sections: {
-        "DevOps": [
-          { id: "skill_devops", value: "DevOps", label: "DevOps" },
-          { id: "skill_ci_cd", value: "CI/CD", label: "CI/CD" },
-          { id: "skill_docker", value: "Docker", label: "Docker" },
-          { id: "skill_kubernetes", value: "Kubernetes", label: "Kubernetes" },
-          { id: "skill_jenkins", value: "Jenkins", label: "Jenkins" },
-          { id: "skill_ansible", value: "Ansible", label: "Ansible" },
-          { id: "skill_terraform", value: "Terraform", label: "Terraform" },
-          { id: "skill_prometheus", value: "Prometheus", label: "Prometheus" },
-          { id: "skill_grafana", value: "Grafana", label: "Grafana" }
-        ],
-        "Cloud Platforms": [
-          { id: "skill_aws", value: "AWS", label: "AWS" },
-          { id: "skill_azure", value: "Azure", label: "Microsoft Azure" },
-          { id: "skill_gcp", value: "GCP", label: "Google Cloud Platform" },
-          { id: "skill_serverless", value: "Serverless Architecture", label: "Serverless Architecture" },
-          { id: "skill_lambda", value: "AWS Lambda", label: "AWS Lambda" },
-          { id: "skill_ec2", value: "AWS EC2", label: "AWS EC2" }
-        ]
-      }
-    },
-    "Security & Networks": {
-      isExpanded: false,
-      sections: {
-        "Cybersecurity": [
-          { id: "skill_cybersecurity", value: "Cybersecurity", label: "Cybersecurity" },
-          { id: "skill_pentesting", value: "Penetration Testing", label: "Penetration Testing" },
-          { id: "skill_security_audit", value: "Security Auditing", label: "Security Auditing" },
-          { id: "skill_cryptography", value: "Cryptography", label: "Cryptography" },
-          { id: "skill_threat_analysis", value: "Threat Analysis", label: "Threat Analysis" },
-          { id: "skill_incident_response", value: "Incident Response", label: "Incident Response" }
-        ],
-        "Network Engineering": [
-          { id: "skill_network", value: "Network Engineering", label: "Network Engineering" },
-          { id: "skill_cisco", value: "Cisco", label: "Cisco" },
-          { id: "skill_routing_protocols", value: "Routing Protocols", label: "Routing Protocols" },
-          { id: "skill_firewall", value: "Firewall Configuration", label: "Firewall Configuration" },
-          { id: "skill_vpn", value: "VPN", label: "VPN" },
-          { id: "skill_load_balancing", value: "Load Balancing", label: "Load Balancing" }
-        ]
-      }
-    },
-    "Database Technologies": {
-      isExpanded: false,
-      sections: {
-        "SQL Databases": [
+      },
+      "Databases": {
+        isExpanded: false,
+        skills: [
           { id: "skill_sql", value: "SQL", label: "SQL" },
           { id: "skill_mysql", value: "MySQL", label: "MySQL" },
           { id: "skill_postgresql", value: "PostgreSQL", label: "PostgreSQL" },
-          { id: "skill_sql_server", value: "MS SQL Server", label: "MS SQL Server" },
-          { id: "skill_oracle", value: "Oracle DB", label: "Oracle DB" }
-        ],
-        "NoSQL Databases": [
+          { id: "skill_sql_server", value: "SQL Server", label: "SQL Server" },
+          { id: "skill_oracle", value: "Oracle", label: "Oracle" },
           { id: "skill_mongodb", value: "MongoDB", label: "MongoDB" },
-          { id: "skill_cassandra", value: "Cassandra", label: "Cassandra" },
           { id: "skill_redis", value: "Redis", label: "Redis" },
-          { id: "skill_dynamodb", value: "DynamoDB", label: "DynamoDB" },
-          { id: "skill_elasticsearch", value: "Elasticsearch", label: "Elasticsearch" }
+          { id: "skill_elasticsearch", value: "Elasticsearch", label: "Elasticsearch" },
+          { id: "skill_orm", value: "ORM Tools", label: "ORM Tools" }
         ]
-      }
-    },
-    "Specialized Engineering Fields": {
-      isExpanded: false,
-      sections: {
-        "Embedded Systems": [
-          { id: "skill_embedded", value: "Embedded Systems", label: "Embedded Systems" },
-          { id: "skill_arduino", value: "Arduino", label: "Arduino" },
-          { id: "skill_raspberry_pi", value: "Raspberry Pi", label: "Raspberry Pi" },
-          { id: "skill_arm", value: "ARM Architecture", label: "ARM Architecture" },
-          { id: "skill_rtos", value: "RTOS", label: "Real-Time OS" }
-        ],
-        "Robotics": [
-          { id: "skill_robotics", value: "Robotics", label: "Robotics" },
-          { id: "skill_ros", value: "ROS", label: "ROS (Robot Operating System)" },
-          { id: "skill_motor_control", value: "Motor Control", label: "Motor Control" },
-          { id: "skill_sensors", value: "Sensor Integration", label: "Sensor Integration" }
-        ],
-        "Other Specialized Fields": [
-          { id: "skill_iot", value: "IoT", label: "Internet of Things (IoT)" },
-          { id: "skill_blockchain", value: "Blockchain", label: "Blockchain" },
-          { id: "skill_parallel", value: "Parallel Computing", label: "Parallel Computing" },
-          { id: "skill_quantum", value: "Quantum Computing", label: "Quantum Computing" },
-          { id: "skill_ar_vr", value: "AR/VR Development", label: "AR/VR Development" }
-        ]
-      }
-    },
-    "General Professional Skills": {
-      isExpanded: false,
-      sections: {
-        "Development Tools & Practices": [
+      },
+      "DevOps & Cloud": {
+        isExpanded: false,
+        skills: [
           { id: "skill_git", value: "Git", label: "Git" },
           { id: "skill_github", value: "GitHub", label: "GitHub" },
-          { id: "skill_jira", value: "Jira", label: "Jira" },
-          { id: "skill_agile", value: "Agile", label: "Agile Methodology" },
-          { id: "skill_scrum", value: "Scrum", label: "Scrum" },
-          { id: "skill_tdd", value: "TDD", label: "Test-Driven Development" },
-          { id: "skill_code_review", value: "Code Review", label: "Code Review" },
-          { id: "skill_unit_testing", value: "Unit Testing", label: "Unit Testing" },
-          { id: "skill_system_design", value: "System Design", label: "System Design" },
-          { id: "skill_algorithm", value: "Algorithms", label: "Algorithms" },
-          { id: "skill_data_structures", value: "Data Structures", label: "Data Structures" }
+          { id: "skill_docker", value: "Docker", label: "Docker" },
+          { id: "skill_kubernetes", value: "Kubernetes", label: "Kubernetes" },
+          { id: "skill_ci_cd", value: "CI/CD", label: "CI/CD" },
+          { id: "skill_aws", value: "AWS", label: "AWS" },
+          { id: "skill_azure", value: "Azure", label: "Microsoft Azure" },
+          { id: "skill_gcp", value: "GCP", label: "Google Cloud Platform" },
+          { id: "skill_firebase", value: "Firebase", label: "Firebase" },
+          { id: "skill_heroku", value: "Heroku", label: "Heroku" }
+        ]
+      },
+      "Data Science & AI": {
+        isExpanded: false,
+        skills: [
+          { id: "skill_pandas", value: "Pandas", label: "Pandas" },
+          { id: "skill_numpy", value: "NumPy", label: "NumPy" },
+          { id: "skill_jupyter", value: "Jupyter", label: "Jupyter" },
+          { id: "skill_r", value: "R Language", label: "R Language" },
+          { id: "skill_data_viz", value: "Data Visualization", label: "Data Visualization" },
+          { id: "skill_scikit", value: "Scikit-Learn", label: "Scikit-Learn" },
+          { id: "skill_tensorflow", value: "TensorFlow", label: "TensorFlow" },
+          { id: "skill_pytorch", value: "PyTorch", label: "PyTorch" },
+          { id: "skill_nlp", value: "NLP", label: "Natural Language Processing" },
+          { id: "skill_computer_vision", value: "Computer Vision", label: "Computer Vision" },
+          { id: "skill_machine_learning", value: "Machine Learning", label: "Machine Learning" }
+        ]
+      },
+      "Other Skills": {
+        isExpanded: false,
+        skills: [
+          { id: "skill_android", value: "Android", label: "Android" },
+          { id: "skill_ios", value: "iOS/Swift", label: "iOS/Swift" },
+          { id: "skill_flutter", value: "Flutter", label: "Flutter" },
+          { id: "skill_react_native", value: "React Native", label: "React Native" },
+          { id: "skill_oop", value: "Object-Oriented Programming", label: "Object-Oriented Programming" },
+          { id: "skill_data_structures", value: "Data Structures", label: "Data Structures" },
+          { id: "skill_algorithms", value: "Algorithms", label: "Algorithms" },
+          { id: "skill_testing", value: "Software Testing", label: "Software Testing" },
+          { id: "skill_agile", value: "Agile", label: "Agile" },
+          { id: "skill_project_management", value: "Project Management", label: "Project Management" }
         ]
       }
-    }
-  };
+    };
 
-  // Function to generate skills sections dynamically
-  function generateSkillsSections() {
-    const accordion = document.getElementById('skillsAccordion');
-    
-    // Clear accordion first
-    accordion.innerHTML = '';
-    
-    // Generate content for each job role category
-    Object.entries(skillsData).forEach(([category, data], categoryIndex) => {
-      // Create unique ID for this category
-      const headingId = `heading${category.replace(/\W+/g, '')}`;
-      const collapseId = `collapse${category.replace(/\W+/g, '')}`;
-      const isExpanded = data.isExpanded;
-      
-      // Create accordion item
-      const accordionItem = document.createElement('div');
-      accordionItem.className = 'accordion-item';
-      
-      // Create header
-      accordionItem.innerHTML = `
+    // Function to generate skills sections dynamically
+    function generateSkillsSections() {
+      const accordion = document.getElementById('skillsAccordion');
+
+      // Clear accordion first
+      accordion.innerHTML = '';
+
+      // Generate content for each skill category
+      Object.entries(skillsData).forEach(([category, data], categoryIndex) => {
+        // Create unique ID for this category
+        const headingId = `heading${category.replace(/\W+/g, '')}`;
+        const collapseId = `collapse${category.replace(/\W+/g, '')}`;
+        const isExpanded = data.isExpanded;
+
+        // Get icon based on category
+        const getCategoryIcon = (category) => {
+          const icons = {
+            'Programming Languages': 'fa-code',
+            'Web Development': 'fa-globe',
+            'Databases': 'fa-database',
+            'DevOps & Cloud': 'fa-cloud',
+            'Data Science & AI': 'fa-brain',
+            'Other Skills': 'fa-tools'
+          };
+          return icons[category] || 'fa-star';
+        };
+
+        // Create accordion item
+        const accordionItem = document.createElement('div');
+        accordionItem.className = 'accordion-item';
+
+        // Create header
+        accordionItem.innerHTML = `
         <h2 class="accordion-header" id="${headingId}">
           <button class="accordion-button ${isExpanded ? '' : 'collapsed'}" type="button" 
                   data-bs-toggle="collapse" data-bs-target="#${collapseId}" 
                   aria-expanded="${isExpanded}" aria-controls="${collapseId}">
-            ${category}
+            <i class="fas ${getCategoryIcon(category)} me-2"></i> ${category}
+            <span class="badge bg-primary ms-2 selected-count" id="badge-${headingId}">0</span>
           </button>
         </h2>
         <div id="${collapseId}" class="accordion-collapse collapse ${isExpanded ? 'show' : ''}" 
              aria-labelledby="${headingId}">
           <div class="accordion-body">
-            <!-- Skills sections will be added here -->
+            <!-- Skills will be added here -->
+          </div>
+        </div>
+      `;
+
+        // Add to accordion
+        accordion.appendChild(accordionItem);
+
+        // Get body element to add skills to
+        const accordionBody = accordionItem.querySelector('.accordion-body');
+
+        // Create skills grid directly
+        const skillsGrid = document.createElement('div');
+        skillsGrid.className = 'skills-grid';
+
+        // Add each skill to the grid
+        data.skills.forEach(skill => {
+          const skillDiv = document.createElement('div');
+          skillDiv.className = 'skill-checkbox';
+
+          skillDiv.innerHTML = `
+          <label class="custom-checkbox" for="${skill.id}">
+            <input type="checkbox" id="${skill.id}" class="skill-input" value="${skill.value}" data-heading="${headingId}">
+            <span class="checkmark"></span>
+            ${skill.label}
+          </label>
+        `;
+
+          skillsGrid.appendChild(skillDiv);
+        });
+
+        // Add skills grid to accordion body
+        accordionBody.appendChild(skillsGrid);
+      });
+
+      // Add event listeners to all generated checkboxes
+      document.querySelectorAll('.skill-input').forEach(checkbox => {
+        checkbox.addEventListener('change', function () {
+          updateSkillsData();
+          updateSkillCategoryCount(this);
+        });
+      });
+    }
+
+    // Update skill category count badges
+    function updateSkillCategoryCount(checkbox) {
+      const headingId = checkbox.dataset.heading;
+      const badge = document.getElementById(`badge-${headingId}`);
+      const checkboxes = document.querySelectorAll(`input[data-heading="${headingId}"]:checked`);
+
+      badge.textContent = checkboxes.length;
+
+      if (checkboxes.length > 0) {
+        badge.classList.remove('bg-light', 'text-dark');
+        badge.classList.add('bg-primary');
+      } else {
+        badge.classList.remove('bg-primary');
+        badge.classList.add('bg-light', 'text-dark');
+      }
+
+      // When a skill is checked, move to the next progress step
+      if (checkbox.checked && progressStep < 3) {
+        progressStep = 3;
+        updateProgressBar(progressStep, totalSteps);
+      }
+    }
+
+    // Initialize progress bar width
+    let progressStep = 1;
+    let totalSteps = 5;
+    updateProgressBar(progressStep, totalSteps);
+
+    // Progress bar update function
+    function updateProgressBar(currentStep, totalSteps) {
+      // Update the progress line
+      const progressPercent = ((currentStep - 1) / (totalSteps - 1)) * 100;
+      document.querySelector('.progress-line').style.width = `${progressPercent}%`;
+
+      // Update all step elements
+      document.querySelectorAll('.progress-step').forEach((step, index) => {
+        const stepNum = index + 1;
+        if (stepNum < currentStep) {
+          step.classList.add('completed');
+          step.classList.remove('active');
+        } else if (stepNum === currentStep) {
+          step.classList.add('active');
+          step.classList.remove('completed');
+        } else {
+          step.classList.remove('active', 'completed');
+        }
+      });
+    }
+
+    // Set up drag and drop functionality
+    const uploadContainer = document.getElementById('uploadContainer');
+    const fileInput = document.getElementById('pdfInput');
+
+    // Handle drag events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      uploadContainer.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // Highlight drop zone when file is dragged over it
+    ['dragenter', 'dragover'].forEach(eventName => {
+      uploadContainer.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      uploadContainer.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+      uploadContainer.classList.add('drag-over');
+    }
+
+    function unhighlight() {
+      uploadContainer.classList.remove('drag-over');
+    }
+
+    // Handle dropped files
+    uploadContainer.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+
+      if (files.length > 0 && files[0].type === 'application/pdf') {
+        fileInput.files = files;
+        handleFileSelection(files[0]);
+      } else {
+        showToast('Please upload a PDF file', 'error');
+      }
+    }
+
+    // Handle file selection via the file input
+    fileInput.addEventListener('change', function (e) {
+      if (this.files.length > 0) {
+        handleFileSelection(this.files[0]);
+      }
+    });
+
+    // Handle the file processing
+    function handleFileSelection(file) {
+      // Show loading effect on the upload container
+      uploadContainer.classList.add('uploading');
+      uploadContainer.innerHTML = `
+      <div class="text-center">
+        <div class="spinner-border text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h4>Analyzing your transcript...</h4>
+        <p>Please wait while we extract your academic information</p>
+      </div>
+    `;
+
+      // Process the file
+      extractPdfText(file)
+        .then(text => {
+          const studentInfo = extractStudentInfo(text);
+          const courses = extractCourses(text);
+          populateForm(studentInfo, courses);
+
+          // Update upload container with success message
+          uploadContainer.classList.remove('uploading');
+          uploadContainer.classList.add('success');
+          uploadContainer.innerHTML = `
+          <div class="text-center">
+            <div class="text-success mb-3">
+              <i class="fas fa-check-circle fa-4x"></i>
+            </div>
+            <h4>Transcript Processed Successfully!</h4>
+            <p class="text-muted">We've extracted your student information and academic courses. Continue filling out the form below.</p>
+          </div>
+        `;
+
+          // Move to next step in progress bar
+          progressStep = 2;
+          updateProgressBar(progressStep, totalSteps);
+
+          // Scroll to student info & courses section
+          const combinedSection = Array.from(document.querySelectorAll('h3.h5')).find(
+            h3 => h3.textContent.includes('Student Information & Academic Courses')
+          )?.closest('.form-card');
+
+          if (combinedSection) {
+            combinedSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+
+          // Show animated toast notification
+          showToast('Transcript processed successfully!', 'success');
+        })
+        .catch(error => {
+          console.error("Error extracting PDF text:", error);
+
+          // Update upload container with error message
+          uploadContainer.classList.remove('uploading');
+          uploadContainer.classList.add('error');
+          uploadContainer.innerHTML = `
+          <div class="text-center">
+            <div class="text-danger mb-3">
+              <i class="fas fa-exclamation-triangle fa-4x"></i>
+            </div>
+            <h4>Error Processing Transcript</h4>
+            <p>We couldn't process your PDF file. Please try again with a different file.</p>
+            <button class="btn btn-custom btn-primary mt-3" type="button" id="retryUpload">
+              <i class="fas fa-redo me-2"></i>Try Again
+            </button>
+          </div>
+        `;
+
+          // Add event listener to retry button
+          document.getElementById('retryUpload').addEventListener('click', resetUploadContainer);
+
+          // Show animated toast notification
+          showToast('Error processing transcript', 'error');
+        });
+    }
+
+    // Reset upload container to initial state
+    function resetUploadContainer() {
+      uploadContainer.classList.remove('uploading', 'success', 'error');
+      uploadContainer.innerHTML = `
+      <div class="upload-icon">
+        <i class="fas fa-cloud-upload-alt"></i>
+      </div>
+      <h3 class="upload-text">Drag & Drop your PDF transcript here</h3>
+      <p>or</p>
+      <button class="btn btn-custom btn-primary" type="button">Browse Files</button>
+      <input type="file" id="pdfInput" class="file-input" accept="application/pdf">
+    `;
+
+      // Re-attach event listener to the new file input
+      document.getElementById('pdfInput').addEventListener('change', function (e) {
+        if (this.files.length > 0) {
+          handleFileSelection(this.files[0]);
+        }
+      });
+    }
+
+    // Toast notification function using Bootstrap's toast component
+    function showToast(message, type) {
+      // Check if a toast container already exists, create if not
+      let toastContainer = document.querySelector('.toast-container');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1080';
+        document.body.appendChild(toastContainer);
+      }
+      
+      // Create unique ID for this toast
+      const toastId = 'toast-' + Date.now();
+      
+      // Create toast HTML using Bootstrap's structure
+      const toastHtml = `
+        <div id="${toastId}" class="toast bg-${type === 'success' ? 'success' : 'danger'} text-white" role="alert" aria-live="assertive" aria-atomic="true">
+          <div class="toast-body d-flex align-items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+            ${message}
+            <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="toast" aria-label="Close"></button>
           </div>
         </div>
       `;
       
-      // Add to accordion
-      accordion.appendChild(accordionItem);
+      // Add toast to container
+      toastContainer.insertAdjacentHTML('beforeend', toastHtml);
       
-      // Get body element to add sections to
-      const accordionBody = accordionItem.querySelector('.accordion-body');
+      // Get the toast element and create Bootstrap Toast instance
+      const toastEl = document.getElementById(toastId);
+      const toast = new bootstrap.Toast(toastEl, {
+        autohide: true,
+        delay: 3000
+      });
       
-      // Add each section for this category
-      Object.entries(data.sections).forEach(([sectionName, skills]) => {
-        // Create section container
-        const section = document.createElement('div');
-        section.className = 'skills-section';
-        
-        // Add section title
-        const title = document.createElement('h4');
-        title.className = 'skills-section-title';
-        title.textContent = sectionName;
-        section.appendChild(title);
-        
-        // Create skills grid
-        const skillsGrid = document.createElement('div');
-        skillsGrid.className = 'skills-grid';
-        
-        // Add each skill to the grid
-        skills.forEach(skill => {
-          const skillDiv = document.createElement('div');
-          skillDiv.className = 'skill-checkbox';
-          
-          skillDiv.innerHTML = `
-            <input type="checkbox" id="${skill.id}" class="skill-input" value="${skill.value}">
-            <label for="${skill.id}">${skill.label}</label>
-          `;
-          
-          skillsGrid.appendChild(skillDiv);
-        });
-        
-        // Add skills grid to section
-        section.appendChild(skillsGrid);
-        
-        // Add section to accordion body
-        accordionBody.appendChild(section);
-      });
-    });
-    
-    // Add event listeners to all generated checkboxes
-    document.querySelectorAll('.skill-input').forEach(checkbox => {
-      checkbox.addEventListener('change', updateSkillsData);
-    });
-  }
-
-  pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'js/pdf.js/pdf.worker.min.js' %}";
-  
-  // PDF extraction and text cleaning function
-  async function extractPdfText(file) {
-    return new Promise((resolve, reject) => {
-      const fileReader = new FileReader();
-      fileReader.onload = async function() {
-        try {
-          const typedarray = new Uint8Array(this.result);
-          const pdf = await pdfjsLib.getDocument(typedarray).promise;
-          const textChunks = [];
-          
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const content = await page.getTextContent({normalizeWhitespace: true, disableCombineTextItems: false});
-            textChunks.push(processPageContent(content));
-          }
-          
-          const text = textChunks.join("\n");
-          const cleanedText = text.replace(/\s+/g, ' ')
-                                  .replace(/(\w+)\s+:\s+/g, '$1: ')
-                                  .replace(/(\d)\s+(\d)/g, '$1$2')
-                                  .replace(/(\d{2})\s+\/\s+(\d{2})\s+\/\s+(\d{4})/g, '$1/$2/$3')
-                                  .replace(/([A-Z]{3})\s+(\d{4})/g, '$1$2');
-          resolve(cleanedText);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      fileReader.onerror = reject;
-      fileReader.readAsArrayBuffer(file);
-    });
-  }
-  
-  // PDF page content processing function
-  function processPageContent(content) {
-    const items = content.items.map(item => ({
-      text: item.str,
-      x: Math.round(item.transform[4]),
-      y: Math.round(item.transform[5]),
-      width: Math.round(item.width) || 0
-    }));
-    
-    const yPositions = {};
-    items.forEach(item => {
-      const yPos = Math.floor(item.y / 3) * 3;
-      if (!yPositions[yPos]) yPositions[yPos] = [];
-      yPositions[yPos].push(item);
-    });
-    
-    const sortedYPositions = Object.keys(yPositions).map(Number).sort((a, b) => b - a);
-    
-    return sortedYPositions.map(yPos => {
-      let line = '';
-      let lastX = -9999;
-      yPositions[yPos].sort((a, b) => a.x - b.x).forEach(item => {
-        if (item.x - lastX > 10 && line !== '') line += ' ';
-        line += item.text;
-        lastX = item.x + item.width;
-      });
-      return line;
-    }).join('\n');
-  }
-
-  // Student info extraction
-  function extractStudentInfo(text) {
-    const patterns = {
-      student_id: /Öğrenci No\s*\(Student ID\)\s*:\s*([0-9]+)/,
-      id_number: /T\.C\. Kimlik No\s*\(TR Identity No\)\s*:\s*([0-9]+)/,
-      fullname: /Adı\s*\(Given Name\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Soyadı|\s*$)/i,
-      last_name: /Soyadı\s*\(Surname\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Doğum|\s*$)/i,
-      birth_date: /Doğum Tarihi\s*\(Date of Birth\)\s*:\s*([0-9/]+)/,
-      faculty: /Eğitim Birimi(?:.*?):\s*([^:\r\n]+?)(?=\s*:[0-9]|\s*\()/,
-      program: /Programı\/ABD\/ASD(?:.*?):\s*([^:\r\n]+?)(?=\s*:|$)/,
-      gpa: /Genel Not Ortalaması(?:.*?):\s*([0-9.]+)/
-    };
-    
-    return Object.entries(patterns).reduce((info, [key, pattern]) => {
-      const match = text.match(pattern);
-      info[key] = match ? match[1].trim() : "Not Found";
-      return info;
-    }, {});
-  }
-
-  // Course list extraction
-  function extractCourses(text) {
-    const courses = [];
-    const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
-    
-    let match;
-    while ((match = courseRegex.exec(text)) !== null) {
-      courses.push({
-        code: match[1],
-        name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
-        grade: match[7] || "--"
+      // Show the toast
+      toast.show();
+      
+      // Remove the toast element after it's hidden
+      toastEl.addEventListener('hidden.bs.toast', function() {
+        this.remove();
       });
     }
-    
-    if (courses.length === 0) {
-      const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)/g;
-      while ((match = altCourseRegex.exec(text)) !== null) {
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "{% static 'js/pdf.js/pdf.worker.min.js' %}";
+
+    // PDF extraction and text cleaning function
+    async function extractPdfText(file) {
+      return new Promise((resolve, reject) => {
+        const fileReader = new FileReader();
+        fileReader.onload = async function () {
+          try {
+            const typedarray = new Uint8Array(this.result);
+            const loadingTask = pdfjsLib.getDocument(typedarray);
+
+            // Add progress tracking
+            loadingTask.onProgress = function (progress) {
+              const percent = progress.loaded / progress.total * 100;
+              console.log(`Loading PDF: ${Math.round(percent)}%`);
+            };
+
+            const pdf = await loadingTask.promise;
+            const textChunks = [];
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent({ normalizeWhitespace: true, disableCombineTextItems: false });
+              textChunks.push(processPageContent(content));
+            }
+
+            const text = textChunks.join("\n");
+            const cleanedText = text.replace(/\s+/g, ' ')
+              .replace(/(\w+)\s+:\s+/g, '$1: ')
+              .replace(/(\d)\s+(\d)/g, '$1$2')
+              .replace(/(\d{2})\s+\/\s+(\d{2})\s+\/\s+(\d{4})/g, '$1/$2/$3')
+              .replace(/([A-Z]{3})\s+(\d{4})/g, '$1$2');
+            resolve(cleanedText);
+          } catch (error) {
+            reject(error);
+          }
+        };
+        fileReader.onerror = reject;
+        fileReader.readAsArrayBuffer(file);
+      });
+    }
+
+    // PDF page content processing function
+    function processPageContent(content) {
+      const items = content.items.map(item => ({
+        text: item.str,
+        x: Math.round(item.transform[4]),
+        y: Math.round(item.transform[5]),
+        width: Math.round(item.width) || 0
+      }));
+
+      const yPositions = {};
+      items.forEach(item => {
+        const yPos = Math.floor(item.y / 3) * 3;
+        if (!yPositions[yPos]) yPositions[yPos] = [];
+        yPositions[yPos].push(item);
+      });
+
+      const sortedYPositions = Object.keys(yPositions).map(Number).sort((a, b) => b - a);
+
+      return sortedYPositions.map(yPos => {
+        let line = '';
+        let lastX = -9999;
+        yPositions[yPos].sort((a, b) => a.x - b.x).forEach(item => {
+          if (item.x - lastX > 10 && line !== '') line += ' ';
+          line += item.text;
+          lastX = item.x + item.width;
+        });
+        return line;
+      }).join('\n');
+    }
+
+    // Student info extraction
+    function extractStudentInfo(text) {
+      const patterns = {
+        student_id: /Öğrenci No\s*\(Student ID\)\s*:\s*([0-9]+)/,
+        id_number: /T\.C\. Kimlik No\s*\(TR Identity No\)\s*:\s*([0-9]+)/,
+        fullname: /Adı\s*\(Given Name\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Soyadı|\s*$)/i,
+        last_name: /Soyadı\s*\(Surname\)\s*:\s*([A-ZİĞÜŞÖÇ\s]+?)(?=\s+Doğum|\s*$)/i,
+        birth_date: /Doğum Tarihi\s*\(Date of Birth\)\s*:\s*([0-9/]+)/,
+        faculty: /Eğitim Birimi(?:.*?):\s*([^:\r\n]+?)(?=\s*:[0-9]|\s*\()/,
+        program: /Programı\/ABD\/ASD(?:.*?):\s*([^:\r\n]+?)(?=\s*:|$)/,
+        gpa: /Genel Not Ortalaması(?:.*?):\s*([0-9.]+)/
+      };
+
+      return Object.entries(patterns).reduce((info, [key, pattern]) => {
+        const match = text.match(pattern);
+        info[key] = match ? match[1].trim() : "Not Found";
+        return info;
+      }, {});
+    }
+
+    // Course list extraction
+    function extractCourses(text) {
+      const courses = [];
+      const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
+
+      let match;
+      while ((match = courseRegex.exec(text)) !== null) {
         courses.push({
           code: match[1],
           name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
-          grade: "--"
+          grade: match[7] || "--"
         });
       }
-    }
-    
-    return courses;
-  }
 
-  // Populate form with extracted data
-  function populateForm(studentInfo, courses) {
-    ['student_id', 'id_number', 'fullname', 'last_name', 'birth_date', 'faculty', 'program', 'gpa'].forEach(field => {
-      document.getElementById(field).value = studentInfo[field] || '';
-    });
-    
-    document.getElementById('courses_data').value = JSON.stringify(courses);
-    displayCoursesTable(courses);
-  }
-  
-  // Display courses table
-  function displayCoursesTable(courses) {
-    const coursesContainer = document.getElementById('courses-container');
-    const hiddenInput = document.getElementById('courses_data');
-    
-    coursesContainer.innerHTML = '';
-    coursesContainer.appendChild(hiddenInput);
-    
-    const coursesTitle = document.createElement('h4');
-    coursesTitle.className = 'mb-3';
-    coursesTitle.textContent = `Courses (${courses.length})`;
-    
-    const tableContainer = document.createElement('div');
-    tableContainer.className = 'table-responsive border rounded overflow-auto';
-    tableContainer.style.maxHeight = '300px';
-    
-    const table = document.createElement('table');
-    table.className = 'table table-striped table-hover mb-0';
-    
-    table.innerHTML = `
+      if (courses.length === 0) {
+        const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)/g;
+        while ((match = altCourseRegex.exec(text)) !== null) {
+          courses.push({
+            code: match[1],
+            name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
+            grade: "--"
+          });
+        }
+      }
+
+      return courses;
+    }
+
+    // Populate form with extracted data
+    function populateForm(studentInfo, courses) {
+      // Populate form fields without animation
+      ['student_id', 'id_number', 'fullname', 'last_name', 'birth_date', 'faculty', 'program', 'gpa'].forEach((field) => {
+        const element = document.getElementById(field);
+        element.value = studentInfo[field] || '';
+
+        // Mark as valid
+        element.classList.add('is-valid');
+        element.parentNode.classList.add('was-validated');
+      });
+
+      document.getElementById('courses_data').value = JSON.stringify(courses);
+
+      // Display courses table without delay and animation
+      displayCoursesTable(courses);
+
+      // Scroll to the courses section
+      const coursesContainer = document.getElementById('courses-container');
+      coursesContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Display courses table
+    function displayCoursesTable(courses) {
+      const coursesContainer = document.getElementById('courses-container');
+      const hiddenInput = document.getElementById('courses_data');
+
+      coursesContainer.innerHTML = '';
+      coursesContainer.appendChild(hiddenInput);
+
+      // Remove any existing alert
+      const existingAlert = coursesContainer.closest('.card-body').querySelector('.alert');
+      if (existingAlert) {
+        existingAlert.remove();
+      }
+
+      // Create a header with summary stats
+      const courseStats = document.createElement('div');
+      courseStats.className = 'd-flex justify-content-between align-items-center mb-3';
+
+      // Create table with improved styling
+      const tableContainer = document.createElement('div');
+      tableContainer.className = 'table-container table-responsive border rounded overflow-auto';
+      tableContainer.style.maxHeight = '300px';
+      tableContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.05)';
+
+      const table = document.createElement('table');
+      table.className = 'table table-hover mb-0';
+
+      // Define grade colors
+      const getGradeColor = (grade) => {
+        if (grade === 'AA') return 'success';
+        if (grade === 'BA' || grade === 'BB') return 'primary';
+        if (grade === 'CB' || grade === 'CC') return 'info';
+        if (grade === 'DC' || grade === 'DD') return 'warning';
+        if (grade === 'FF') return 'danger';
+        return 'secondary'; // For '--' or any other undefined grade
+      };
+
+      table.innerHTML = `
       <thead class="position-sticky top-0 bg-light">
         <tr>
-          <th>Code</th>
-          <th>Name</th>
-          <th>Grade</th>
+          <th class="col-2">Code</th>
+          <th class="col-8">Name</th>
+          <th class="col-2 text-center">Grade</th>
         </tr>
       </thead>
       <tbody>
         ${courses.map(course => `
-          <tr>
-            <td>${course.code}</td>
+          <tr class="course-row">
+            <td class="fw-bold">${course.code}</td>
             <td>${course.name}</td>
-            <td>${course.grade}</td>
+            <td class="text-center">
+              <span class="badge bg-${getGradeColor(course.grade)} rounded-pill px-3 py-2">
+                ${course.grade}
+              </span>
+            </td>
           </tr>
         `).join('')}
       </tbody>
     `;
-    
-    tableContainer.appendChild(table);
-    coursesContainer.appendChild(coursesTitle);
-    coursesContainer.appendChild(tableContainer);
-  }
-  
-  // Experience input template
-  const createExperienceInput = (type, index) => {
-    const isOrg = type === 'organization';
-    const prefix = isOrg ? 'org' : 'intern';
-    const nameField = isOrg ? 'name' : 'company';
-    const nameLabel = isOrg ? 'Organization Name:' : 'Company Name:';
-    
-    return `
-      <div class="card mb-3">
+
+      tableContainer.appendChild(table);
+      coursesContainer.appendChild(courseStats);
+      coursesContainer.appendChild(tableContainer);
+
+      // Progress step update after displaying courses
+      if (progressStep < 4) {
+        progressStep = 4;
+        updateProgressBar(progressStep, totalSteps);
+      }
+    }
+
+    // Experience input template
+    const createExperienceInput = (type, index) => {
+      const isOrg = type === 'organization';
+      const prefix = isOrg ? 'org' : 'intern';
+      const nameField = isOrg ? 'name' : 'company';
+      const nameLabel = isOrg ? 'Organization Name' : 'Company Name';
+      const icon = isOrg ? 'fa-users' : 'fa-building';
+      const color = isOrg ? 'primary' : 'info';
+
+      return `
+      <div class="form-card mb-3 animate-fade-in">
         <div class="card-body">
-          <div class="mb-3">
-            <label for="${prefix}_${nameField}_${index}" class="form-label">${nameLabel}</label>
-            <input type="text" id="${prefix}_${nameField}_${index}" name="${type}s[${index}][${nameField}]" class="form-control" required>
+          <div class="text-${color} mb-3">
+            <i class="fas ${icon} fa-2x"></i>
+            <span class="badge bg-light text-dark position-absolute top-0 end-0 m-3">#${index + 1}</span>
           </div>
-          <div class="mb-3">
-            <label for="${prefix}_position_${index}" class="form-label">Position:</label>
-            <input type="text" id="${prefix}_position_${index}" name="${type}s[${index}][position]" class="form-control" required>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3 form-floating">
+                <input type="text" id="${prefix}_${nameField}_${index}" name="${type}s[${index}][${nameField}]" class="form-control" required placeholder="${nameLabel}">
+                <label for="${prefix}_${nameField}_${index}">
+                  <i class="fas ${isOrg ? 'fa-sitemap' : 'fa-building'} me-2"></i>${nameLabel}
+                </label>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3 form-floating">
+                <input type="text" id="${prefix}_position_${index}" name="${type}s[${index}][position]" class="form-control" required placeholder="Your position">
+                <label for="${prefix}_position_${index}">
+                  <i class="fas fa-user-tie me-2"></i>Position
+                </label>
+              </div>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="${prefix}_description_${index}" class="form-label">Description:</label>
-            <textarea id="${prefix}_description_${index}" name="${type}s[${index}][description]" class="form-control" rows="3"></textarea>
+          
+          <div class="mb-3 form-floating">
+            <textarea id="${prefix}_description_${index}" name="${type}s[${index}][description]" class="form-control" placeholder="Description of your role"></textarea>
+            <label for="${prefix}_description_${index}">
+              <i class="fas fa-align-left me-2"></i>Description
+            </label>
           </div>
-          <button type="button" class="btn btn-danger" onclick="removeInput(this, '${type}')">Remove</button>
+          
+          <div class="text-end">
+            <button type="button" class="btn btn-custom btn-danger" onclick="removeInput(this, '${type}')">
+              <i class="fas fa-trash-alt me-2"></i>Remove
+            </button>
+          </div>
         </div>
       </div>
     `;
-  };
-  
-  // Add experience input
-  function addExperienceInput(type) {
-    const container = document.getElementById(`${type}-inputs`);
-    const inputGroup = document.createElement('div');
-    inputGroup.innerHTML = createExperienceInput(type, container.children.length);
-    container.appendChild(inputGroup.firstElementChild);
-  }
-  
-  // Remove input
-  window.removeInput = function(button, type) {
-    const card = button.closest('.card');
-    const container = card.parentNode;
-    container.removeChild(card);
-    
-    Array.from(container.querySelectorAll('.card')).forEach((card, index) => {
-      Array.from(card.querySelectorAll('[name]')).forEach(input => {
-        const nameAttr = input.getAttribute('name');
-        if (nameAttr) {
-          input.setAttribute('name', nameAttr.replace(/\[\d+\]/, `[${index}]`));
-        }
-      });
-    });
-  };
+    };
 
-  // Handle skill checkbox changes
-  function updateSkillsData() {
-    const selectedSkills = Array.from(document.querySelectorAll('.skill-input:checked')).map(cb => cb.value);
-    document.getElementById('skills_data').value = JSON.stringify(selectedSkills);
-  }
-  
-  // Event listeners
-  document.addEventListener('DOMContentLoaded', function() {
-    // Generate skills sections dynamically
-    generateSkillsSections();
-    
-    document.getElementById('add-organization').addEventListener('click', () => addExperienceInput('organization'));
-    document.getElementById('add-internship').addEventListener('click', () => addExperienceInput('internship'));
-    
-    document.getElementById('applicationForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      
-      // Update skills data before submission
-      updateSkillsData();
-      
-      // Show loading spinner
-      document.getElementById('loadingSpinner').style.display = 'block';
-      document.getElementById('submitBtn').disabled = true;
-      
-      try {
-        const formData = new FormData(e.target);
-        
-        // Get the CSRF token from the cookie
-        const csrftoken = getCookie('csrftoken');
-        
-        const response = await fetch('/api/submit-application/', {
-          method: 'POST',
-          headers: {
-            'X-CSRFToken': csrftoken
-          },
-          body: formData
+    // Add experience input with animation
+    function addExperienceInput(type) {
+      const container = document.getElementById(`${type}-inputs`);
+      const inputGroup = document.createElement('div');
+      inputGroup.innerHTML = createExperienceInput(type, container.children.length);
+
+      // Add to container
+      container.appendChild(inputGroup.firstElementChild);
+
+      // Focus on the first input field
+      const firstInput = inputGroup.querySelector('input');
+      if (firstInput) {
+        setTimeout(() => {
+          firstInput.focus();
+        }, 300); // Give time for animation to start
+      }
+
+      // Update progress step after adding experience
+      if (progressStep < 5) {
+        progressStep = 5;
+        updateProgressBar(progressStep, totalSteps);
+      }
+    }
+
+    // Remove input with animation
+    window.removeInput = function (button, type) {
+      const card = button.closest('.form-card');
+
+      // Add removal animation class
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(-10px)';
+      card.style.transition = 'all 0.3s ease';
+
+      // After animation completes, remove the element
+      setTimeout(() => {
+        const container = card.parentNode;
+        container.removeChild(card);
+
+        // Update indices for remaining cards
+        Array.from(container.querySelectorAll('.form-card')).forEach((card, index) => {
+          // Update the badge number
+          const badge = card.querySelector('.badge');
+          if (badge) badge.textContent = `#${index + 1}`;
+
+          // Update form field names
+          Array.from(card.querySelectorAll('[name]')).forEach(input => {
+            const nameAttr = input.getAttribute('name');
+            if (nameAttr) {
+              input.setAttribute('name', nameAttr.replace(/\[\d+\]/, `[${index}]`));
+            }
+          });
         });
-        
-        if (response.ok) {
-          const result = await response.json();
-          console.log('Submission result:', result);
-          
-          if (result.data && result.data.job_recommendations) {
-            // Store recommendations in session storage
-            sessionStorage.setItem('jobRecommendations', JSON.stringify(result.data.job_recommendations));
-            
-            // Redirect to the recommendations page
-            window.location.href = '/recommendation-results/';
+      }, 300);
+    };
+
+    // Handle skill checkbox changes
+    function updateSkillsData() {
+      const selectedSkills = Array.from(document.querySelectorAll('.skill-input:checked')).map(cb => cb.value);
+      document.getElementById('skills_data').value = JSON.stringify(selectedSkills);
+    }
+
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function () {
+      // Generate skills sections dynamically
+      generateSkillsSections();
+
+      // Add experience buttons with animations
+      document.getElementById('add-organization').addEventListener('click', () => {
+        addExperienceInput('organization');
+        // Switch to the organization tab if not already active
+        const orgTab = document.getElementById('organization-tab');
+        bootstrap.Tab.getOrCreateInstance(orgTab).show();
+      });
+
+      document.getElementById('add-internship').addEventListener('click', () => {
+        addExperienceInput('internship');
+        // Switch to the internship tab if not already active
+        const internTab = document.getElementById('internship-tab');
+        bootstrap.Tab.getOrCreateInstance(internTab).show();
+      });
+
+      // Tab events to update progress steps
+      document.querySelectorAll('#experienceTabs .nav-link').forEach(tab => {
+        tab.addEventListener('shown.bs.tab', () => {
+          if (progressStep < 4) {
+            progressStep = 4;
+            updateProgressBar(progressStep, totalSteps);
+          }
+        });
+      });
+
+      // Form submission with animated progress
+      document.getElementById('applicationForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Update skills data before submission
+        updateSkillsData();
+
+        // Show loading spinner
+        document.getElementById('loadingSpinner').style.display = 'block';
+        document.getElementById('submitBtn').disabled = true;
+
+        // Animate the progress bar
+        const progressBar = document.querySelector('#loadingSpinner .progress-bar');
+        progressBar.style.transition = 'width 2s ease';
+
+        setTimeout(() => {
+          progressBar.style.width = '30%';
+
+          setTimeout(() => {
+            progressBar.style.width = '60%';
+
+            setTimeout(() => {
+              progressBar.style.width = '90%';
+            }, 800);
+          }, 700);
+        }, 300);
+
+        try {
+          const formData = new FormData(e.target);
+
+          // Get the CSRF token from the cookie
+          const csrftoken = getCookie('csrftoken');
+
+          const response = await fetch('/api/submit-application/', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': csrftoken
+            },
+            body: formData
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Submission result:', result);
+
+            if (result.data && result.data.job_recommendations) {
+              // Store recommendations in session storage
+              sessionStorage.setItem('jobRecommendations', JSON.stringify(result.data.job_recommendations));
+
+              // Redirect to the recommendations page
+              window.location.href = '/recommendation-results/';
+            } else {
+              alert('No job recommendations were found. Please check your input data.');
+              document.getElementById('loadingSpinner').style.display = 'none';
+              document.getElementById('submitBtn').disabled = false;
+            }
           } else {
-            alert('No job recommendations were found. Please check your input data.');
+            const errorText = await response.text();
+            alert('Failed to submit application: ' + errorText);
             document.getElementById('loadingSpinner').style.display = 'none';
             document.getElementById('submitBtn').disabled = false;
           }
-        } else {
-          const errorText = await response.text();
-          alert('Failed to submit application: ' + errorText);
+        } catch (error) {
+          // Hide loading spinner on error
           document.getElementById('loadingSpinner').style.display = 'none';
           document.getElementById('submitBtn').disabled = false;
+          console.error('Error submitting form:', error);
+          alert('An error occurred while submitting your application. Please try again.');
         }
-      } catch (error) {
-        // Hide loading spinner on error
-        document.getElementById('loadingSpinner').style.display = 'none';
-        document.getElementById('submitBtn').disabled = false;
-        console.error('Error submitting form:', error);
-        alert('An error occurred while submitting your application. Please try again.');
-      }
+      });
+
+      document.getElementById('pdfInput').addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          try {
+            const text = await extractPdfText(file);
+            const studentInfo = extractStudentInfo(text);
+            const courses = extractCourses(text);
+            populateForm(studentInfo, courses);
+          } catch (error) {
+            console.error("Error extracting PDF text:", error);
+          }
+        }
+      });
     });
-    
-    document.getElementById('pdfInput').addEventListener('change', async (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        try {
-          const text = await extractPdfText(file);
-          const studentInfo = extractStudentInfo(text);
-          const courses = extractCourses(text);
-          populateForm(studentInfo, courses);
-        } catch (error) {
-          console.error("Error extracting PDF text:", error);
+
+    // Function to get CSRF token from cookie
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
         }
       }
-    });
-  });
-  
-  // Function to get CSRF token from cookie
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
+      return cookieValue;
     }
-    return cookieValue;
-  }
-</script>
-{% endblock %}
+
+    // Add scroll animations for a more dynamic feel
+    const animateOnScroll = () => {
+      const elements = document.querySelectorAll('.form-card');
+
+      elements.forEach(element => {
+        const position = element.getBoundingClientRect();
+
+        // Check if element is in viewport
+        if (position.top < window.innerHeight && position.bottom >= 0) {
+          if (!element.classList.contains('has-animated')) {
+            element.classList.add('animate-fade-in', 'has-animated');
+          }
+        }
+      });
+    };
+
+    // Add smooth scrolling and animations
+    window.addEventListener('scroll', animateOnScroll);
+
+    // Trigger initial animation
+    setTimeout(() => {
+      animateOnScroll();
+    }, 300);
+
+    // Add form field interactions for better UX
+    document.querySelectorAll('.form-control').forEach(field => {
+      field.addEventListener('focus', function () {
+        this.closest('.mb-3').classList.add('highlight-field');
+      });
+
+      field.addEventListener('blur', function () {
+        this.closest('.mb-3').classList.remove('highlight-field');
+
+        // Simple validation feedback
+        if (this.value.trim() !== '' && this.hasAttribute('required')) {
+          this.classList.add('is-valid');
+          this.classList.remove('is-invalid');
+        } else if (this.hasAttribute('required')) {
+          this.classList.add('is-invalid');
+          this.classList.remove('is-valid');
+        }
+      });
+    });
+  </script>
+  {% endblock %}
