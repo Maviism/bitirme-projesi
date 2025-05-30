@@ -125,7 +125,6 @@ function handleFileSelection(file) {
       // Call the form population function (from another module)
       window.populateForm(studentInfo, courses);
 
-      // Update upload container with success message
       uploadContainer.classList.remove('uploading');
       uploadContainer.classList.add('success');
       uploadContainer.innerHTML = `
@@ -166,13 +165,10 @@ function handleFileSelection(file) {
           </div>
           <h4>Error Processing Transcript</h4>
           <p>We couldn't process your PDF file. Please try again with a different file.</p>
-          <button class="btn btn-custom btn-primary mt-3" type="button" id="retryUpload">
-            <i class="fas fa-redo me-2"></i>Try Again
-          </button>
         </div>
       `;
 
-      // Add event listener to retry button
+      // Add event listeners to buttons
       document.getElementById('retryUpload').addEventListener('click', resetUploadContainer);
 
       // Show animated toast notification
@@ -300,10 +296,17 @@ function extractStudentInfo(text) {
  */
 function extractCourses(text) {
   const courses = [];
-  const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
+  
+  // Preprocess text to ensure course codes are properly separated
+  // This helps with cases where course entries are running together
+  let processedText = text.replace(/([A-Z]{3}\d{4}[İ]?)/g, '\n$1');
 
+  // Main regex pattern for courses with grade information
+  const courseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+(?:Tr|İng\.)\s+(\d+)\s+(\d+)\s+(\d+\s+)?([\w-]{1,2})\s+([\d.-]+|\-\-)\s+([A-Za-z]{1,3})?/g;
+
+  // Try to extract courses using the primary regex
   let match;
-  while ((match = courseRegex.exec(text)) !== null) {
+  while ((match = courseRegex.exec(processedText)) !== null) {
     courses.push({
       code: match[1],
       name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
@@ -311,9 +314,11 @@ function extractCourses(text) {
     });
   }
 
-  if (courses.length === 0) {
-    const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+Tr\s+(\d+)\s+(\d+)/g;
-    while ((match = altCourseRegex.exec(text)) !== null) {
+  // If no courses found or we want to try to find more courses with a different pattern
+  const altCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+(?:Tr|İng\.)\s+(\d+)\s+(\d+)/g;
+  while ((match = altCourseRegex.exec(processedText)) !== null) {
+    // Check if course code already exists to avoid duplicates
+    if (!courses.some(course => course.code === match[1])) {
       courses.push({
         code: match[1],
         name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
@@ -321,8 +326,66 @@ function extractCourses(text) {
       });
     }
   }
+  
+  // Additional pattern for courses with language as "İng." instead of "Tr"
+  const engCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)\s+([ZS])\s+İng\.\s+(\d+)\s+(\d+)(?:\s+(\d+\s+)?([\w-]{1,2}))?/g;
+  while ((match = engCourseRegex.exec(processedText)) !== null) {
+    // Check if course code already exists to avoid duplicates
+    if (!courses.some(course => course.code === match[1])) {
+      courses.push({
+        code: match[1],
+        name: match[2].trim().replace(/\s*\([^)]*\)\s*$/, ''),
+        grade: match[7] || "--"
+      });
+    }
+  }
+  
+  // If still missing courses, try a more aggressive approach with a simpler regex
+  // This will find any course codes that might have been missed
+  if (courses.length === 0 || true) { // Always run this as a supplementary check
+    const basicCourseRegex = /([A-Z]{3}\d{4}[İ]?)\s+(.*?)(?=\s+[ZS]\s+|$|\s+([A-Z]{3}\d{4}[İ]?))/g;
+    
+    while ((match = basicCourseRegex.exec(processedText)) !== null) {
+      const courseCode = match[1];
+      
+      // Check if course code already exists to avoid duplicates
+      if (!courses.some(course => course.code === courseCode)) {
+        // Extract name, stopping at common delimiters found in transcripts
+        let courseName = match[2].trim();
+        
+        // Clean up course name by removing text after specific Turkish terms that often appear
+        const stopTerms = ["Dersin", "Dönem", "Güz", "Bahar"];
+        for (const term of stopTerms) {
+          const index = courseName.indexOf(term);
+          if (index > 0) {
+            courseName = courseName.substring(0, index).trim();
+          }
+        }
+        
+        // Remove parenthetical content at the end
+        courseName = courseName.replace(/\s*\([^)]*\)\s*$/, '');
+        
+        courses.push({
+          code: courseCode,
+          name: courseName,
+          grade: "--"
+        });
+      }
+    }
+  }
+  
+  // Remove duplicate entries based on course code
+  const uniqueCourses = [];
+  const courseCodes = new Set();
+  
+  for (const course of courses) {
+    if (!courseCodes.has(course.code)) {
+      courseCodes.add(course.code);
+      uniqueCourses.push(course);
+    }
+  }
 
-  return courses;
+  return uniqueCourses;
 }
 
 export default {
