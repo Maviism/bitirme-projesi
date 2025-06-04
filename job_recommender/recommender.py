@@ -1,5 +1,5 @@
 from collections import Counter
-from .models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
+from .models import Student, Course, Experience, Job, JobRecommendation, Alumni
 from sentence_transformers import SentenceTransformer, util
 
 # Updated function to retrieve alumni data from the database

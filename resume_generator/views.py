@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.http import HttpRequest, HttpResponse, JsonResponse, JsonResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML
-from job_recommender.models import Student, Course, Internship, Organization # Assuming models are in job_recommender
+from job_recommender.models import Student, Course, Experience # Assuming models are in job_recommender
 from django.shortcuts import get_object_or_404 # For fetching student
 from utils.llm_utils import get_llm_instance, cache_llm_response
 import json
@@ -47,8 +47,8 @@ def generate_resume_view(request: HttpRequest):
 
     # Fetch related data for the student
     courses = Course.objects.filter(student=student)
-    internships = Internship.objects.filter(student=student)
-    organizations = Organization.objects.filter(student=student)
+    internships = Experience.objects.filter(student=student, experience_type='internship')
+    organizations = Experience.objects.filter(student=student, experience_type='organization')
 
     # Prepare student data for the form
     # Add fields that might not be directly on the Student model but are useful for a resume
@@ -112,8 +112,8 @@ def download_resume_view(request: HttpRequest):
         'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
         'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
         'courses': Course.objects.filter(student=student_obj),
-        'internships': Internship.objects.filter(student=student_obj),
-        'organizations': Organization.objects.filter(student=student_obj),
+        'internships': Experience.objects.filter(student=student_obj, experience_type='internship'),
+        'organizations': Experience.objects.filter(student=student_obj, experience_type='organization'),
     }
 
     # Get selected template style
@@ -166,8 +166,8 @@ def preview_resume_view(request: HttpRequest):
         'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
         'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
         'courses': Course.objects.filter(student=student_obj),
-        'internships': Internship.objects.filter(student=student_obj),
-        'organizations': Organization.objects.filter(student=student_obj),
+        'internships': Experience.objects.filter(student=student_obj, experience_type='internship'),
+        'organizations': Experience.objects.filter(student=student_obj, experience_type='organization'),
     }
 
     template_style = request.POST.get('resume_template_style', 'ats')
@@ -308,9 +308,9 @@ def generate_cover_letter(request: HttpRequest):
             'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills],
             'experience': [
                 {
-                    'company': internship.company_name,
-                    'position': getattr(internship, 'position', 'Intern')
-                } for internship in Internship.objects.filter(student=student_obj)
+                    'company': exp.institution_name,
+                    'position': getattr(exp, 'position', 'Intern')
+                } for exp in Experience.objects.filter(student=student_obj, experience_type='internship')
             ]
         }
         

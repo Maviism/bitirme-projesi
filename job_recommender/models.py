@@ -22,6 +22,17 @@ class Student(models.Model):
 
     def __str__(self):
         return f"{self.fullname} {self.last_name} ({self.student_id})"
+    
+    # Properties for backward compatibility with templates
+    @property
+    def internships(self):
+        """Return experiences with type 'internship'"""
+        return self.experiences.filter(experience_type='internship')
+    
+    @property
+    def organizations(self):
+        """Return experiences with type 'organization'"""
+        return self.experiences.filter(experience_type='organization')
 
 class Alumni(models.Model):
     """Model representing alumni information, extending the Student model"""
@@ -67,29 +78,40 @@ class Course(models.Model):
     class Meta:
         unique_together = ('student', 'code')
 
-class Organization(models.Model):
-    """Model representing student's organizational experience"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='organizations')
-    name = models.CharField(max_length=100)
+class Experience(models.Model):
+    """Model representing student's experience (organization or internship)"""
+    EXPERIENCE_TYPE_CHOICES = [
+        ('organization', 'Organization'),
+        ('internship', 'Internship'),
+    ]
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='experiences')
+    experience_type = models.CharField(max_length=20, choices=EXPERIENCE_TYPE_CHOICES, default='internship')
+    institution_name = models.CharField(max_length=100)  # Generic name for company/organization
     position = models.CharField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
     
     def __str__(self):
-        return f"{self.name} - {self.position}"
-
-class Internship(models.Model):
-    """Model representing student's internship experience"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='internships')
-    company = models.CharField(max_length=100)
-    position = models.CharField(max_length=100)
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
-    description = models.TextField(blank=True)
+        return f"{self.institution_name} - {self.position} ({self.get_experience_type_display()})"
     
-    def __str__(self):
-        return f"{self.company} - {self.position}"
+    @property
+    def is_organization(self):
+        return self.experience_type == 'organization'
+    
+    @property
+    def is_internship(self):
+        return self.experience_type == 'internship'
+    
+    @property
+    def name(self):
+        """For backward compatibility with Organization model"""
+        return self.institution_name
+    
+    @property
+    def company(self):
+        """For backward compatibility with Internship model"""
+        return self.institution_name
 
 class Job(models.Model):
     """Model representing a job posting"""

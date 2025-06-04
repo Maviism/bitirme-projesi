@@ -1,17 +1,14 @@
 from django.contrib import admin
-from .models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
+from .models import Student, Course, Experience, Job, JobRecommendation, Alumni
 
 class CourseInline(admin.TabularInline):
     model = Course
     extra = 1
 
-class OrganizationInline(admin.TabularInline):
-    model = Organization
+class ExperienceInline(admin.TabularInline):
+    model = Experience
     extra = 1
-
-class InternshipInline(admin.TabularInline):
-    model = Internship
-    extra = 1
+    fields = ('experience_type', 'institution_name', 'position', 'start_date', 'end_date', 'description')
 
 class JobRecommendationInline(admin.TabularInline):
     model = JobRecommendation
@@ -30,7 +27,7 @@ class StudentAdmin(admin.ModelAdmin):
     list_display = ('student_id', 'fullname', 'last_name', 'program', 'gpa', 'is_alumni')
     search_fields = ('student_id', 'fullname', 'last_name', 'program')
     list_filter = ('program', 'faculty', 'is_alumni')
-    inlines = [AlumniInline, CourseInline, OrganizationInline, InternshipInline, JobRecommendationInline]
+    inlines = [AlumniInline, CourseInline, ExperienceInline, JobRecommendationInline]
 
 @admin.register(Alumni)
 class AlumniAdmin(admin.ModelAdmin):
@@ -54,15 +51,11 @@ class CourseAdmin(admin.ModelAdmin):
     search_fields = ('code', 'name', 'student__fullname')
     list_filter = ('grade',)
 
-@admin.register(Organization)
-class OrganizationAdmin(admin.ModelAdmin):
-    list_display = ('name', 'position', 'student')
-    search_fields = ('name', 'position', 'student__fullname')
-
-@admin.register(Internship)
-class InternshipAdmin(admin.ModelAdmin):
-    list_display = ('company', 'position', 'student')
-    search_fields = ('company', 'position', 'student__fullname')
+@admin.register(Experience)
+class ExperienceAdmin(admin.ModelAdmin):
+    list_display = ('institution_name', 'position', 'experience_type', 'student', 'start_date', 'end_date')
+    search_fields = ('institution_name', 'position', 'student__fullname', 'description')
+    list_filter = ('experience_type', 'start_date')
 
 @admin.register(Job)
 class JobAdmin(admin.ModelAdmin):

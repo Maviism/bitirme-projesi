@@ -175,7 +175,7 @@
                     <span class="item-title">{{ exp.position }}</span>
                     <span class="item-dates">{{ exp.start_date|date:"M Y" }} – {{ exp.end_date|date:"M Y"|default:"Present" }}</span>
                 </div>
-                <div class="item-subtitle">{{ exp.company }}</div>
+                <div class="item-subtitle">{{ exp.institution_name }}</div>
                 {% if exp.description %}
                 <div class="item-description">
                     {{ exp.description }}

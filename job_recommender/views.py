@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 # Import our recommender system
 from .recommender import HybridRecommender
 # Import our models
-from .models import Student, Course, Organization, Internship, Job, JobRecommendation
+from .models import Student, Course, Experience, Job, JobRecommendation
 # Import LLM utils
 from utils.llm_utils import get_llm_instance, cache_llm_response
 import logging
@@ -171,32 +171,34 @@ def submit_application(request):
                     }
                 )
             
-            # Save organizations
+            # Save organizations as experiences
             for org_data in organizations:
                 start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
                 end_date = None
                 if org_data.get('end_date'):
                     end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
                 
-                Organization.objects.create(
+                Experience.objects.create(
                     student=student,
-                    name=org_data['name'],
+                    experience_type='organization',
+                    institution_name=org_data.get('institution_name', org_data.get('name', '')),
                     position=org_data['position'],
                     start_date=start_date,
                     end_date=end_date,
                     description=org_data.get('description', '')
                 )
             
-            # Save internships
+            # Save internships as experiences
             for intern_data in internships:
                 start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
                 end_date = None
                 if intern_data.get('end_date'):
                     end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
                 
-                Internship.objects.create(
+                Experience.objects.create(
                     student=student,
-                    company=intern_data['company'],
+                    experience_type='internship',
+                    institution_name=intern_data.get('institution_name', intern_data.get('company', '')),
                     position=intern_data['position'],
                     start_date=start_date,
                     end_date=end_date,
@@ -296,16 +298,16 @@ def analyze_job_compatibility(request):
             ],
             'experience': [
                 {
-                    'company': internship.company_name,
-                    'position': getattr(internship, 'position', 'Intern'),
-                    'duration': getattr(internship, 'duration', 'N/A')
-                } for internship in Internship.objects.filter(student=student)
+                    'company': exp.institution_name,
+                    'position': getattr(exp, 'position', 'Intern'),
+                    'duration': getattr(exp, 'duration', 'N/A')
+                } for exp in Experience.objects.filter(student=student, experience_type='internship')
             ],
             'organizations': [
                 {
-                    'name': org.organization_name,
-                    'role': getattr(org, 'role', 'Member')
-                } for org in Organization.objects.filter(student=student)
+                    'name': exp.institution_name,
+                    'role': getattr(exp, 'position', 'Member')
+                } for exp in Experience.objects.filter(student=student, experience_type='organization')
             ]
         }
         
@@ -360,7 +362,7 @@ def get_ai_job_recommendations(request):
                 'gpa': str(student.gpa)
             },
             'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
-            'experience_level': 'entry' if not Internship.objects.filter(student=student).exists() else 'experienced',
+            'experience_level': 'entry' if not Experience.objects.filter(student=student, experience_type='internship').exists() else 'experienced',
             'preferences': {
                 'industry': request.POST.get('preferred_industry', ''),
                 'location': request.POST.get('preferred_location', ''),
@@ -425,9 +427,9 @@ def get_career_advice(request):
             'courses': [course.course_name for course in Course.objects.filter(student=student)],
             'experience': [
                 {
-                    'company': internship.company_name,
-                    'position': getattr(internship, 'position', 'Intern')
-                } for internship in Internship.objects.filter(student=student)
+                    'company': exp.institution_name,
+                    'position': getattr(exp, 'position', 'Intern')
+                } for exp in Experience.objects.filter(student=student, experience_type='internship')
             ],
             'career_goal': career_goal
         }
@@ -487,7 +489,7 @@ def get_skill_gap_analysis(request):
         # Prepare current skills
         current_skills = student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else []
         current_experience = [
-            internship.company_name for internship in Internship.objects.filter(student=student)
+            exp.institution_name for exp in Experience.objects.filter(student=student, experience_type='internship')
         ]
         
         # Get target job requirements

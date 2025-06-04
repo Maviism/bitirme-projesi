@@ -1,0 +1,5 @@
+student_id,experience_type,institution_name,position,start_date,end_date,description
+S001,internship,Google,Software Engineering Intern,2021-06-01,2021-08-31,Developed and optimized backend services for Google Photos
+S002,internship,Microsoft,UX Design Intern,2021-06-15,2021-09-15,Worked on interface design for Microsoft Teams
+S001,organization,Computer Society,President,2020-09-01,2022-05-31,Leading the university computer society and organizing tech events
+S001,organization,Robotics Club,Member,2019-10-15,2021-06-30,Participated in robotics competitions and projects

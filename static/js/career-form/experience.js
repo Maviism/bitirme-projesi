@@ -13,7 +13,7 @@ import progressBar from './progress-bar.js';
 const createExperienceInput = (type, index) => {
   const isOrg = type === 'organization';
   const prefix = isOrg ? 'org' : 'intern';
-  const nameField = isOrg ? 'name' : 'company';
+  const nameField = 'institution_name'; // Use unified field name
   const nameLabel = isOrg ? 'Organization Name' : 'Company Name';
   const icon = isOrg ? 'fa-users' : 'fa-building';
   const color = isOrg ? 'primary' : 'info';
@@ -30,6 +30,7 @@ const createExperienceInput = (type, index) => {
         <div class="col-md-6">
           <div class="mb-3 form-floating">
             <input type="text" id="${prefix}_${nameField}_${index}" name="${type}s[${index}][${nameField}]" class="form-control" required placeholder="${nameLabel}">
+            <input type="hidden" name="${type}s[${index}][experience_type]" value="${type}">
             <label for="${prefix}_${nameField}_${index}">
               <i class="fas ${isOrg ? 'fa-sitemap' : 'fa-building'} me-2"></i>${nameLabel}
             </label>
@@ -40,6 +41,25 @@ const createExperienceInput = (type, index) => {
             <input type="text" id="${prefix}_position_${index}" name="${type}s[${index}][position]" class="form-control" required placeholder="Your position">
             <label for="${prefix}_position_${index}">
               <i class="fas fa-user-tie me-2"></i>Position
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div class="mb-3 form-floating">
+            <input type="date" id="${prefix}_start_date_${index}" name="${type}s[${index}][start_date]" class="form-control" required placeholder="Start Date">
+            <label for="${prefix}_start_date_${index}">
+              <i class="fas fa-calendar-day me-2"></i>Start Date
+            </label>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="mb-3 form-floating">
+            <input type="date" id="${prefix}_end_date_${index}" name="${type}s[${index}][end_date]" class="form-control" placeholder="End Date">
+            <label for="${prefix}_end_date_${index}">
+              <i class="fas fa-calendar-check me-2"></i>End Date (leave empty if current)
             </label>
           </div>
         </div>
