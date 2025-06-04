@@ -1,8 +1,10 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import User
 
 class Student(models.Model):
     """Model representing student information"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='student_profiles', null=True, blank=True)
     student_id = models.CharField(max_length=20, unique=True)
     id_number = models.CharField(max_length=20, blank=True, null=True)
     fullname = models.CharField(max_length=100)
@@ -11,6 +13,9 @@ class Student(models.Model):
     faculty = models.CharField(max_length=100)
     program = models.CharField(max_length=100)
     gpa = models.DecimalField(max_digits=3, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(4.0)])
+    email = models.EmailField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    linkedin_profile = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

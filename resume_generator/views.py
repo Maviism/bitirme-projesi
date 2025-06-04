@@ -12,30 +12,128 @@ import logging
 # Standard logger configuration
 logger = logging.getLogger(__name__)
 
-# A placeholder function to simulate getting a student.
-# In a real app, you\'d get this from the logged-in user.
+# Function to get the student related to the current user
 def get_current_student(request: HttpRequest):
-    # Placeholder: using the first student. Replace with actual user logic.
-    # For example, if Student model has a OneToOneField to User:
-    # if request.user.is_authenticated:
-    #     try:
-    #         return Student.objects.get(user=request.user)
-    #     except Student.DoesNotExist:
-    #         return None
-    # return None
+    # Check if the user is authenticated
+    if request.user.is_authenticated:
+        try:
+            # Get the username
+            username = request.user.username
+            logger.info(f"Finding student for authenticated user: {username}")
+            
+            # Check if a specific student ID is requested from the session or URL parameter
+            requested_student_id = request.session.get('active_student_id') or request.GET.get('student_profile_id')
+            if requested_student_id:
+                try:
+                    # Try to get the specific student
+                    student = Student.objects.get(id=requested_student_id, user=request.user)
+                    logger.info(f"Using specifically requested student: {student.fullname} {student.last_name}")
+                    return student
+                except Student.DoesNotExist:
+                    logger.warning(f"Requested student ID {requested_student_id} not found or doesn't belong to user")
+            
+            # First try to find student profiles directly linked to the user
+            student_profiles = Student.objects.filter(user=request.user)
+            if student_profiles.exists():
+                # Get the most recently updated student profile
+                student = student_profiles.order_by('-updated_at').first()
+                logger.info(f"Found student by user relation: {student.fullname} {student.last_name}")
+                return student
+            
+            # Try to find student by student_id matching username
+            try:
+                student = Student.objects.get(student_id=username)
+                logger.info(f"Found student by matching student_id: {student.fullname} {student.last_name}")
+                
+                # Link this student to the user if not already linked
+                if not student.user:
+                    student.user = request.user
+                    student.save(update_fields=['user'])
+                    logger.info(f"Linked student {student.student_id} to user {username}")
+                
+                return student
+            except Student.DoesNotExist:
+                logger.info(f"No student found with student_id={username}")
+            
+            # Try by email if available
+            if hasattr(request.user, 'email') and request.user.email:
+                try:
+                    # Look for students with email field
+                    student = Student.objects.filter(email=request.user.email).first()
+                    if student:
+                        logger.info(f"Found student by email: {student.fullname} {student.last_name}")
+                        
+                        # Link this student to the user if not already linked
+                        if not student.user:
+                            student.user = request.user
+                            student.save(update_fields=['user'])
+                            logger.info(f"Linked student with email {request.user.email} to user {username}")
+                        
+                        return student
+                except Exception as e:
+                    logger.info(f"Could not find student by email: {e}")
+            
+            # If we reach here, no student was found for this user
+            logger.warning(f"No student record found for user: {username}")
+            
+        except Exception as e:
+            logger.error(f"Error fetching student for user: {e}")
+    
+    # If not authenticated or no match found, log appropriately
+    if not request.user.is_authenticated:
+        logger.warning("User is not authenticated - using default student")
+    else:
+        logger.warning(f"No student record found for user '{request.user.username}' - using default student")
+    
+    # Fall back to default student (for development only)
     student = Student.objects.first()
     if not student:
-        # Create a dummy student if none exist, for development purposes
-        # This is NOT for production.
+        # Create a dummy student if none exist, for development purposes only
+        from datetime import date
         student = Student.objects.create(
             student_id="00000", fullname="Dummy", last_name="User",
-            birth_date="2000-01-01", faculty="Science", program="General Science", gpa="3.0",
+            birth_date=date(2000, 1, 1), faculty="Science", program="General Science", gpa="3.0",
             skills=["Sample Skill 1", "Sample Skill 2"]
         )
-        # You might want to create dummy related objects too if needed for the template
+        logger.warning(f"Created dummy student: {student.fullname} {student.last_name}")
+    else:
+        logger.info(f"Using existing student as fallback: {student.fullname} {student.last_name}")
+        
     return student
 
 # Create your views here.
+def select_profile_view(request: HttpRequest):
+    """View for selecting among multiple student profiles"""
+    if not request.user.is_authenticated:
+        return redirect('login')
+        
+    if request.method == 'POST':
+        profile_id = request.POST.get('profile_id')
+        if profile_id:
+            # Store the selected profile ID in session
+            request.session['active_student_id'] = profile_id
+            
+            # Redirect to the resume generator
+            return redirect('resume_generator:generate_resume')
+    
+    # Get all profiles linked to this user
+    student_profiles = Student.objects.filter(user=request.user).order_by('-updated_at')
+    
+    # Get the currently active profile ID from session
+    active_profile_id = request.session.get('active_student_id')
+    
+    # If there's only one profile, set it as active and redirect
+    if student_profiles.count() == 1:
+        request.session['active_student_id'] = str(student_profiles.first().id)
+        return redirect('resume_generator:generate_resume')
+        
+    context = {
+        'profiles': student_profiles,
+        'active_profile_id': active_profile_id
+    }
+    
+    return render(request, 'resume_generator/select_profile.html', context)
+
 def generate_resume_view(request: HttpRequest):
     job_id = request.GET.get('job_id')
     job_title = request.GET.get('title')
@@ -51,6 +149,59 @@ def generate_resume_view(request: HttpRequest):
     courses = Course.objects.filter(student=student)
     internships = Experience.objects.filter(student=student, experience_type='internship')
     organizations = Experience.objects.filter(student=student, experience_type='organization')
+    
+    # Get job recommendations for this student if available
+    job_recommendations = None
+    if job_id:
+        try:
+            from job_recommender.models import JobRecommendation, Job
+            
+            # Debug information
+            logger.info(f"Fetching recommendations for student ID: {student.id}, job ID: {job_id}")
+            
+            # Get all recommendations for this student
+            recommendations = JobRecommendation.objects.filter(
+                student=student
+            ).select_related('job').order_by('-match_score')[:5]  # Get top 5
+            
+            logger.info(f"Found {recommendations.count()} recommendations for student")
+            
+            # Find the current job in recommendations if it exists
+            current_job_rec = None
+            for rec in recommendations:
+                logger.info(f"Checking recommendation job ID: {rec.job.id} ({type(rec.job.id)}) vs requested job ID: {job_id} ({type(job_id)})")
+                if str(rec.job.id) == str(job_id):
+                    current_job_rec = rec
+                    logger.info(f"Match found! Job: {rec.job.title} with score: {rec.match_score}")
+                    break
+            
+            # If we didn't find the current job in recommendations, try to fetch it directly
+            if not current_job_rec:
+                logger.info(f"Current job not found in recommendations, trying direct fetch")
+                try:
+                    # Try to find a recommendation for this specific job
+                    direct_rec = JobRecommendation.objects.filter(
+                        student=student,
+                        job__id=job_id
+                    ).first()
+                    
+                    if direct_rec:
+                        logger.info(f"Direct job recommendation found with score: {direct_rec.match_score}")
+                        current_job_rec = direct_rec
+                    else:
+                        # If there's no recommendation, create the job object for reference
+                        job_obj = Job.objects.get(id=job_id)
+                        logger.info(f"Found job: {job_obj.title} at {job_obj.company}")
+                except Exception as job_error:
+                    logger.error(f"Error looking up job directly: {job_error}")
+            
+            job_recommendations = {
+                'recommendations': recommendations,
+                'current_job_rec': current_job_rec
+            }
+        except Exception as e:
+            logger.error(f"Error fetching job recommendations: {e}")
+            # Don't let this block the resume generation
 
     # Prepare student data for the form
     # Add fields that might not be directly on the Student model but are useful for a resume
@@ -77,6 +228,7 @@ def generate_resume_view(request: HttpRequest):
         'job_company': job_company,
         'job_description': job_description,
         'student': student_form_data,
+        'job_recommendations': job_recommendations,  # Add recommendations to context
     }
     # Assuming you have a template named 'generate_resume_form.html' 
     # or similar in your resume_generator templates directory.
@@ -352,6 +504,57 @@ def generate_ai_resume_content(request: HttpRequest):
                 })
         except Exception as e:
             logger.warning(f"Error checking LLM API keys: {e}")
+
+        # Get job recommendations to enhance resume content
+        job_recommendations = []
+        try:
+            from job_recommender.models import JobRecommendation, Job
+            
+            # Get job ID if it was passed to the form
+            job_id = request.POST.get('job_id')
+            if job_id:
+                logger.info(f"Job ID from form: {job_id}")
+                
+                # First try to get recommendation specifically for this job
+                job_rec = JobRecommendation.objects.filter(
+                    student=student_obj,
+                    job__id=job_id
+                ).select_related('job').first()
+                
+                if job_rec:
+                    logger.info(f"Found specific job recommendation for job ID {job_id}")
+                    # Add this first as it's the most relevant
+                    job_recommendations.append({
+                        'title': job_rec.job.title,
+                        'company': job_rec.job.company,
+                        'match_score': float(job_rec.match_score),
+                        'is_current_job': True,
+                        'required_skills': job_rec.job.required_skills if isinstance(job_rec.job.required_skills, list) else [],
+                        'description': job_rec.job.description[:200]
+                    })
+            
+            # Get general recommendations
+            recommendations = JobRecommendation.objects.filter(
+                student=student_obj
+            ).select_related('job').order_by('-match_score')[:3]  # Top 3 recommendations
+            
+            for rec in recommendations:
+                # Skip if this is the current job we already added
+                if job_id and str(rec.job.id) == str(job_id) and len(job_recommendations) > 0:
+                    continue
+                    
+                job_recommendations.append({
+                    'title': rec.job.title,
+                    'company': rec.job.company,
+                    'match_score': float(rec.match_score),
+                    'is_current_job': job_id and str(rec.job.id) == str(job_id),
+                    'required_skills': rec.job.required_skills if isinstance(rec.job.required_skills, list) else [],
+                    'description': rec.job.description[:200]  # Truncated description
+                })
+                
+            logger.info(f"Processed {len(job_recommendations)} job recommendations for AI content generation")
+        except Exception as e:
+            logger.warning(f"Error fetching job recommendations: {e}")
         
         # Prepare user data for LLM
         user_data = {
@@ -381,7 +584,8 @@ def generate_ai_resume_content(request: HttpRequest):
                     'name': org.institution_name,
                     'role': getattr(org, 'position', 'Member')
                 } for org in Experience.objects.filter(student=student_obj, experience_type='organization')
-            ]
+            ],
+            'job_recommendations': job_recommendations  # Add job recommendations
         }
         
         # Get job description if provided
@@ -389,18 +593,17 @@ def generate_ai_resume_content(request: HttpRequest):
         
         # Get LLM instance and generate content
         llm = get_llm_instance()
-        ai_content = llm.generate_resume_content(user_data, job_description)
+        content = llm.generate_resume_content(user_data, job_description)
         
         return JsonResponse({
             'success': True,
-            'content': ai_content
+            'content': content
         })
         
     except Exception as e:
-        logger.error(f"Error generating AI resume content: {e}")
+        logger.error(f"Error generating resume content: {e}")
         return JsonResponse({
-            'error': 'Failed to generate AI content',
-            'details': str(e)
+            'error': str(e)
         }, status=500)
 
 
@@ -562,13 +765,37 @@ PROFESSIONAL SUMMARY:
         # Get the cover letter content if it was generated
         cover_letter = request.POST.get('cover_letter_content', '')
         
+        # Check if there's cover letter content in the DOM (from generated content)
+        if not cover_letter and request.POST.get('has_generated_cover_letter') == 'true':
+            # Extract from the hidden field that might have been populated by JS
+            cover_letter_elem = request.POST.get('hidden_cover_letter', '')
+            if cover_letter_elem:
+                cover_letter = cover_letter_elem
+                
         # Prepare data for the interview system
         interview_data = {
             'student_id': student_id,
             'job_id': job_id,
+            'job_title': job_title,
+            'job_company': job_company,
             'resume_content': resume_content,
             'cover_letter': cover_letter
         }
+        
+        # If we have job recommendation data, include match information
+        if job_id:
+            try:
+                from job_recommender.models import JobRecommendation
+                job_rec = JobRecommendation.objects.filter(
+                    student=student_obj,
+                    job__id=job_id
+                ).first()
+                
+                if job_rec:
+                    interview_data['match_score'] = str(job_rec.match_score)
+                    interview_data['match_source'] = job_rec.source
+            except Exception as e:
+                logger.warning(f"Could not retrieve job recommendation data: {e}")
         
         # Redirect to the interview preparation page
         from django.urls import reverse

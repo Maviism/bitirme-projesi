@@ -4,6 +4,7 @@ from . import views
 app_name = 'resume_generator'
 
 urlpatterns = [
+    path('profiles/', views.select_profile_view, name='select_profile'),
     path('generate/', views.generate_resume_view, name='generate_resume'),
     path('download/', views.download_resume_view, name='download_resume'),
     path('preview/', views.preview_resume_view, name='preview_resume'),

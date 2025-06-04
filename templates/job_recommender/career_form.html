@@ -81,14 +81,23 @@
         <h3 class="h5 mb-0">Student Information & Academic Courses</h3>
       </div>
       <div class="card-body">
+        {% if student %}
+        <div class="alert alert-info mb-4">
+          <i class="fas fa-info-circle me-2"></i>
+          We've found your existing profile. You can update the information below if needed.
+        </div>
+        <input type="hidden" id="student_id" name="student_id" value="{{ student.student_id }}">
+        <input type="hidden" id="id_number" name="id_number" value="{{ student.id_number }}">
+        {% else %}
         <input type="hidden" id="student_id" name="student_id">
         <input type="hidden" id="id_number" name="id_number">
+        {% endif %}
 
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3 form-floating">
               <input type="text" id="fullname" name="fullname" class="form-control" required
-                placeholder="Your first name">
+                placeholder="Your first name" value="{{ student.fullname|default:'' }}">
               <label for="fullname">
                 <i class="fas fa-user me-2"></i>First Name
               </label>
@@ -98,7 +107,7 @@
           <div class="col-md-6">
             <div class="mb-3 form-floating">
               <input type="text" id="last_name" name="last_name" class="form-control" required
-                placeholder="Your last name">
+                placeholder="Your last name" value="{{ student.last_name|default:'' }}">
               <label for="last_name"><i class="fas fa-user me-2"></i>Last Name</label>
             </div>
           </div>
@@ -108,14 +117,15 @@
           <div class="col-md-6">
             <div class="mb-3 form-floating">
               <input type="text" id="birth_date" name="birth_date" class="form-control" required
-                placeholder="DD/MM/YYYY">
+                placeholder="DD/MM/YYYY" value="{{ student.birth_date|default:'' }}">
               <label for="birth_date"><i class="fas fa-calendar me-2"></i>Date of Birth</label>
             </div>
           </div>
 
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="gpa" name="gpa" class="form-control" required placeholder="0.00">
+              <input type="text" id="gpa" name="gpa" class="form-control" required placeholder="0.00" 
+                value="{{ student.gpa|default:'' }}">
               <label for="gpa"><i class="fas fa-chart-line me-2"></i>GPA</label>
             </div>
           </div>
@@ -124,14 +134,16 @@
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="faculty" name="faculty" class="form-control" required placeholder="Your faculty">
+              <input type="text" id="faculty" name="faculty" class="form-control" required placeholder="Your faculty" 
+                value="{{ student.faculty|default:'' }}">
               <label for="faculty"><i class="fas fa-university me-2"></i>Faculty</label>
             </div>
           </div>
 
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="program" name="program" class="form-control" required placeholder="Your program">
+              <input type="text" id="program" name="program" class="form-control" required placeholder="Your program" 
+                value="{{ student.program|default:'' }}">
               <label for="program"><i class="fas fa-graduation-cap me-2"></i>Program</label>
             </div>
           </div>
@@ -172,6 +184,9 @@
           </div>
         </div>
         <input type="hidden" id="skills_data" name="skills_data" value="[]">
+        {% if student.skills %}
+        <input type="hidden" id="existing_skills" value="{{ student.skills|safe }}">
+        {% endif %}
 
         <div class="accordion" id="skillsAccordion">
           <!-- Skill categories will be dynamically generated here -->

@@ -54,12 +54,10 @@
                             </div>
                             <span class="badge bg-primary rounded-pill">New</span>
                         </a>
-                        <a href="{% url 'resume_generator:generate_resume' %}" class="list-group-item list-group-item-action">
+                        <a href="{% url 'resume_generator:select_profile' %}" class="list-group-item list-group-item-action">
                             <i class="fas fa-file-alt me-2"></i> Create Resume
                         </a>
-                        <a href="{% url 'index' %}" class="list-group-item list-group-item-action">
-                            <i class="fas fa-video me-2"></i> Interview Practice
-                        </a>
+                        
                         <a href="#" class="list-group-item list-group-item-action">
                             <i class="fas fa-bookmark me-2"></i> Saved Jobs
                         </a>
@@ -155,8 +153,8 @@
                             <p>Practice interviews with our virtual interviewer and get feedback.</p>
                             <p class="text-muted small">Join mock interviews and improve your performance.</p>
                             <div class="d-grid mt-3">
-                                <a href="{% url 'index' %}" class="btn btn-custom btn-info">
-                                    <i class="fas fa-play me-2"></i>Start Practice
+                                <a href="{% url 'interview:index' %}" class="btn btn-custom btn-info">
+                                    <i class="fas fa-comments me-2"></i>Start Interview
                                 </a>
                             </div>
                         </div>

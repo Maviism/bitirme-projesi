@@ -5,6 +5,7 @@ import json
 from datetime import datetime
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
+import logging
 
 # Import our recommender system
 from .recommender import HybridRecommender
@@ -25,12 +26,89 @@ def landing_page(request):
 
 @login_required
 def career_form(request):
-    return render(request, 'job_recommender/career_form.html')
+    from .views_utils import get_current_student
+    
+    # Get current student profile if exists
+    student = get_current_student(request)
+    context = {}
+    
+    if student:
+        # Convert birth date to string format DD/MM/YYYY
+        birth_date_str = student.birth_date.strftime('%d/%m/%Y') if student.birth_date else ""
+        
+        # Pass student data to template
+        context = {
+            'student': {
+                'id': student.id,
+                'student_id': student.student_id,
+                'id_number': student.id_number,
+                'fullname': student.fullname,
+                'last_name': student.last_name,
+                'birth_date': birth_date_str,
+                'faculty': student.faculty,
+                'program': student.program, 
+                'gpa': float(student.gpa),
+                'skills': student.skills
+            },
+            'has_existing_profile': True
+        }
+        
+        logger.info(f"Found existing student profile for user: {request.user.username}")
+    else:
+        context['has_existing_profile'] = False
+        logger.info(f"No existing student profile found for user: {request.user.username}")
+    
+    return render(request, 'job_recommender/career_form.html', context)
 
 # View for the recommendation results page
 @login_required
 def recommendation_results(request):
-    return render(request, 'job_recommender/recommendation_results.html')
+    from .views_utils import get_current_student
+    
+    # Get the current user's student profile
+    student = get_current_student(request)
+    
+    if student:
+        # Get the student's job recommendations
+        recommendations = JobRecommendation.objects.filter(
+            student=student
+        ).select_related('job').order_by('-match_score')[:10]
+        
+        # Format the recommendations for the template
+        formatted_recommendations = []
+        for rec in recommendations:
+            # Define the recommendation sources based on the source field
+            sources = []
+            if rec.source == 'alumni':
+                sources = ['alumni']
+            elif rec.source == 'job_posting':
+                sources = ['job_posting']
+            elif rec.source == 'hybrid':
+                sources = ['alumni', 'job_posting']  # Hybrid means both sources contributed
+            
+            formatted_recommendations.append({
+                'id': rec.job.id,
+                'title': rec.job.title,
+                'company': rec.job.company,
+                'description': rec.job.description,
+                'match_score': float(rec.match_score),
+                'recommendation_sources': sources
+            })
+        
+        context = {
+            'has_recommendations': len(formatted_recommendations) > 0,
+            'job_recommendations': formatted_recommendations
+        }
+        logger.info(f"Found {len(formatted_recommendations)} recommendations for user {request.user.username}")
+        
+    else:
+        context = {
+            'has_recommendations': False,
+            'error_message': 'No student profile found. Please complete your profile first.'
+        }
+        logger.warning(f"No student profile found for user {request.user.username}")
+    
+    return render(request, 'job_recommender/recommendation_results.html', context)
 
 # View to handle form submission
 @csrf_exempt
@@ -43,6 +121,11 @@ def submit_application(request):
         return JsonResponse({"error": "Only POST method is allowed"}, status=405)
     
     try:
+        # Try to find an existing student profile for the logged-in user
+        existing_student = None
+        if request.user.is_authenticated:
+            existing_student = Student.objects.filter(user=request.user).first()
+        
         # Extract basic student information
         student_data = {
             'student_id': request.POST.get('student_id'),
@@ -146,19 +229,37 @@ def submit_application(request):
                     return JsonResponse({"error": "Invalid birth date format. Use DD/MM/YYYY"}, status=400)
             
             # Create or update student record
-            student, created = Student.objects.update_or_create(
-                student_id=student_data['student_id'],
-                defaults={
-                    'id_number': student_data['id_number'],
-                    'fullname': student_data['fullname'],
-                    'last_name': student_data['last_name'],
-                    'birth_date': birth_date,
-                    'faculty': student_data['faculty'],
-                    'program': student_data['program'],
-                    'gpa': float(student_data['gpa']) if student_data['gpa'] else 0.0,
-                    'skills': skills_data,  # Save the skills data
-                }
-            )
+            if existing_student:
+                # Update existing student record
+                existing_student.id_number = student_data['id_number']
+                existing_student.fullname = student_data['fullname']  
+                existing_student.last_name = student_data['last_name']
+                existing_student.birth_date = birth_date
+                existing_student.faculty = student_data['faculty']
+                existing_student.program = student_data['program']
+                existing_student.gpa = float(student_data['gpa']) if student_data['gpa'] else 0.0
+                existing_student.skills = skills_data  # Save the skills data
+                existing_student.save()
+                student = existing_student
+                created = False
+                logger.info(f"Updated existing student record for user {request.user.username}")
+            else:
+                # Create new student record
+                student, created = Student.objects.update_or_create(
+                    student_id=student_data['student_id'],
+                    defaults={
+                        'id_number': student_data['id_number'],
+                        'fullname': student_data['fullname'],
+                        'last_name': student_data['last_name'],
+                        'birth_date': birth_date,
+                        'faculty': student_data['faculty'],
+                        'program': student_data['program'],
+                        'gpa': float(student_data['gpa']) if student_data['gpa'] else 0.0,
+                        'skills': skills_data,  # Save the skills data
+                        'user': request.user,  # Link the student to the current logged-in user
+                    }
+                )
+                logger.info(f"Created new student record for user {request.user.username}")
             
             # Save courses
             for course_data in courses_data:

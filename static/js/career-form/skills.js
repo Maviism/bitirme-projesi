@@ -188,6 +188,9 @@ function generateSkillsSections() {
       updateSkillCategoryCount(this);
     });
   });
+  
+  // Dispatch event that skills accordion is ready for other modules to use
+  document.dispatchEvent(new CustomEvent('skillsAccordionReady'));
 }
 
 /**

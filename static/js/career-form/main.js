@@ -7,6 +7,7 @@ import fileUpload from './file-upload.js';
 import skills from './skills.js';
 import experience from './experience.js';
 import formProcessing from './form-processing.js';
+import existingProfile from './existing-profile.js';
 import { setupScrollAnimations, setupFormFieldInteractions } from './utils.js';
 
 /**
@@ -30,6 +31,9 @@ document.addEventListener('DOMContentLoaded', function () {
   
   // Initialize form submission
   formProcessing.initFormSubmission();
+  
+  // Initialize existing student data if available
+  existingProfile.initExistingStudentData();
   
   // Setup animations and interactions
   setupScrollAnimations();
