@@ -209,3 +209,9 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Deepgram API settings
+DEEPGRAM_API_KEY = os.environ.get('DEEPGRAM_API_KEY', 'e100be4bf9db8db782649b9342eeb3fe1cac9557')
+
+# Audio debug settings
+AUDIO_DEBUG_DIR = os.path.join(BASE_DIR, 'audio_debug')

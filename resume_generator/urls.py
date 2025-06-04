@@ -11,4 +11,6 @@ urlpatterns = [
     path('ai/generate/', views.generate_ai_resume_content, name='ai_generate_content'),
     path('ai/improve/', views.improve_resume_section, name='ai_improve_section'),
     path('ai/cover-letter/', views.generate_cover_letter, name='ai_cover_letter'),
+    # Interview flow
+    path('start-interview/', views.start_interview_from_resume, name='start_interview'),
 ]

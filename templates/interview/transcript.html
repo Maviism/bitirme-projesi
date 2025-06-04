@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}Interview Transcript - {{ interview_session.job.title|default:"General Interview" }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1>Interview Transcript</h1>
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ interview_session.job.title|default:"General Interview" }}</h5>
+                        <small>{{ interview_session.created_at|date:"F j, Y, g:i a" }}</small>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Candidate:</strong> {{ interview_session.student.fullname }}</p>
+                            {% if interview_session.job %}
+                            <p><strong>Position:</strong> {{ interview_session.job.title }}</p>
+                            <p><strong>Company:</strong> {{ interview_session.job.company }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 text-md-end">
+                            <p><strong>Duration:</strong> {% if interview_session.interview_duration %}{{ interview_session.interview_duration|floatformat:0 }} seconds{% else %}Not available{% endif %}</p>
+                            <p><strong>Status:</strong> {% if interview_session.completed %}<span class="badge bg-success">Completed</span>{% else %}<span class="badge bg-warning">In Progress</span>{% endif %}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">Conversation Transcript</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="transcript-container">
+                        {% if transcript_data %}
+                            {% for entry in transcript_data %}
+                                <div class="transcript-entry {% if entry.is_agent %}ai-message{% else %}user-message{% endif %}">
+                                    <div class="message-header">
+                                        <strong>{{ entry.speaker }}</strong>
+                                        {% if entry.timestamp %}
+                                            <small class="text-muted">{{ entry.timestamp|slice:":19"|date:"H:i:s" }}</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="message-content">
+                                        {{ entry.message }}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="p-4 text-center">
+                                <p class="text-muted">No transcript data available for this interview.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <a href="{% url 'interview:index' %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left me-2"></i> Back to Interviews
+                </a>
+                {% if interview_session.completed %}
+                <a href="#" class="btn btn-outline-secondary ms-2" onclick="window.print();">
+                    <i class="fas fa-print me-2"></i> Print Transcript
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .transcript-container {
+        max-height: 600px;
+        overflow-y: auto;
+        padding: 1rem;
+    }
+    
+    .transcript-entry {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        border-radius: 0.5rem;
+    }
+    
+    .ai-message {
+        background-color: #f2f7ff;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .user-message {
+        background-color: #f9f9f9;
+        border-left: 4px solid #6c757d;
+    }
+    
+    .message-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.5rem;
+    }
+    
+    .message-content {
+        white-space: pre-wrap;
+    }
+    
+    @media print {
+        .btn, .navbar {
+            display: none !important;
+        }
+        
+        .transcript-container {
+            max-height: none;
+            overflow: visible;
+        }
+        
+        .card {
+            border: none !important;
+        }
+        
+        .card-header {
+            background-color: #f8f9fa !important;
+            color: #000 !important;
+        }
+    }
+</style>
+{% endblock %}

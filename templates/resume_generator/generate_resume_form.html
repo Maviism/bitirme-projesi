@@ -366,6 +366,10 @@
         formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">
         <i class="fas fa-download me-2"></i> Generate and Download Resume
       </button>
+      <button type="submit" class="btn btn-custom btn-primary btn-lg"
+        formaction="{% url 'resume_generator:start_interview' %}" formmethod="POST" id="startInterviewButton">
+        <i class="fas fa-comments me-2"></i> Prepare for Interview
+      </button>
     </div>
   </form>
 </div>

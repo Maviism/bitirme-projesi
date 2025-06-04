@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -514,4 +514,91 @@ Sincerely,
             'details': str(e)
         }, status=500)
 
-# Diagnostic views and health check removed as they are no longer needed
+def start_interview_from_resume(request: HttpRequest):
+    """
+    Handle the flow from resume generation to interview preparation
+    This function prepares the resume data and redirects to the interview system
+    """
+    if request.method != 'POST':
+        return HttpResponse("Invalid request method.", status=400)
+    
+    try:
+        # Get job and student data from POST
+        job_title = request.POST.get('job_title')
+        job_company = request.POST.get('job_company')
+        job_description = request.POST.get('job_description')
+        job_id = request.POST.get('job_id')
+        student_id = request.POST.get('student_id')
+
+        if not student_id:
+            return HttpResponse("Student ID missing.", status=400)
+        
+        # Get the student object
+        student_obj = get_object_or_404(Student, pk=student_id)
+        
+        # Format the resume content as text for the interview system
+        skills_str = request.POST.get('student_skills', '')
+        
+        # Create a simple text format for the resume that the interview system can use
+        resume_content = f"""
+RESUME: {student_obj.fullname} {student_obj.last_name}
+
+CONTACT INFORMATION:
+Email: {request.POST.get('student_email', '')}
+Phone: {request.POST.get('student_phone', '')}
+LinkedIn: {request.POST.get('student_linkedin', '')}
+
+EDUCATION:
+{student_obj.faculty} - {student_obj.program}
+GPA: {student_obj.gpa}
+
+SKILLS:
+{skills_str}
+
+PROFESSIONAL SUMMARY:
+{request.POST.get('student_summary', '')}
+        """
+        
+        # Get the cover letter content if it was generated
+        cover_letter = request.POST.get('cover_letter_content', '')
+        
+        # Prepare data for the interview system
+        interview_data = {
+            'student_id': student_id,
+            'job_id': job_id,
+            'resume_content': resume_content,
+            'cover_letter': cover_letter
+        }
+        
+        # Redirect to the interview preparation page
+        from django.urls import reverse
+        return redirect(reverse('interview:prepare_interview') + '?' + '&'.join([f"{k}={v}" for k, v in interview_data.items() if v]))
+        
+    except Exception as e:
+        logger.error(f"Error starting interview from resume: {e}")
+        error_message = f"""
+        <html>
+        <head>
+            <title>Error Starting Interview</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }}
+                .error-container {{ max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #f44336; border-radius: 5px; }}
+                .error-title {{ color: #f44336; }}
+                .error-details {{ background-color: #f9f9f9; padding: 10px; border-left: 3px solid #f44336; }}
+                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #4CAF50; color: white; 
+                               text-decoration: none; border-radius: 4px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h2 class="error-title">Error Starting Interview</h2>
+                <p>We encountered an error while preparing your interview. Please try again.</p>
+                <div class="error-details">
+                    <p>{str(e)}</p>
+                </div>
+                <a href="javascript:history.back()" class="back-button">Go Back</a>
+            </div>
+        </body>
+        </html>
+        """
+        return HttpResponse(error_message, status=500)

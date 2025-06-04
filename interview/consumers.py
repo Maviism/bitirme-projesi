@@ -3,6 +3,7 @@ import logging
 import concurrent.futures
 import os
 import time
+import json
 from datetime import datetime
 from channels.generic.websocket import AsyncWebsocketConsumer
 from deepgram import (
@@ -43,6 +44,21 @@ class AgentConsumer(AsyncWebsocketConsumer):
         
         # Generate session ID untuk debugging
         self.session_id = f"session_{int(time.time())}_{id(self)}"
+        self.start_time = datetime.now()
+        
+        # Track interview session if available
+        self.interview_session_id = None
+        if self.scope.get("url_route", {}).get("kwargs", {}):
+            interview_room = self.scope["url_route"]["kwargs"].get("interview_room")
+            if interview_room:
+                # Try to get the interview session for this room
+                try:
+                    from interview.models import InterviewSession
+                    interview_session = InterviewSession.objects.get(room_name=interview_room)
+                    self.interview_session_id = interview_session.id
+                    logger.info(f"Connected to interview session {self.interview_session_id}")
+                except Exception as e:
+                    logger.error(f"Error getting interview session from room {interview_room}: {e}")
         
         # Setup direktori untuk menyimpan audio
         self.setup_audio_logging()
@@ -214,6 +230,27 @@ class AgentConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             logger.error(f"Error flushing buffers on disconnect: {e}")
         
+        # Save interview data if we have an interview session
+        try:
+            if hasattr(self, 'interview_session_id') and self.interview_session_id:
+                from interview.models import InterviewSession
+                interview_session = InterviewSession.objects.get(id=self.interview_session_id)
+                
+                # Mark interview as completed
+                interview_session.completed = True
+                
+                # Calculate duration
+                if hasattr(self, 'start_time'):
+                    interview_duration = int((datetime.now() - self.start_time).total_seconds())
+                    interview_session.interview_duration = interview_duration
+                
+                # Save the interview session
+                interview_session.save()
+                
+                logger.info(f"Saved interview session {self.interview_session_id} as completed")
+        except Exception as e:
+            logger.error(f"Error updating interview session on disconnect: {e}")
+        
         # Simpan metadata akhir session
         if self.audio_log_dir:
             try:
@@ -307,15 +344,125 @@ class AgentConsumer(AsyncWebsocketConsumer):
 
     def _handle_error(self, error):
         logger.error(f"Deepgram Error: {error}")
+        
+    def _handle_transcript(self, transcript):
+        """Handle transcript events from Deepgram"""
+        try:
+            # Extract message and speaker information
+            if transcript and hasattr(transcript, 'agent'):
+                message = transcript.agent.message
+                is_agent = True
+            elif transcript and hasattr(transcript, 'human'):
+                message = transcript.human.message
+                is_agent = False
+            else:
+                logger.warning(f"Unrecognized transcript format: {transcript}")
+                return
+                
+            # If we have a message, send it to the browser
+            if message:
+                speaker = "AI Interviewer" if is_agent else "You"
+                
+                # Create a JSON message with transcript info
+                transcript_data = {
+                    "transcript": message,
+                    "speaker": speaker,
+                    "is_agent": is_agent
+                }
+                
+                # Send as text message to browser
+                asyncio.run_coroutine_threadsafe(
+                    self.send(text_data=json.dumps(transcript_data)),
+                    self.main_loop
+                )
+                
+                # Log the transcript
+                logger.info(f"Transcript [{speaker}]: {message}")
+                
+                # Save transcript to database if we have an interview session
+                self.save_transcript_to_db(message, is_agent)
+                
+        except Exception as e:
+            logger.error(f"Error handling transcript: {e}")
+            
+    def save_transcript_to_db(self, message, is_agent):
+        """Save transcript to database for the interview session"""
+        if not hasattr(self, 'interview_session_id') or not self.interview_session_id:
+            return
+            
+        try:
+            from interview.models import InterviewSession
+            import json
+            
+            interview_session = InterviewSession.objects.get(id=self.interview_session_id)
+            
+            # Create transcript entry
+            transcript_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'speaker': 'AI Interviewer' if is_agent else 'Candidate',
+                'message': message,
+                'is_agent': is_agent
+            }
+            
+            # Add to existing transcript or create new one
+            if interview_session.transcript:
+                try:
+                    transcript = json.loads(interview_session.transcript)
+                    if isinstance(transcript, list):
+                        transcript.append(transcript_entry)
+                    else:
+                        transcript = [transcript, transcript_entry]
+                except Exception:
+                    transcript = [transcript_entry]
+            else:
+                transcript = [transcript_entry]
+                
+            # Save back to the database
+            interview_session.transcript = json.dumps(transcript)
+            interview_session.save(update_fields=['transcript'])
+            
+            logger.info(f"Saved transcript to database for session {self.interview_session_id}")
+            
+        except Exception as e:
+            logger.error(f"Error saving transcript to database: {e}")
 
     def _setup_deepgram(self):
         """Setup Deepgram connection (blocking operation)"""
         try:
             # Inisialisasi Deepgram
             config = DeepgramClientOptions(options={"keepalive": "true"})
-            self.deepgram = DeepgramClient("e100be4bf9db8db782649b9342eeb3fe1cac9557", config)
+            from django.conf import settings
+            deepgram_api_key = getattr(settings, "DEEPGRAM_API_KEY", os.getenv("DEEPGRAM_API_KEY", ""))
+            if not deepgram_api_key:
+                logger.error("Deepgram API key not found in settings or environment variables")
+                return False
+            self.deepgram = DeepgramClient(deepgram_api_key, config)
             self.dg_connection = self.deepgram.agent.websocket.v("1")
 
+            # Get interview context
+            context_data = {}
+            if self.scope.get("url_route", {}).get("kwargs", {}):
+                interview_room = self.scope["url_route"]["kwargs"].get("interview_room")
+                if interview_room:
+                    # Try to get the interview session for this room
+                    try:
+                        from interview.models import InterviewSession
+                        interview_session = InterviewSession.objects.get(room_name=interview_room)
+                        # Extract job details and resume content if available
+                        if interview_session:
+                            if interview_session.job:
+                                context_data["job_title"] = interview_session.job.title
+                                context_data["job_company"] = interview_session.job.company
+                                context_data["job_description"] = interview_session.job.description
+                            if interview_session.resume_content:
+                                context_data["resume"] = interview_session.resume_content
+                            if interview_session.cover_letter:
+                                context_data["cover_letter"] = interview_session.cover_letter
+                            if interview_session.student:
+                                context_data["candidate_name"] = interview_session.student.fullname
+                    except Exception as e:
+                        logger.error(f"Error getting interview session data: {e}")
+            
             # Setup options
             options = SettingsOptions()
             options.audio.input = Input(encoding="linear16", sample_rate=16000)
@@ -324,19 +471,53 @@ class AgentConsumer(AsyncWebsocketConsumer):
             options.agent.listen.provider.model = "nova-3"
             options.agent.speak.provider.type = "deepgram"
             options.agent.think.provider.type = "open_ai"
-            options.agent.think.provider.model = "gpt-4o-mini"
-            options.agent.think.prompt = (
-                "You are a helpful voice assistant created by Deepgram. "
-                "Your responses should be friendly, human-like, and conversational. "
-                "Always keep your answers concise—1-2 sentences, no more than 120 characters."
-            )
-            options.agent.greeting = "Hello! I'm your Deepgram voice assistant. How can I help you today?"
+            options.agent.think.provider.model = "gpt-4o"  # Using a more powerful model for interviews
+            
+            # Set up the interview agent prompt
+            interview_prompt = """You are an AI Job Interviewer conducting a professional job interview.
+            
+            IMPORTANT CONTEXT:
+            """
+            if "candidate_name" in context_data:
+                interview_prompt += f"- Candidate Name: {context_data.get('candidate_name')}\n"
+            if "job_title" in context_data:
+                interview_prompt += f"- Position: {context_data.get('job_title')} at {context_data.get('job_company', 'the company')}\n"
+            if "job_description" in context_data:
+                interview_prompt += f"- Job Description: {context_data.get('job_description')}\n"
+            if "resume" in context_data:
+                interview_prompt += f"- Resume Summary: {context_data.get('resume')[:500]}...\n"
+            
+            interview_prompt += """
+            YOUR ROLE:
+            - You are a professional hiring manager or recruiter.
+            - Conduct a realistic job interview for the position specified.
+            - Ask relevant questions based on the candidate's resume and the job requirements.
+            - Ask one question at a time, listen to the response, then follow up appropriately.
+            - Keep your questions and responses concise and conversational.
+            - Evaluate the candidate's answers in your internal thinking, but don't express judgments out loud.
+            
+            INTERVIEW STRUCTURE:
+            1. Start with a brief introduction and welcome the candidate
+            2. Ask about relevant experience related to the position
+            3. Ask behavioral questions related to the job skills
+            4. Discuss scenario-based problems they might face in this role
+            5. Ask about their career goals and why they're interested in this position
+            6. End with asking if they have questions for you
+            7. Thank them for their time and explain next steps
+            
+            Focus on professional questions that evaluate the candidate's skills, experience, and fit for the role.
+            Your responses should be friendly but professional, clear, and concise.
+            """
+            
+            options.agent.think.prompt = interview_prompt
+            options.agent.greeting = f"Hello{' ' + context_data.get('candidate_name', '') if 'candidate_name' in context_data else ''}! I'm your interviewer today for the {context_data.get('job_title', 'position')} role. Thank you for joining us. Let's get started with a few questions about your background and experience."
 
             # Setup event handlers
             self.dg_connection.on(AgentWebSocketEvents.Open, lambda ws, event: self._handle_open(event))
             self.dg_connection.on(AgentWebSocketEvents.AudioData, lambda ws, data: self._handle_audio(data))
             self.dg_connection.on(AgentWebSocketEvents.Close, lambda ws, event: self._handle_close(event))
             self.dg_connection.on(AgentWebSocketEvents.Error, lambda ws, error: self._handle_error(error))
+            self.dg_connection.on(AgentWebSocketEvents.Transcript, lambda ws, transcript: self._handle_transcript(transcript))
 
             # Start Deepgram connection (blocking call)
             if self.dg_connection.start(options):
