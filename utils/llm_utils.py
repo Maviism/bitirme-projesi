@@ -694,12 +694,50 @@ def get_llm_instance(provider: str = None) -> LLMUtils:
         provider: Provider name ('openai' or 'gemini')
                  If None, will use settings from Django configuration
     """
-    if provider is None:
-        # Try to get from Django settings
-        try:
-            from django.conf import settings
-            provider = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'openai')
-        except:
-            provider = 'openai'  # Default fallback
-    
-    return LLMUtils(provider=provider)
+    try:
+        if provider is None:
+            # Try to get from Django settings
+            try:
+                from django.conf import settings
+                provider = getattr(settings, 'DEFAULT_LLM_PROVIDER', 'openai')
+            except:
+                provider = 'openai'  # Default fallback
+        
+        # Check if API keys are available
+        import os
+        if provider == 'openai' and not os.environ.get('OPENAI_API_KEY'):
+            logger.warning("OpenAI API key not available. Using a fallback LLM provider.")
+        elif provider == 'gemini' and not os.environ.get('GEMINI_API_KEY'):
+            logger.warning("Gemini API key not available. Using a fallback LLM provider.")
+        
+        return LLMUtils(provider=provider)
+    except Exception as e:
+        logger.error(f"Failed to initialize LLM provider: {e}")
+        
+        # Create a simple fallback provider that doesn't make API calls
+        class FallbackProvider:
+            def generate_resume_content(self, user_data, job_description=""):
+                return {
+                    "summary": f"Recent graduate from {user_data.get('personal_info', {}).get('program', 'University')} with skills in problem-solving and communication.",
+                    "skills": ["Communication", "Problem Solving", "Adaptability"] + user_data.get('skills', [])[:3],
+                }
+                
+            def improve_resume_section(self, section_content, section_type, job_context=""):
+                return section_content
+                
+            def generate_cover_letter(self, user_data, job_data):
+                name = user_data.get('name', 'Candidate')
+                program = user_data.get('program', 'University program')
+                job_title = job_data.get('title', 'the position')
+                company = job_data.get('company', 'your company')
+                
+                return f"""Dear Hiring Manager,
+
+I am writing to express my interest in the {job_title} position at {company}. As a graduate of {program}, I believe my skills and experiences make me a strong candidate for this role.
+
+Thank you for considering my application. I look forward to the opportunity to discuss how I can contribute to your team.
+
+Sincerely,
+{name}"""
+                
+        return FallbackProvider()

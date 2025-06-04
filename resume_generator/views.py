@@ -1,13 +1,15 @@
-from django.shortcuts import render
-from django.http import HttpRequest, HttpResponse, JsonResponse, JsonResponse
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.template.loader import render_to_string
+from django.conf import settings
 from weasyprint import HTML
-from job_recommender.models import Student, Course, Experience # Assuming models are in job_recommender
-from django.shortcuts import get_object_or_404 # For fetching student
+from job_recommender.models import Student, Course, Experience
 from utils.llm_utils import get_llm_instance, cache_llm_response
 import json
+import os
 import logging
 
+# Standard logger configuration
 logger = logging.getLogger(__name__)
 
 # A placeholder function to simulate getting a student.
@@ -84,111 +86,239 @@ def download_resume_view(request: HttpRequest):
     if request.method != 'POST':
         return HttpResponse("Invalid request method.", status=400)
 
-    # 1. Get Job Data from POST
-    job_title = request.POST.get('job_title')
-    job_company = request.POST.get('job_company')
-    job_description = request.POST.get('job_description')
+    try:
+        # 1. Get Job Data from POST
+        job_title = request.POST.get('job_title')
+        job_company = request.POST.get('job_company')
+        job_description = request.POST.get('job_description')
 
-    # 2. Get Student ID from POST and fetch the original student object
-    student_id = request.POST.get('student_id')
-    if not student_id:
-        return HttpResponse("Student ID missing.", status=400)
+        # 2. Get Student ID from POST and fetch the original student object
+        student_id = request.POST.get('student_id')
+        if not student_id:
+            return HttpResponse("Student ID missing.", status=400)
+        
+        student_obj = get_object_or_404(Student, pk=student_id)
+
+        # 3. Construct student_data for the PDF using POST data for editable fields
+        #    and DB data for non-editable structured data (courses, etc.)
+        skills_str = request.POST.get('student_skills', '')
+        
+        student_data_for_pdf = {
+            'fullname': request.POST.get('student_fullname', student_obj.fullname),
+            'last_name': request.POST.get('student_last_name', student_obj.last_name),
+            'email': request.POST.get('student_email', getattr(student_obj, 'email', '')),
+            'phone': request.POST.get('student_phone', getattr(student_obj, 'phone', '')),
+            'linkedin_profile': request.POST.get('student_linkedin', getattr(student_obj, 'linkedin_profile', '')),
+            'faculty': student_obj.faculty, # Assuming faculty is not editable in this form
+            'program': student_obj.program, # Assuming program is not editable
+            'gpa': str(student_obj.gpa), # Assuming GPA is not editable
+            'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
+            'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
+            'courses': Course.objects.filter(student=student_obj),
+            'internships': Experience.objects.filter(student=student_obj, experience_type='internship'),
+            'organizations': Experience.objects.filter(student=student_obj, experience_type='organization'),
+        }
+
+        # Get selected template style
+        template_style = request.POST.get('resume_template_style', 'ats') # Default to 'ats'
+        if template_style == 'modern':
+            template_name = 'resume_generator/resume_template_modern.html'
+        else: # Default to ATS
+            template_name = 'resume_generator/resume_template_ats.html'
+
+        context_for_template = {
+            'job_title': job_title,
+            'job_company': job_company,
+            'job_description': job_description,
+            'student': student_data_for_pdf,
+        }
+
+        html_string = render_to_string(template_name, context_for_template)
+        
+        try:
+            pdf_file = HTML(string=html_string).write_pdf()
+        except Exception as pdf_error:
+            logger.error(f"PDF generation failed: {pdf_error}")
+            raise
+
+        # Create response with proper headers
+        filename = f"resume_{student_data_for_pdf['last_name']}_{job_title}.pdf"
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
     
-    student_obj = get_object_or_404(Student, pk=student_id)
-
-    # 3. Construct student_data for the PDF using POST data for editable fields
-    #    and DB data for non-editable structured data (courses, etc.)
-    skills_str = request.POST.get('student_skills', '')
-    
-    student_data_for_pdf = {
-        'fullname': request.POST.get('student_fullname', student_obj.fullname),
-        'last_name': request.POST.get('student_last_name', student_obj.last_name),
-        'email': request.POST.get('student_email', getattr(student_obj, 'email', '')),
-        'phone': request.POST.get('student_phone', getattr(student_obj, 'phone', '')),
-        'linkedin_profile': request.POST.get('student_linkedin', getattr(student_obj, 'linkedin_profile', '')),
-        'faculty': student_obj.faculty, # Assuming faculty is not editable in this form
-        'program': student_obj.program, # Assuming program is not editable
-        'gpa': str(student_obj.gpa), # Assuming GPA is not editable
-        'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
-        'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
-        'courses': Course.objects.filter(student=student_obj),
-        'internships': Experience.objects.filter(student=student_obj, experience_type='internship'),
-        'organizations': Experience.objects.filter(student=student_obj, experience_type='organization'),
-    }
-
-    # Get selected template style
-    template_style = request.POST.get('resume_template_style', 'ats') # Default to 'ats'
-    if template_style == 'modern':
-        template_name = 'resume_generator/resume_template_modern.html'
-    else: # Default to ATS
-        template_name = 'resume_generator/resume_template_ats.html'
-
-    context_for_template = {
-        'job_title': job_title,
-        'job_company': job_company,
-        'job_description': job_description,
-        'student': student_data_for_pdf,
-    }
-
-    html_string = render_to_string(template_name, context_for_template)
-    pdf_file = HTML(string=html_string).write_pdf()
-
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="resume_{student_data_for_pdf["last_name"]}_{job_title}.pdf"'
-    
-    return response
+    except Exception as e:
+        logger.error(f"Error generating resume PDF: {e}")
+        error_html = f"""
+        <html>
+        <head>
+            <title>Error Generating PDF</title>
+            <style>
+                body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }}
+                .error-container {{ max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #f44336; border-radius: 5px; }}
+                .error-title {{ color: #f44336; }}
+                .error-details {{ background-color: #f9f9f9; padding: 10px; border-left: 3px solid #f44336; }}
+                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #4CAF50; color: white; 
+                               text-decoration: none; border-radius: 4px; }}
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <h2 class="error-title">Error Generating Resume PDF</h2>
+                <p>We encountered an error while generating your resume PDF. Please try again.</p>
+                <a href="javascript:history.back()" class="back-button">Go Back</a>
+            </div>
+        </body>
+        </html>
+        """
+        return HttpResponse(error_html)
 
 def preview_resume_view(request: HttpRequest):
+    # Check request method
     if request.method != 'POST':
         return HttpResponse("Invalid request method.", status=400)
-
-    # Essentially the same data gathering logic as download_resume_view
-    job_title = request.POST.get('job_title')
-    job_company = request.POST.get('job_company')
-    job_description = request.POST.get('job_description')
-    student_id = request.POST.get('student_id')
-
-    if not student_id:
-        return HttpResponse("Student ID missing.", status=400)
     
-    student_obj = get_object_or_404(Student, pk=student_id)
+    try:
+        # Wrap everything in a transaction for performance
+        from django.db import transaction
+        with transaction.atomic():
+            
+            # Essentially the same data gathering logic as download_resume_view
+            job_title = request.POST.get('job_title')
+            job_company = request.POST.get('job_company')
+            job_description = request.POST.get('job_description')
+            student_id = request.POST.get('student_id')
 
-    skills_str = request.POST.get('student_skills', '')
-    student_data_for_preview = {
-        'fullname': request.POST.get('student_fullname', student_obj.fullname),
-        'last_name': request.POST.get('student_last_name', student_obj.last_name),
-        'email': request.POST.get('student_email', getattr(student_obj, 'email', '')),
-        'phone': request.POST.get('student_phone', getattr(student_obj, 'phone', '')),
-        'linkedin_profile': request.POST.get('student_linkedin', getattr(student_obj, 'linkedin_profile', '')),
-        'faculty': student_obj.faculty,
-        'program': student_obj.program,
-        'gpa': str(student_obj.gpa),
-        'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
-        'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
-        'courses': Course.objects.filter(student=student_obj),
-        'internships': Experience.objects.filter(student=student_obj, experience_type='internship'),
-        'organizations': Experience.objects.filter(student=student_obj, experience_type='organization'),
-    }
+            if not student_id:
+                return HttpResponse("Student ID missing.", status=400)
+            
+            student_obj = get_object_or_404(Student, pk=student_id)
+            logger.info(f"Retrieved student: {student_obj.fullname} {student_obj.last_name}")
 
-    template_style = request.POST.get('resume_template_style', 'ats')
-    if template_style == 'modern':
-        template_name = 'resume_generator/resume_template_modern.html'
-    else:
-        template_name = 'resume_generator/resume_template_ats.html'
+            skills_str = request.POST.get('student_skills', '')
+            student_data_for_preview = {
+                'fullname': request.POST.get('student_fullname', student_obj.fullname),
+                'last_name': request.POST.get('student_last_name', student_obj.last_name),
+                'email': request.POST.get('student_email', getattr(student_obj, 'email', '')),
+                'phone': request.POST.get('student_phone', getattr(student_obj, 'phone', '')),
+                'linkedin_profile': request.POST.get('student_linkedin', getattr(student_obj, 'linkedin_profile', '')),
+                'faculty': student_obj.faculty,
+                'program': student_obj.program,
+                'gpa': str(student_obj.gpa),
+                'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
+                'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
+            }
+            
+            # Use select_related to optimize queries
+            courses = Course.objects.filter(student=student_obj).select_related()
+            internships = Experience.objects.filter(student=student_obj, experience_type='internship').select_related()
+            organizations = Experience.objects.filter(student=student_obj, experience_type='organization').select_related()
+            
+            # Add to student data after query optimization
+            student_data_for_preview['courses'] = courses
+            student_data_for_preview['internships'] = internships
+            student_data_for_preview['organizations'] = organizations
 
-    context_for_template = {
-        'job_title': job_title,
-        'job_company': job_company,
-        'job_description': job_description,
-        'student': student_data_for_preview,
-        'is_preview': True # Flag to indicate this is a preview
-    }
+            template_style = request.POST.get('resume_template_style', 'ats')
+            if template_style == 'modern':
+                template_name = 'resume_generator/resume_template_modern.html'
+            else:
+                template_name = 'resume_generator/resume_template_ats.html'
 
-    # Render the HTML template to a string
-    html_string = render_to_string(template_name, context_for_template)
+            context_for_template = {
+                'job_title': job_title,
+                'job_company': job_company,
+                'job_description': job_description,
+                'student': student_data_for_preview,
+                'is_preview': True # Flag to indicate this is a preview
+            }
+
+            # Render the HTML template to a string
+            try:
+                html_string = render_to_string(template_name, context_for_template)
+            except Exception as template_error:
+                logger.error(f"Template rendering failed: {template_error}")
+                # Re-raise to be caught by the outer exception handler
+                raise
+            
+            # Add base HTML structure to make preview standalone
+            complete_html = f"""
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Resume Preview - {student_data_for_preview['fullname']} {student_data_for_preview['last_name']}</title>
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                <style>
+                    body {{ max-width: 1200px; margin: 0 auto; padding: 20px; }}
+                    .preview-controls {{ position: fixed; bottom: 20px; right: 20px; background: #fff; padding: 10px; 
+                                        border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); z-index: 1000; }}
+                </style>
+            </head>
+            <body>
+                <div class="preview-controls">
+                    <button onclick="window.print()" class="btn btn-sm btn-primary">Print</button>
+                    <button onclick="window.close()" class="btn btn-sm btn-secondary">Close</button>
+                </div>
+                {html_string}
+                <script>
+                    // Send message to parent window that preview is loaded
+                    window.onload = function() {{
+                        if (window.opener) {{
+                            window.opener.postMessage('previewLoaded', '*');
+                        }}
+                    }};
+                </script>
+            </body>
+            </html>
+            """
+            
+            logger.info(f"Resume preview generation complete")
+            # Return as HTML response for preview
+            return HttpResponse(complete_html)
     
-    # Return as HTML response for preview
-    return HttpResponse(html_string)
+    except Exception as e:
+        logger.error(f"Error generating resume preview: {e}")
+        
+        error_html = f"""
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Resume Preview Error</title>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+        </head>
+        <body class="bg-light">
+            <div class="container py-5">
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <div class="alert alert-danger">
+                            <h4 class="alert-heading">Error Generating Resume Preview</h4>
+                            <p>We encountered an error while generating your resume preview:</p>
+                            <pre class="bg-light p-3">{e}</pre>
+                            <hr>
+                            <p>Please try again or contact support if the issue persists.</p>
+                            <button class="btn btn-primary" onclick="window.close()">Close Preview</button>
+                            <button class="btn btn-secondary" onclick="window.location.reload()">Try Again</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                // Send message to parent window that preview failed
+                window.onload = function() {{{{
+                    if (window.opener) {{{{
+                        window.opener.postMessage('previewFailed', '*');
+                    }}}}
+                }}}};
+            </script>
+        </body>
+        </html>
+        """
+        return HttpResponse(error_html)
 
 
 @cache_llm_response("resume_content")
@@ -205,6 +335,24 @@ def generate_ai_resume_content(request: HttpRequest):
         
         student_obj = get_object_or_404(Student, pk=student_id)
         
+        # Check for API keys
+        try:
+            import os
+            openai_key = os.environ.get('OPENAI_API_KEY')
+            gemini_key = os.environ.get('GEMINI_API_KEY')
+            if not openai_key and not gemini_key:
+                logger.warning("No LLM API keys available - using fallback content")
+                # Return fallback content when no API keys are available
+                return JsonResponse({
+                    'success': True,
+                    'content': {
+                        'summary': f"Recent graduate from {student_obj.program} at {student_obj.faculty} with a GPA of {student_obj.gpa}. Seeking opportunities to apply academic knowledge in a professional setting.",
+                        'skills': ["Communication", "Time Management", "Problem Solving", "Critical Thinking"] + (student_obj.skills if isinstance(student_obj.skills, list) else [])
+                    }
+                })
+        except Exception as e:
+            logger.warning(f"Error checking LLM API keys: {e}")
+        
         # Prepare user data for LLM
         user_data = {
             'personal_info': {
@@ -216,23 +364,23 @@ def generate_ai_resume_content(request: HttpRequest):
             'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills],
             'courses': [
                 {
-                    'name': course.course_name,
+                    'name': course.name,
                     'grade': getattr(course, 'grade', 'N/A')
                 } for course in Course.objects.filter(student=student_obj)
             ],
             'internships': [
                 {
-                    'company': internship.company_name,
+                    'company': internship.institution_name,
                     'position': getattr(internship, 'position', 'Intern'),
-                    'duration': getattr(internship, 'duration', 'N/A'),
+                    'duration': f"{internship.start_date} to {internship.end_date or 'Present'}",
                     'description': getattr(internship, 'description', '')
-                } for internship in Internship.objects.filter(student=student_obj)
+                } for internship in Experience.objects.filter(student=student_obj, experience_type='internship')
             ],
             'organizations': [
                 {
-                    'name': org.organization_name,
-                    'role': getattr(org, 'role', 'Member')
-                } for org in Organization.objects.filter(student=student_obj)
+                    'name': org.institution_name,
+                    'role': getattr(org, 'position', 'Member')
+                } for org in Experience.objects.filter(student=student_obj, experience_type='organization')
             ]
         }
         
@@ -299,6 +447,35 @@ def generate_cover_letter(request: HttpRequest):
         
         student_obj = get_object_or_404(Student, pk=student_id)
         
+        # Check for API keys
+        try:
+            import os
+            openai_key = os.environ.get('OPENAI_API_KEY')
+            gemini_key = os.environ.get('GEMINI_API_KEY')
+            if not openai_key and not gemini_key:
+                logger.warning("No LLM API keys available - using fallback cover letter")
+                # Return fallback content when no API keys are available
+                job_title = request.POST.get('job_title', 'the position')
+                job_company = request.POST.get('job_company', 'your company')
+                
+                fallback_letter = f"""Dear Hiring Manager,
+
+I am writing to express my strong interest in the {job_title} position at {job_company}. As a recent graduate from {student_obj.program} at {student_obj.faculty} with a GPA of {student_obj.gpa}, I am eager to contribute my skills and knowledge to your team.
+
+My academic background has equipped me with the necessary skills for this role, including {', '.join(student_obj.skills[:3] if isinstance(student_obj.skills, list) else ['problem-solving', 'communication', 'teamwork'])}.
+
+I am particularly impressed by {job_company}'s reputation in the industry and would welcome the opportunity to discuss how my qualifications align with your needs. Thank you for considering my application.
+
+Sincerely,
+{student_obj.fullname} {student_obj.last_name}"""
+
+                return JsonResponse({
+                    'success': True,
+                    'cover_letter': fallback_letter
+                })
+        except Exception as e:
+            logger.warning(f"Error checking LLM API keys: {e}")
+        
         # Prepare user data
         user_data = {
             'name': f"{student_obj.fullname} {student_obj.last_name}",
@@ -336,3 +513,5 @@ def generate_cover_letter(request: HttpRequest):
             'error': 'Failed to generate cover letter',
             'details': str(e)
         }, status=500)
+
+# Diagnostic views and health check removed as they are no longer needed

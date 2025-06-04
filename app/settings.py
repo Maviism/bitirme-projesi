@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'interview',
     'job_recommender',
     'accounts',
+    'resume_generator',
+    'utils',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -150,9 +152,40 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # LLM Configuration
-DEFAULT_LLM_PROVIDER = os.environ.get('DEFAULT_LLM_PROVIDER', 'openai')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# Auto-select provider based on available API keys if not explicitly set
+if os.environ.get('DEFAULT_LLM_PROVIDER'):
+    DEFAULT_LLM_PROVIDER = os.environ.get('DEFAULT_LLM_PROVIDER')
+elif OPENAI_API_KEY:
+    DEFAULT_LLM_PROVIDER = 'openai'
+elif GEMINI_API_KEY:
+    DEFAULT_LLM_PROVIDER = 'gemini'
+else:
+    DEFAULT_LLM_PROVIDER = 'openai'  # Default, but will use fallback responses
+    
+# Configure logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'resume_generator': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 
 # Cache configuration for LLM responses
 CACHES = {

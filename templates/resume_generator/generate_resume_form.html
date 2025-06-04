@@ -628,22 +628,178 @@
     document.body.removeChild(a);
   }
 
-  // Initialize page
+  // Listen for messages from preview window
+  window.addEventListener('message', function(event) {
+    if (event.data === 'previewLoaded') {
+      // Reset the preview button
+      const previewButton = document.getElementById('previewButton');
+      if (previewButton.disabled) {
+        previewButton.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+        previewButton.disabled = false;
+      }
+    } else if (event.data === 'previewFailed') {
+      // Reset the preview button if preview failed
+      const previewButton = document.getElementById('previewButton');
+      if (previewButton.disabled) {
+        previewButton.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+        previewButton.disabled = false;
+      }
+    }
+  });
+
+  // Add client-side error handling and diagnostics
+  // System health check function removed as it's no longer needed
+  
+  // Global error handler for fetch operations
+  function handleFetchError(response) {
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    return response.json();
+  }    // Initialize page
   document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('resumeForm');
     const previewButton = document.getElementById('previewButton');
     const downloadButton = document.getElementById('downloadButton');
 
-    // Add loading states for form submission buttons
-    previewButton.addEventListener('click', function () {
-      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
-      this.disabled = true;
+    // Initialize Bootstrap components
+    // Enable dismissing of alerts
+    document.querySelectorAll('.alert .btn-close').forEach(button => {
+      button.addEventListener('click', function() {
+        this.closest('.alert').classList.add('d-none');
+      });
     });
 
-    downloadButton.addEventListener('click', function () {
+    // Initialize Bootstrap components
+    
+    // Add loading states for form submission buttons
+    previewButton.addEventListener('click', function (e) {
+      // Prevent the default form submission
+      e.preventDefault();
+      
+      // Collect the form data
+      const formData = new FormData(form);
+      
+      // Update button state
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
+      this.disabled = true;
+      
+      // Use a timeout to detect if the fetch is taking too long
+      const timeoutId = setTimeout(() => {
+        if (this.disabled) {
+          this.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+          this.disabled = false;
+          alert('Preview is taking longer than expected. Please try again.');
+        }
+      }, 15000); // 15 seconds timeout
+      
+      // Use fetch API for more control
+      fetch('{% url "resume_generator:preview_resume" %}', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          // For preview, we need to open the response in a new window
+          return response.text().then(html => {
+            const previewWindow = window.open('', '_blank');
+            if (previewWindow) {
+              previewWindow.document.write(html);
+              previewWindow.document.close();
+              this.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+              this.disabled = false;
+            } else {
+              throw new Error('Could not open preview window. Please check your popup blocker settings.');
+            }
+          });
+        } else {
+          return response.text().then(errorText => {
+            throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}...`);
+          });
+        }
+      })
+      .catch(error => {
+        this.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+        this.disabled = false;
+        alert('Error generating resume preview: ' + error.message);
+      });
+    });
+
+    downloadButton.addEventListener('click', function (e) {
+      // Prevent default form submission
+      e.preventDefault();
+      
+      console.log('Download button clicked - preparing to generate PDF with fetch');
+      
+      // Collect the form data
+      const formData = new FormData(form);
+      
+      // Prepare UI for PDF generation
+      
       this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
       this.disabled = true;
+      
+      // Use a timeout for the fetch call
+      const timeoutId = setTimeout(() => {
+        if (this.disabled) {
+          this.innerHTML = '<i class="fas fa-download me-2"></i> Generate and Download Resume';
+          this.disabled = false;
+          alert('PDF generation is taking longer than expected. Please try again.');
+        }
+      }, 15000); // 15 seconds timeout
+      
+      // Use fetch for more control
+      fetch('{% url "resume_generator:download_resume" %}', {
+        method: 'POST',
+        body: formData
+      })
+      .then(response => {
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          // For PDF download, we need to trigger a download
+          return response.blob().then(blob => {
+            // Create filename from the Content-Disposition header if available
+            let filename = 'resume.pdf';
+            const disposition = response.headers.get('Content-Disposition');
+            if (disposition) {
+              const filenameMatch = disposition.match(/filename="(.+)"/);
+              if (filenameMatch && filenameMatch[1]) {
+                filename = filenameMatch[1];
+              }
+            }
+            
+            // Create download link and trigger download
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            // Reset button
+            this.innerHTML = '<i class="fas fa-download me-2"></i> Generate and Download Resume';
+            this.disabled = false;
+          });
+        } else {
+          return response.text().then(errorText => {
+            throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}...`);
+          });
+        }
+      })
+      .catch(error => {
+        this.innerHTML = '<i class="fas fa-download me-2"></i> Generate and Download Resume';
+        this.disabled = false;
+        alert('Error generating PDF: ' + error.message);
+      });
     });
+    
+    // No debugging code needed anymore
   });
 </script>
 {% endblock %}
