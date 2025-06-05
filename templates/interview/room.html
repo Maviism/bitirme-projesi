@@ -1,417 +1,597 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}Interview Room: {{ room_name }}{% endblock %}
+{% block title %}Interview Simulation - {{ interview_session.job.title|default:"Job Interview" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/global-theme.css' %}">
+<style>
+  .btn-custom.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+  }
+  .btn-custom.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+  }
+  .status {
+    padding: 10px;
+    margin: 20px 0;
+    border-radius: 4px;
+    font-weight: bold;
+  }
+  .connected { background-color: #d4edda; color: #155724; }
+  .disconnected { background-color: #f8d7da; color: #721c24; }
+  .connecting { background-color: #fff3cd; color: #856404; }
+  .debug-info {
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+  }
+  .ai-chat-bubble {
+    background-color: #f1f0f7;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    position: relative;
+  }
+  .user-chat-bubble {
+    background-color: #e7f3fe;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    position: relative;
+  }
+  .chat-container {
+    max-height: 500px;
+    overflow-y: auto;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h1>Interview Room: {{ room_name }}</h1>
-    
-    {% if interview_session %}
-    <div class="row mb-4">
-        <div class="col-md-6">
-            {% if interview_session.job %}
-            <div class="card mb-3">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Job Information</h5>
-                </div>
-                <div class="card-body">
-                    <h5>{{ interview_session.job.title }}</h5>
-                    <p class="mb-2 text-muted">{{ interview_session.job.company }}</p>
-                    <p>{{ interview_session.job.description|linebreaks }}</p>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        
-        <div class="col-md-6">
-            <div class="card mb-3">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="card-title mb-0">Resume Information</h5>
-                </div>
-                <div class="card-body">
-                    <pre class="resume-content">{{ interview_session.resume_content }}</pre>
-                    
-                    {% if interview_session.cover_letter %}
-                    <hr>
-                    <h5>Cover Letter</h5>
-                    <pre class="cover-letter-content">{{ interview_session.cover_letter }}</pre>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-    
-    <div id="interview-area">
-        <div class="card">
-            <div class="card-header bg-success text-white">
-                <h5 class="card-title mb-0">AI Interview Session</h5>
-            </div>
-            <div class="card-body">
-                <p class="card-text">Your AI interview will begin shortly. The AI interviewer will use your resume to create tailored questions for the job position.</p>
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i> Speak clearly and respond to the interviewer's questions as if you were in a real interview.
-                </div>
-                <button id="start-interview-btn" class="btn btn-primary">
-                    <i class="fas fa-microphone me-2"></i> Start Interview
-                </button>
-            </div>
-        </div>
-        
-        <div id="interview-chat" class="mt-4" style="display: none;">
-            <!-- Chat messages will appear here -->
-        </div>
-        
-        <!-- Interview Feedback Form (shown when interview is completed) -->
-        <div id="interview-feedback" class="mt-4" style="display: none;">
-            <div class="card">
-                <div class="card-header bg-info text-white">
-                    <h5 class="card-title mb-0">Interview Feedback</h5>
-                </div>
-                <div class="card-body">
-                    <form id="feedback-form" method="post" action="{% url 'interview:save_feedback' interview_session.id %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label for="feedback-rating" class="form-label">How would you rate this interview experience?</label>
-                            <div class="rating">
-                                <input type="radio" id="star5" name="rating" value="5" /><label for="star5"></label>
-                                <input type="radio" id="star4" name="rating" value="4" /><label for="star4"></label>
-                                <input type="radio" id="star3" name="rating" value="3" /><label for="star3"></label>
-                                <input type="radio" id="star2" name="rating" value="2" /><label for="star2"></label>
-                                <input type="radio" id="star1" name="rating" value="1" /><label for="star1"></label>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label for="feedback-comments" class="form-label">Any comments or suggestions?</label>
-                            <textarea class="form-control" id="feedback-comments" name="feedback" rows="3" placeholder="Share your thoughts about the interview experience..."></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Submit Feedback</button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="hero-section">
+  <div class="container py-4">
+    <h1 class="hero-title display-4">Interview Simulation</h1>
+    <p class="hero-subtitle lead">Practice your interview skills with our AI-powered interviewer</p>
+  </div>
 </div>
 
-<style>
-    .resume-content, .cover-letter-content {
-        white-space: pre-wrap;
-        font-family: Arial, sans-serif;
-        font-size: 0.9rem;
-        max-height: 300px;
-        overflow-y: auto;
-        background-color: #f9f9f9;
-        padding: 1rem;
-        border-radius: 0.25rem;
-    }
-    
-    /* Star rating CSS */
-    .rating {
-        display: flex;
-        flex-direction: row-reverse;
-        justify-content: flex-end;
-    }
-    .rating input {
-        display: none;
-    }
-    .rating label {
-        color: #ddd;
-        font-size: 2rem;
-        padding: 0 0.1rem;
-        cursor: pointer;
-    }
-    .rating label:before {
-        content: '\2605';
-    }
-    .rating input:checked ~ label {
-        color: #FFD700;
-    }
-    .rating label:hover,
-    .rating label:hover ~ label {
-        color: #FFD700;
-    }
-</style>
+<div class="container py-4">
+  <div class="row">
+    <div class="col-md-4">
+      <div class="form-card mb-4">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-briefcase"></i>
+          </div>
+          <h3 class="h5 mb-0">Interview Details</h3>
+        </div>
+        <div class="card-body">
+          {% if interview_session.job %}
+          <h5 class="card-title">{{ interview_session.job.title }}</h5>
+          <h6 class="card-subtitle mb-2 text-muted">{{ interview_session.job.company }}</h6>
+          {% else %}
+          <h5 class="card-title">General Interview Practice</h5>
+          {% endif %}
+
+          <div class="alert alert-info d-flex align-items-center mt-3">
+            <i class="fas fa-info-circle me-3 fs-4"></i>
+            <div>
+              <p class="mb-0">Speak clearly and naturally when answering questions.</p>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div id="status" class="status disconnected">Ready to start interview</div>
+            <div class="d-grid gap-2">
+              <button id="startBtn" class="btn btn-custom btn-success">
+                <i class="fas fa-microphone me-2"></i>Start Interview
+              </button>
+              <button id="stopBtn" class="btn btn-custom btn-danger" disabled>
+                <i class="fas fa-stop-circle me-2"></i>End Interview
+              </button>
+            </div>
+          </div>
+
+          <div class="volume-control mt-3">
+            <label for="volumeSlider" class="form-label">
+              <i class="fas fa-volume-up me-2"></i>Microphone Sensitivity: 
+              <span id="volumeValue">100%</span>
+            </label>
+            <input type="range" id="volumeSlider" class="form-range" min="0.1" max="2.0" step="0.1" value="1.0">
+          </div>
+
+          {% if interview_session %}
+          <hr>
+          <div class="d-grid mt-3">
+            <a href="{% url 'interview:index' %}" class="btn btn-custom btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Interview List
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="form-card mb-4 d-none" id="feedbackSection">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-comment-dots"></i>
+          </div>
+          <h3 class="h5 mb-0">Provide Feedback</h3>
+        </div>
+        <div class="card-body">
+          <form id="feedbackForm" method="post" action="{% url 'interview:save_feedback' interview_session.id %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="rating" class="form-label">How helpful was this interview?</label>
+              <select class="form-select" id="rating" name="rating" required>
+                <option value="5">Excellent</option>
+                <option value="4">Very Good</option>
+                <option value="3" selected>Good</option>
+                <option value="2">Fair</option>
+                <option value="1">Poor</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="feedback" class="form-label">Comments:</label>
+              <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Share your thoughts about this interview experience..."></textarea>
+            </div>
+            <div class="d-grid">
+              <button type="submit" class="btn btn-custom btn-primary">
+                <i class="fas fa-paper-plane me-2"></i>Submit Feedback
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-8">
+      <div class="form-card mb-4">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-comments"></i>
+          </div>
+          <h3 class="h5 mb-0">Interview Conversation</h3>
+        </div>
+        <div class="card-body">
+          <div class="chat-container" id="chatContainer">
+            <div class="ai-chat-bubble">
+              <i class="fas fa-robot me-2"></i> <strong>Interviewer:</strong> 
+              <p>Welcome to the interview! I'll be asking you some questions about your experience and skills. Please speak clearly after I ask each question.</p>
+            </div>
+          </div>
+
+          <div id="audioFeedback" class="mt-3 text-center d-none">
+            <div class="spinner-grow spinner-grow-sm text-primary me-2" role="status">
+              <span class="visually-hidden">Listening...</span>
+            </div>
+            <span>Listening to your response...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Technical Info (Collapsed by default) -->
+      <div class="form-card mb-4">
+        <div class="form-section-header" data-bs-toggle="collapse" data-bs-target="#debugSection" aria-expanded="false" style="cursor: pointer;">
+          <div class="form-section-icon">
+            <i class="fas fa-code"></i>
+          </div>
+          <h3 class="h5 mb-0">Technical Information</h3>
+          <i class="fas fa-chevron-down ms-auto"></i>
+        </div>
+        <div class="collapse" id="debugSection">
+          <div class="card-body">
+            <div id="debugInfo" class="debug-info">
+              Audio format: Not started<br>
+              Bytes sent: 0<br>
+              Samples processed: 0<br>
+              Recording: false
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const startButton = document.getElementById('start-interview-btn');
-        const interviewChat = document.getElementById('interview-chat');
-        let socket = null;
-        let audioContext = null;
-        let mediaStream = null;
-        let mediaRecorder = null;
-        let audioQueue = [];
-        let isProcessing = false;
-        let isInterviewActive = false;
-        
-        // Setup audio context and devices
-        async function setupAudioDevices() {
-            try {
-                // Create audio context
-                audioContext = new (window.AudioContext || window.webkitAudioContext)({
-                    sampleRate: 16000
-                });
-                
-                // Request microphone access
-                mediaStream = await navigator.mediaDevices.getUserMedia({
-                    audio: {
-                        channelCount: 1,
-                        sampleRate: 16000,
-                        echoCancellation: true,
-                        noiseSuppression: true
-                    },
-                    video: false
-                });
-                
-                // Create options for media recorder
-                const options = {
-                    audioBitsPerSecond: 16 * 16000,
-                    mimeType: 'audio/webm'
-                };
-                
-                // Create media recorder
-                mediaRecorder = new MediaRecorder(mediaStream, options);
-                
-                // Setup media recorder events
-                mediaRecorder.ondataavailable = function(e) {
-                    if (e.data.size > 0 && socket && socket.readyState === WebSocket.OPEN) {
-                        // Convert to arrayBuffer then send to websocket
-                        e.data.arrayBuffer().then(buffer => {
-                            socket.send(buffer);
-                        });
-                    }
-                };
-                
-                return true;
-            } catch (error) {
-                console.error('Error setting up audio devices:', error);
-                addSystemMessage('Error: Could not access your microphone. Please ensure you have granted microphone permissions.');
-                return false;
-            }
+  // Connection variables
+  let socket;
+  let isConnected = false;
+  let isRecording = false;
+  let isPlaying = false;
+  
+  // Media variables
+  let mediaStream;
+  let audioContext;
+  let sourceNode;
+  let processorNode;
+  
+  // Audio processing variables
+  let audioBuffer = [];
+  let bufferSize = 0;
+  let samplesProcessed = 0;
+  let bytesSent = 0;
+  let volumeMultiplier = 1.0;
+  let minBufferSize = 8000; // Minimum buffer size for audio playback
+  
+  // DOM elements
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const statusDiv = document.getElementById('status');
+  const chatContainer = document.getElementById('chatContainer');
+  const audioFeedback = document.getElementById('audioFeedback');
+  const volumeSlider = document.getElementById('volumeSlider');
+  const volumeValue = document.getElementById('volumeValue');
+  const debugInfo = document.getElementById('debugInfo');
+  const feedbackSection = document.getElementById('feedbackSection');
+
+  volumeSlider.addEventListener('input', (e) => {
+    volumeMultiplier = parseFloat(e.target.value);
+    volumeValue.textContent = Math.round(volumeMultiplier * 100) + '%';
+  });
+
+  function updateDebugInfo() {
+    debugInfo.innerHTML = `
+      Audio format: ${audioContext ? audioContext.sampleRate + 'Hz, PCM 16-bit' : 'Not started'}<br>
+      Bytes sent: ${bytesSent}<br>
+      Samples processed: ${samplesProcessed}<br>
+      Recording: ${isRecording}
+    `;
+  }
+
+  function updateStatus(message, className) {
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${className}`;
+    console.log(`Status: ${message}`);
+    updateDebugInfo();
+  }
+
+  async function initAudioContext() {
+    if (!audioContext) {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000 // Force 16kHz
+      });
+      console.log('AudioContext created, sample rate:', audioContext.sampleRate);
+    }
+    if (audioContext.state === 'suspended') {
+      await audioContext.resume();
+      console.log('AudioContext resumed');
+    }
+  }
+  
+  // Audio playback functions
+  function addToAudioBuffer(audioData) {
+    try {
+      const int16Array = new Int16Array(audioData);
+      audioBuffer.push(...int16Array);
+      bufferSize += int16Array.length;
+      
+      if (bufferSize >= minBufferSize || isPlaying) {
+        processAudioBuffer();
+      }
+    } catch (error) {
+      console.error('Error adding to audio buffer:', error);
+    }
+  }
+
+  async function processAudioBuffer() {
+    if (audioBuffer.length === 0 || isPlaying) return;
+    
+    try {
+      await initAudioContext();
+      isPlaying = true;
+      
+      const samples = new Int16Array(audioBuffer);
+      audioBuffer = [];
+      bufferSize = 0;
+      
+      const float32Array = new Float32Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        float32Array[i] = (samples[i] / 32768.0) * volumeMultiplier;
+      }
+      
+      const audioBufferNode = audioContext.createBuffer(1, samples.length, 16000);
+      audioBufferNode.copyToChannel(float32Array, 0);
+      
+      const source = audioContext.createBufferSource();
+      source.buffer = audioBufferNode;
+      source.connect(audioContext.destination);
+      
+      source.onended = () => {
+        isPlaying = false;
+        if (audioBuffer.length > 0) {
+          setTimeout(processAudioBuffer, 10);
+        }
+      };
+      
+      source.start(0);
+      console.log(`Playing buffered audio: ${samples.length} samples`);
+      
+    } catch (error) {
+      console.error('Error playing buffered audio:', error);
+      isPlaying = false;
+    }
+  }
+
+  function processAudioData(e) {
+    if (!isRecording) return;
+    
+    const inputBuffer = e.inputBuffer;
+    const inputData = inputBuffer.getChannelData(0); // Mono audio data
+    
+    // Apply volume adjustment
+    const adjustedData = new Float32Array(inputData.length);
+    for (let i = 0; i < inputData.length; i++) {
+      adjustedData[i] = Math.max(-1, Math.min(1, inputData[i] * volumeMultiplier));
+    }
+    
+    // Convert float32 to int16
+    const pcmBuffer = new Int16Array(adjustedData.length);
+    for (let i = 0; i < adjustedData.length; i++) {
+      const sample = adjustedData[i];
+      pcmBuffer[i] = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+    }
+    
+    // Send the PCM data as a blob
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(pcmBuffer.buffer);
+      bytesSent += pcmBuffer.byteLength;
+      samplesProcessed += pcmBuffer.length;
+    }
+    
+    // Update debug display periodically
+    if (samplesProcessed % 16000 === 0) {
+      updateDebugInfo();
+    }
+  }
+
+  function startConnection() {
+    // Create WebSocket connection
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws/interview/{{ room_name }}/`;
+    
+    updateStatus("Connecting...", "connecting");
+    
+    try {
+      socket = new WebSocket(wsUrl);
+      
+      socket.onopen = () => {
+        isConnected = true;
+        updateStatus("Connected to voice agent", "connected");
+        startRecording();
+      };
+      
+      socket.onmessage = async event => {
+        // Check if the message is binary data (audio)
+        if (event.data instanceof Blob || event.data instanceof ArrayBuffer) {
+          let arrayBuffer;
+          if (event.data instanceof Blob) {
+            arrayBuffer = await event.data.arrayBuffer();
+          } else {
+            arrayBuffer = event.data;
+          }
+          
+          if (arrayBuffer.byteLength > 0) {
+            // Process audio data
+            addToAudioBuffer(arrayBuffer);
+          }
+          return; // Exit early for binary data
         }
         
-        // Setup WebSocket connection
-        function connectWebSocket() {
-            // Get room name from page context
-            const roomName = "{{ room_name }}";
-            
-            // Create WebSocket connection
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/agent/${roomName}/`;
-            
-            socket = new WebSocket(wsUrl);
-            
-            socket.binaryType = "arraybuffer";
-            
-            // WebSocket event handlers
-            socket.onopen = function(e) {
-                addSystemMessage('Connected to AI interviewer. Interview starting...');
-                startRecording();
-            };
-            
-            socket.onclose = function(e) {
-                addSystemMessage('Connection closed. Interview ended.');
-                stopRecording();
-                isInterviewActive = false;
-                
-                // Show feedback form when interview ends
-                const feedbackForm = document.getElementById('interview-feedback');
-                if (feedbackForm) {
-                    feedbackForm.style.display = 'block';
-                }
-                
-                // Re-enable start button
-                startButton.disabled = false;
-                startButton.style.display = 'block';
-                startButton.innerHTML = '<i class="fas fa-microphone me-2"></i> Reconnect Interview';
-            };
-            
-            socket.onerror = function(error) {
-                console.error('WebSocket Error:', error);
-                addSystemMessage('Error: Connection problem. Please try again later.');
-                stopRecording();
-            };
-            
-            socket.onmessage = function(event) {
-                if (event.data instanceof ArrayBuffer) {
-                    // Handle audio data from AI
-                    playAudio(event.data);
-                } else if (typeof event.data === 'string') {
-                    // Handle text data (if any)
-                    try {
-                        const textData = JSON.parse(event.data);
-                        if (textData.transcript) {
-                            if (textData.is_agent) {
-                                addAIMessage(textData.transcript);
-                            } else {
-                                addUserMessage(textData.transcript);
-                            }
-                        }
-                    } catch (e) {
-                        console.error('Error parsing message:', e);
-                        
-                        // If not JSON, treat as plain text
-                        addSystemMessage(event.data);
-                    }
-                }
-            };
-            
-            return socket;
+        // Process JSON messages
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'transcript') {
+            addMessage('user', data.transcript);
+            audioFeedback.classList.add('d-none');
+          } else if (data.type === 'ai_response') {
+            addMessage('ai', data.response);
+          } else if (data.type === 'listening_start') {
+            audioFeedback.classList.remove('d-none');
+          } else if (data.type === 'listening_end') {
+            audioFeedback.classList.add('d-none');
+          } else if (data.type === 'interview_complete') {
+            stopConnection();
+            feedbackSection.classList.remove('d-none');
+            updateStatus("Interview completed", "connected");
+          }
+        } catch (error) {
+          console.error('Error processing message:', error);
         }
-        
-        // Add a system message to the chat
-        function addSystemMessage(message) {
-            const messageElem = document.createElement('div');
-            messageElem.className = 'alert alert-info my-2';
-            messageElem.innerHTML = `<i class="fas fa-info-circle me-2"></i> ${message}`;
-            interviewChat.appendChild(messageElem);
-            interviewChat.scrollTop = interviewChat.scrollHeight;
+      };
+      
+      socket.onerror = error => {
+        console.error('WebSocket error:', error);
+        updateStatus("Connection error", "disconnected");
+      };
+      
+      socket.onclose = event => {
+        console.log('WebSocket closed:', event.code);
+        isConnected = false;
+        updateStatus("Disconnected", "disconnected");
+        cleanup();
+        resetUI();
+      };
+    } catch (e) {
+      console.error('Socket creation error:', e);
+      updateStatus("Failed to create connection", "disconnected");
+    }
+  }
+
+  async function startRecording() {
+    try {
+      console.log('Requesting microphone access...');
+      
+      // Request microphone with specific constraints
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1,
+          sampleRate: 16000, // Prefer 16kHz but browser might ignore this
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          latency: 0.01 // Low latency
         }
-        
-        // Add an AI message to the chat
-        function addAIMessage(message) {
-            const messageElem = document.createElement('div');
-            messageElem.className = 'alert alert-success my-2';
-            messageElem.innerHTML = `<strong>AI Interviewer:</strong> ${message}`;
-            interviewChat.appendChild(messageElem);
-            interviewChat.scrollTop = interviewChat.scrollHeight;
+      });
+      
+      console.log('Microphone access granted');
+      await initAudioContext();
+      
+      // Create audio source
+      sourceNode = audioContext.createMediaStreamSource(mediaStream);
+      
+      // Create processor node
+      const bufferSize = 4096; // Good balance between latency and processing
+      processorNode = audioContext.createScriptProcessor(bufferSize, 1, 1);
+      processorNode.onaudioprocess = processAudioData;
+      
+      // Connect nodes
+      sourceNode.connect(processorNode);
+      processorNode.connect(audioContext.destination); // Required for processing
+      
+      isRecording = true;
+      console.log('Recording started with sample rate:', audioContext.sampleRate);
+      
+      updateStatus("Recording and listening...", "connected");
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      updateDebugInfo();
+
+    } catch (err) {
+      console.error('Microphone error:', err);
+      updateStatus("Microphone access denied", "disconnected");
+      alert("Microphone error: " + err.message);
+      resetUI();
+    }
+  }
+
+  function stopConnection() {
+    console.log('Stopping connection...');
+    isRecording = false;
+    
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.close(1000, "User stop");
+    }
+    
+    cleanup();
+    resetUI();
+  }
+
+  function cleanup() {
+    isRecording = false;
+    
+    // Stop audio processing
+    if (processorNode) {
+      processorNode.disconnect();
+      processorNode = null;
+    }
+    
+    if (sourceNode) {
+      sourceNode.disconnect();
+      sourceNode = null;
+    }
+    
+    // Stop media stream
+    if (mediaStream) {
+      mediaStream.getTracks().forEach(track => track.stop());
+      mediaStream = null;
+    }
+    
+    // Clear audio buffers
+    audioBuffer = [];
+    bufferSize = 0;
+    isPlaying = false;
+    
+    // Reset counters
+    bytesSent = 0;
+    samplesProcessed = 0;
+    
+    // Close audio context after delay
+    if (audioContext) {
+      setTimeout(() => {
+        if (audioContext && audioContext.state !== 'closed') {
+          audioContext.close().then(() => {
+            console.log('AudioContext closed');
+          });
+          audioContext = null;
         }
-        
-        // Add a user message to the chat
-        function addUserMessage(message) {
-            const messageElem = document.createElement('div');
-            messageElem.className = 'alert alert-primary my-2 text-end';
-            messageElem.innerHTML = `${message} <strong>You:</strong>`;
-            interviewChat.appendChild(messageElem);
-            interviewChat.scrollTop = interviewChat.scrollHeight;
-        }
-        
-        // Start recording audio from microphone
-        function startRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'inactive') {
-                isInterviewActive = true;
-                mediaRecorder.start(250); // Capture in 250ms chunks
-                console.log('Recording started');
-            }
-        }
-        
-        // Stop recording audio
-        function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === 'recording') {
-                mediaRecorder.stop();
-                console.log('Recording stopped');
-            }
-        }
-        
-        // Play audio from the AI
-        function playAudio(audioData) {
-            if (!audioContext) return;
-            
-            audioQueue.push(audioData);
-            
-            if (!isProcessing) {
-                processAudioQueue();
-            }
-        }
-        
-        // Process audio queue sequentially
-        async function processAudioQueue() {
-            if (audioQueue.length === 0) {
-                isProcessing = false;
-                return;
-            }
-            
-            isProcessing = true;
-            const audioData = audioQueue.shift();
-            
-            try {
-                // Decode audio data
-                const buffer = await audioContext.decodeAudioData(audioData);
-                
-                // Create source node
-                const source = audioContext.createBufferSource();
-                source.buffer = buffer;
-                source.connect(audioContext.destination);
-                
-                // Play the audio
-                source.start(0);
-                
-                // When done, process next audio
-                source.onended = () => {
-                    setTimeout(() => {
-                        processAudioQueue();
-                    }, 100);
-                };
-            } catch (error) {
-                console.error('Error playing audio:', error);
-                processAudioQueue();
-            }
-        }
-        
-        // Start interview button handler
-        startButton.addEventListener('click', async function() {
-            startButton.disabled = true;
-            startButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> Connecting...';
-            
-            // Show the chat area
-            interviewChat.style.display = 'block';
-            interviewChat.innerHTML = ''; // Clear any previous messages
-            
-            // Setup audio devices
-            const audioSetupSuccess = await setupAudioDevices();
-            if (!audioSetupSuccess) {
-                startButton.disabled = false;
-                startButton.innerHTML = '<i class="fas fa-microphone me-2"></i> Retry Interview';
-                return;
-            }
-            
-            // Connect to WebSocket
-            connectWebSocket();
-            
-            // Hide start button
-            startButton.style.display = 'none';
-        });
-        
-        // Handle feedback form submission
-        const feedbackForm = document.getElementById('feedback-form');
-        if (feedbackForm) {
-            feedbackForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                // Get form data
-                const formData = new FormData(feedbackForm);
-                
-                // Submit form via AJAX
-                fetch(feedbackForm.action, {
-                    method: 'POST',
-                    body: formData,
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        // Show success message
-                        const feedbackDiv = document.getElementById('interview-feedback');
-                        feedbackDiv.innerHTML = `
-                            <div class="alert alert-success">
-                                <i class="fas fa-check-circle me-2"></i> Thank you for your feedback! Your responses will help us improve the interview experience.
-                            </div>
-                        `;
-                    } else {
-                        // Show error message
-                        alert('Error saving feedback: ' + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('An error occurred while saving your feedback. Please try again.');
-                });
-            });
-        }
+      }, 1000);
+    }
+  }
+
+  function resetUI() {
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    updateDebugInfo();
+  }
+  
+  function addMessage(type, message) {
+    const bubble = document.createElement('div');
+    bubble.className = type === 'ai' ? 'ai-chat-bubble' : 'user-chat-bubble';
+    
+    const content = document.createElement('div');
+    if (type === 'ai') {
+      content.innerHTML = `<i class="fas fa-robot me-2"></i> <strong>Interviewer:</strong> <p>${message}</p>`;
+    } else {
+      content.innerHTML = `<i class="fas fa-user me-2"></i> <strong>You:</strong> <p>${message}</p>`;
+    }
+    
+    bubble.appendChild(content);
+    chatContainer.appendChild(bubble);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+  }
+
+  // Event listeners
+  startBtn.onclick = startConnection;
+  stopBtn.onclick = stopConnection;
+
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    if (socket) socket.close();
+    cleanup();
+  });
+
+  // Submit feedback form via AJAX
+  document.getElementById('feedbackForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    
+    fetch(this.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.status === 'success') {
+        alert('Thank you for your feedback!');
+        feedbackSection.classList.add('d-none');
+      } else {
+        alert('Error saving feedback: ' + data.message);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error saving feedback. Please try again.');
     });
+  });
+
+  console.log('Interview room ready');
+  updateDebugInfo();
 </script>
 {% endblock %}

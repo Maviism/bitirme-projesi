@@ -144,13 +144,27 @@ def interview_transcript(request, interview_id):
         if interview_session.transcript:
             try:
                 transcript_data = json.loads(interview_session.transcript)
-            except:
+            except Exception as e:
+                print(f"Error parsing transcript data: {e}")
                 transcript_data = []
         
+        # Process feedback data
+        feedback_data = None
+        if interview_session.feedback:
+            try:
+                feedback_data = json.loads(interview_session.feedback)
+                # If it's a list, use the most recent feedback
+                if isinstance(feedback_data, list) and len(feedback_data) > 0:
+                    feedback_data = feedback_data[-1]
+            except Exception as e:
+                print(f"Error parsing feedback data: {e}")
+                feedback_data = None
+                
         # Render the template
         return render(request, "interview/transcript.html", {
             "interview_session": interview_session,
-            "transcript_data": transcript_data
+            "transcript_data": transcript_data,
+            "feedback": feedback_data
         })
     else:
         # User doesn't have permission

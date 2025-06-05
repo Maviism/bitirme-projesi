@@ -1,108 +1,343 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+{% load static %}
 
-{% block title %}AI Interview Sessions{% endblock %}
+{% block title %}Interview Practice - AI-Powered Interview Preparation{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/global-theme.css' %}">
+<style>
+  .btn-custom.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+  }
+  .btn-custom.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+  }
+  .btn-outline-purple {
+    color: #6f42c1;
+    border-color: #6f42c1;
+  }
+  .btn-outline-purple:hover {
+    color: white;
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+  }
+  .interview-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    margin-bottom: 1.5rem;
+  }
+  .interview-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+  }
+  .status-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .empty-state i {
+    font-size: 4rem;
+    color: #dee2e6;
+    margin-bottom: 1rem;
+  }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h1>AI Interview Sessions</h1>
-            <p class="lead">Practice your interview skills with our AI interviewer powered by Deepgram.</p>
-            
-            <div class="card mb-4">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="card-title mb-0">Create New Interview Session</h5>
-                </div>
-                <div class="card-body">
-                    <p>You can practice for a specific job position or conduct a general interview practice.</p>
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-start">
-                        <a href="{% url 'interview:prepare_interview' %}" class="btn btn-success">
-                            <i class="fas fa-plus-circle me-2"></i> Start New Interview
-                        </a>
-                    </div>
-                </div>
-            </div>
+<div class="hero-section">
+  <div class="container py-4">
+    <h1 class="hero-title display-4">Interview Practice</h1>
+    <p class="hero-subtitle lead">Prepare for your next interview with our AI-powered simulation tool</p>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div class="row mb-4">
+    <div class="col-md-8">
+      <div class="form-card">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-microphone-alt"></i>
+          </div>
+          <h3 class="h5 mb-0">Start A New Interview</h3>
         </div>
+        <div class="card-body">
+          <div class="alert alert-info d-flex align-items-center mb-4">
+            <i class="fas fa-info-circle me-3 fs-4"></i>
+            <div>
+              <strong>How it works:</strong> Practice your interview skills with our AI interviewer. 
+              Speak naturally and get instant feedback on your responses.
+            </div>
+          </div>
+          
+          <div class="row">
+            <div class="col-md-6">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body text-center">
+                  <i class="fas fa-briefcase text-primary mb-3 fa-3x"></i>
+                  <h5 class="card-title">Job-Specific Interview</h5>
+                  <p class="card-text">Practice for a specific job position using your resume and job details</p>
+                  {% if request.user.is_authenticated %}
+                  <a href="#jobSpecificModal" class="btn btn-custom btn-primary" data-bs-toggle="modal">
+                    <i class="fas fa-briefcase me-2"></i>Start Job Interview
+                  </a>
+                  {% else %}
+                  <a href="{% url 'login' %}" class="btn btn-custom btn-primary">
+                    <i class="fas fa-sign-in-alt me-2"></i>Login to Start
+                  </a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card h-100 border-0 bg-light">
+                <div class="card-body text-center">
+                  <i class="fas fa-comments text-success mb-3 fa-3x"></i>
+                  <h5 class="card-title">General Interview</h5>
+                  <p class="card-text">Practice common interview questions and improve your skills</p>
+                  <a href="#generalInterviewModal" class="btn btn-custom btn-success" data-bs-toggle="modal">
+                    <i class="fas fa-play-circle me-2"></i>Start General Interview
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
     
-    {% if interview_sessions %}
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header bg-secondary text-white">
-                    <h5 class="card-title mb-0">Your Previous Sessions</h5>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Position</th>
-                                    <th>Status</th>
-                                    <th>Duration</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for session in interview_sessions %}
-                                <tr>
-                                    <td>{{ session.created_at|date:"M j, Y" }}</td>
-                                    <td>
-                                        {% if session.job %}
-                                            <strong>{{ session.job.title }}</strong><br>
-                                            <small class="text-muted">{{ session.job.company }}</small>
-                                        {% else %}
-                                            General Practice
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if session.completed %}
-                                            <span class="badge bg-success">Completed</span>
-                                        {% else %}
-                                            <span class="badge bg-warning">In Progress</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if session.interview_duration %}
-                                            {{ session.interview_duration|floatformat:0 }}s
-                                        {% else %}
-                                            -
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'interview:room' session.room_name %}" class="btn btn-primary">
-                                                {% if not session.completed %}
-                                                    <i class="fas fa-play me-1"></i> Continue
-                                                {% else %}
-                                                    <i class="fas fa-redo me-1"></i> Restart
-                                                {% endif %}
-                                            </a>
-                                            {% if session.completed and session.transcript %}
-                                                <a href="{% url 'interview:transcript' session.id %}" class="btn btn-info">
-                                                    <i class="fas fa-file-alt me-1"></i> View Transcript
-                                                </a>
-                                            {% endif %}
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    <div class="col-md-4">
+      <div class="form-card">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-lightbulb"></i>
+          </div>
+          <h3 class="h5 mb-0">Interview Tips</h3>
         </div>
-    </div>
-    {% else %}
-    <div class="row">
-        <div class="col-12">
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> You don't have any interview sessions yet. Start a new one to begin practicing!
-            </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item bg-transparent d-flex align-items-center">
+              <i class="fas fa-check-circle text-success me-3"></i>
+              <span>Use a quiet environment for best results</span>
+            </li>
+            <li class="list-group-item bg-transparent d-flex align-items-center">
+              <i class="fas fa-check-circle text-success me-3"></i>
+              <span>Speak clearly and at a normal pace</span>
+            </li>
+            <li class="list-group-item bg-transparent d-flex align-items-center">
+              <i class="fas fa-check-circle text-success me-3"></i>
+              <span>Answer questions with specific examples</span>
+            </li>
+            <li class="list-group-item bg-transparent d-flex align-items-center">
+              <i class="fas fa-check-circle text-success me-3"></i>
+              <span>Review your transcript after each session</span>
+            </li>
+          </ul>
         </div>
+      </div>
     </div>
-    {% endif %}
+  </div>
+  
+  <!-- Past Interviews Section -->
+  <div class="form-card mb-4">
+    <div class="form-section-header">
+      <div class="form-section-icon">
+        <i class="fas fa-history"></i>
+      </div>
+      <h3 class="h5 mb-0">Your Previous Interviews</h3>
+    </div>
+    <div class="card-body">
+      {% if request.user.is_authenticated and interview_sessions %}
+        <div class="row">
+          {% for session in interview_sessions %}
+            <div class="col-md-4">
+              <div class="card interview-card position-relative">
+                {% if session.completed %}
+                  <span class="badge bg-success status-badge">Completed</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark status-badge">In Progress</span>
+                {% endif %}
+                <div class="card-body">
+                  <h5 class="card-title">
+                    {% if session.job %}
+                      {{ session.job.title }}
+                    {% else %}
+                      General Interview Practice
+                    {% endif %}
+                  </h5>
+                  <h6 class="card-subtitle mb-2 text-muted">
+                    {% if session.job %}
+                      {{ session.job.company }}
+                    {% else %}
+                      Practice Session
+                    {% endif %}
+                  </h6>
+                  <p class="text-muted small mb-3">
+                    <i class="fas fa-calendar-alt me-2"></i>{{ session.created_at|date:"F j, Y" }}
+                  </p>
+                  <div class="d-grid gap-2">
+                    {% if session.completed %}
+                      <a href="{% url 'interview:transcript' session.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-file-alt me-2"></i>View Transcript
+                      </a>
+                    {% else %}
+                      <a href="{% url 'interview:room' session.room_name %}" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-play-circle me-2"></i>Continue Interview
+                      </a>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% elif request.user.is_authenticated %}
+        <div class="empty-state">
+          <i class="fas fa-comments"></i>
+          <h5>No previous interviews found</h5>
+          <p class="text-muted">Start a new interview to practice your skills</p>
+        </div>
+      {% else %}
+        <div class="alert alert-info">
+          <i class="fas fa-info-circle me-2"></i>
+          <a href="{% url 'login' %}">Login</a> to see your interview history and track your progress
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </div>
+
+<!-- Job Specific Interview Modal -->
+<div class="modal fade" id="jobSpecificModal" tabindex="-1" aria-labelledby="jobSpecificModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="jobSpecificModalLabel">Job-Specific Interview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        {% if request.user.is_authenticated %}
+          <!-- Job Selection Form -->
+          <form id="jobSpecificForm" action="{% url 'interview:prepare_interview' %}" method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label for="jobSelect" class="form-label">Select Job Position</label>
+              <select class="form-select" id="jobSelect" name="job_id" required>
+                <option value="">Choose a job position...</option>
+                <!-- Job options would be loaded dynamically -->
+              </select>
+            </div>
+            <input type="hidden" name="student_id" id="studentIdInput">
+            <div class="mb-3">
+              <label for="resumeContent" class="form-label">Resume Content (Optional)</label>
+              <textarea class="form-control" id="resumeContent" name="resume_content" rows="3" placeholder="Paste your resume content here to help tailor the interview questions..."></textarea>
+            </div>
+            <div class="mb-3">
+              <label for="coverLetter" class="form-label">Cover Letter (Optional)</label>
+              <textarea class="form-control" id="coverLetter" name="cover_letter" rows="3" placeholder="Paste your cover letter here for more personalized questions..."></textarea>
+            </div>
+          </form>
+        {% else %}
+          <div class="alert alert-warning">
+            Please <a href="{% url 'login' %}">login</a> to continue
+          </div>
+        {% endif %}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" form="jobSpecificForm" class="btn btn-primary">Start Interview</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- General Interview Modal -->
+<div class="modal fade" id="generalInterviewModal" tabindex="-1" aria-labelledby="generalInterviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="generalInterviewModalLabel">General Interview Practice</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="generalInterviewForm" action="{% url 'interview:prepare_interview' %}" method="post">
+          {% csrf_token %}
+          {% if request.user.is_authenticated %}
+            <input type="hidden" name="student_id" value="{{ request.user.student.id }}">
+          {% endif %}
+          <p>Start a general interview practice session with common interview questions.</p>
+          <div class="mb-3">
+            <label class="form-label">Interview Focus (Optional)</label>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="focus" id="focusBehavioral" value="behavioral">
+              <label class="form-check-label" for="focusBehavioral">
+                Behavioral Questions
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="focus" id="focusTechnical" value="technical">
+              <label class="form-check-label" for="focusTechnical">
+                Technical Questions
+              </label>
+            </div>
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="focus" id="focusMixed" value="mixed" checked>
+              <label class="form-check-label" for="focusMixed">
+                Mixed (Recommended)
+              </label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="submit" form="generalInterviewForm" class="btn btn-success">Start Practice</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if request.user.is_authenticated %}
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Set student ID
+    document.getElementById('studentIdInput').value = "{{ request.user.student.id }}";
+    
+    // Load job options
+    fetch('/api/jobs/')
+      .then(response => response.json())
+      .then(data => {
+        const jobSelect = document.getElementById('jobSelect');
+        
+        if (data && data.length > 0) {
+          data.forEach(job => {
+            const option = document.createElement('option');
+            option.value = job.id;
+            option.textContent = `${job.title} at ${job.company}`;
+            jobSelect.appendChild(option);
+          });
+        } else {
+          const option = document.createElement('option');
+          option.value = "";
+          option.textContent = "No job listings available";
+          option.disabled = true;
+          jobSelect.appendChild(option);
+        }
+      })
+      .catch(error => {
+        console.error('Error loading jobs:', error);
+      });
+  });
+</script>
+{% endif %}
 {% endblock %}
