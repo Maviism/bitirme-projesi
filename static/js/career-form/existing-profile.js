@@ -31,23 +31,33 @@ function initExistingStudentData() {
   
 
   // Check if existing skills data is available
-  const existingSkillsElement = document.getElementById('existing_skills');
-  console.log('Existing skills element:', existingSkillsElement);
-  if (existingSkillsElement && existingSkillsElement.value) {
+  const existingSkillsScript = document.getElementById('existing-skills-json');
+  if (existingSkillsScript && existingSkillsScript.textContent) {
     try {
-      // Parse existing skills data
-      const skills = JSON.parse(existingSkillsElement.value);
+      // Parse existing skills data from JSON script
+      const skills = JSON.parse(existingSkillsScript.textContent);
       
       // Pre-populate the skills data input
       const skillsDataElement = document.getElementById('skills_data');
       if (skillsDataElement) {
-        skillsDataElement.value = existingSkillsElement.value;
+        skillsDataElement.value = JSON.stringify(skills);
       }
       
       // Mark skills as selected when skills accordion is ready
-      document.addEventListener('skillsAccordionReady', () => {
-        preSelectExistingSkills(skills);
-      });
+      // First, check if the accordion is already ready
+      const existingAccordion = document.getElementById('skillsAccordion');
+      if (existingAccordion && existingAccordion.children.length > 0) {
+        setTimeout(() => {
+          preSelectExistingSkills(skills);
+        }, 100);
+      } else {
+        document.addEventListener('skillsAccordionReady', () => {
+          // Small delay to ensure all DOM elements are ready
+          setTimeout(() => {
+            preSelectExistingSkills(skills);
+          }, 100);
+        });
+      }
     } catch (error) {
       console.error('Error parsing existing skills:', error);
     }
@@ -67,17 +77,29 @@ function initExistingStudentData() {
 
 // Function to pre-select existing skills in the UI
 function preSelectExistingSkills(skills) {
-  if (!Array.isArray(skills) || skills.length === 0) return;
+  if (!Array.isArray(skills) || skills.length === 0) {
+    return;
+  }
   
   // Find all checkboxes in the skills accordion
-  const skillCheckboxes = document.querySelectorAll('#skillsAccordion input[type="checkbox"]');
+  const skillCheckboxes = document.querySelectorAll('#skillsAccordion .skill-input');
   
   skillCheckboxes.forEach(checkbox => {
     const skillName = checkbox.value.trim();
+    
     if (skills.includes(skillName)) {
       checkbox.checked = true;
+      
+      // Trigger the change event to update UI components (badges, counts, etc.)
+      const changeEvent = new Event('change', { bubbles: true });
+      checkbox.dispatchEvent(changeEvent);
     }
   });
+  
+  // Update the skills data hidden field after pre-selection
+  if (typeof window.updateSkillsData === 'function') {
+    window.updateSkillsData();
+  }
 }
 
 export default {

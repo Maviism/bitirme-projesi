@@ -23,6 +23,9 @@ document.addEventListener('DOMContentLoaded', function () {
   // Generate skills sections
   skills.generateSkillsSections();
   
+  // Initialize existing student data immediately after skills are generated
+  existingProfile.initExistingStudentData();
+  
   // Expose updateSkillsData globally for form submission
   window.updateSkillsData = skills.updateSkillsData;
   
@@ -31,9 +34,6 @@ document.addEventListener('DOMContentLoaded', function () {
   
   // Initialize form submission
   formProcessing.initFormSubmission();
-  
-  // Initialize existing student data if available
-  existingProfile.initExistingStudentData();
   
   // Setup animations and interactions
   setupScrollAnimations();

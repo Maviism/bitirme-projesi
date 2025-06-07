@@ -189,7 +189,7 @@
         </div>
         <input type="hidden" id="skills_data" name="skills_data" value="[]">
         {% if student.skills %}
-        <input type="hidden" id="existing_skills" value="{{ student.skills|safe }}">
+        {{ student.skills|json_script:"existing-skills-json" }}
         {% endif %}
 
         <div class="accordion" id="skillsAccordion">
