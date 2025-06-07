@@ -46,6 +46,30 @@ def career_form(request):
                 'grade': course.grade
             })
         
+        # Get student experiences
+        organizations = student.experiences.filter(experience_type='organization')
+        formatted_organizations = []
+        for org in organizations:
+            formatted_organizations.append({
+                'institution_name': org.institution_name,
+                'position': org.position,
+                'start_date': org.start_date.strftime('%Y-%m-%d') if org.start_date else '',
+                'end_date': org.end_date.strftime('%Y-%m-%d') if org.end_date else '',
+                'description': org.description
+            })
+        
+        internships = student.experiences.filter(experience_type='internship')
+        formatted_internships = []
+        for internship in internships:
+            formatted_internships.append({
+                'institution_name': internship.institution_name,
+                'position': internship.position,
+                'start_date': internship.start_date.strftime('%Y-%m-%d') if internship.start_date else '',
+                'end_date': internship.end_date.strftime('%Y-%m-%d') if internship.end_date else '',
+                'description': internship.description
+            })
+        print(f"[DEBUG] Formatted internships: {formatted_internships}")
+        print(f"[DEBUG] Formatted organizations: {formatted_organizations}")
         # Pass student data to template
         context = {
             'student': {
@@ -61,6 +85,8 @@ def career_form(request):
                 'skills': student.skills
             },
             'courses': formatted_courses,
+            'organizations': formatted_organizations,
+            'internships': formatted_internships,
             'has_existing_profile': True
         }
         logger.info(f"Found existing student profile for user: {request.user.username}")
@@ -170,10 +196,10 @@ def submit_application(request):
         
         # Process organization experiences
         organizations = []
-        org_fields = ['name', 'position', 'start_date', 'end_date', 'description']
+        org_fields = ['institution_name', 'position', 'start_date', 'end_date', 'description']
         i = 0
         while True:
-            if f'organizations[{i}][name]' not in request.POST:
+            if f'organizations[{i}][institution_name]' not in request.POST:
                 break
             
             org = {}
@@ -188,10 +214,10 @@ def submit_application(request):
         
         # Process internship experiences
         internships = []
-        intern_fields = ['company', 'position', 'start_date', 'end_date', 'description']
+        intern_fields = ['institution_name', 'position', 'start_date', 'end_date', 'description']
         i = 0
         while True:
-            if f'internships[{i}][company]' not in request.POST:
+            if f'internships[{i}][institution_name]' not in request.POST:
                 break
             
             intern = {}
@@ -282,39 +308,57 @@ def submit_application(request):
                     }
                 )
             
+            # Clear existing experiences before saving new ones if updating profile
+            if not created:
+                Experience.objects.filter(student=student).delete()
+            
             # Save organizations as experiences
             for org_data in organizations:
-                start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
-                end_date = None
-                if org_data.get('end_date'):
-                    end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
-                
-                Experience.objects.create(
-                    student=student,
-                    experience_type='organization',
-                    institution_name=org_data.get('institution_name', org_data.get('name', '')),
-                    position=org_data['position'],
-                    start_date=start_date,
-                    end_date=end_date,
-                    description=org_data.get('description', '')
-                )
+                try:
+                    start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
+                    end_date = None
+                    if org_data.get('end_date'):
+                        end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
+                    
+                    Experience.objects.create(
+                        student=student,
+                        experience_type='organization',
+                        institution_name=org_data['institution_name'],
+                        position=org_data['position'],
+                        start_date=start_date,
+                        end_date=end_date,
+                        description=org_data.get('description', '')
+                    )
+                except ValueError as e:
+                    logger.warning(f"Invalid date format in organization data: {e}")
+                    continue
+                except KeyError as e:
+                    logger.warning(f"Missing required field in organization data: {e}")
+                    continue
             
             # Save internships as experiences
             for intern_data in internships:
-                start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
-                end_date = None
-                if intern_data.get('end_date'):
-                    end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
-                
-                Experience.objects.create(
-                    student=student,
-                    experience_type='internship',
-                    institution_name=intern_data.get('institution_name', intern_data.get('company', '')),
-                    position=intern_data['position'],
-                    start_date=start_date,
-                    end_date=end_date,
-                    description=intern_data.get('description', '')
-                )
+                try:
+                    start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
+                    end_date = None
+                    if intern_data.get('end_date'):
+                        end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
+                    
+                    Experience.objects.create(
+                        student=student,
+                        experience_type='internship',
+                        institution_name=intern_data['institution_name'],
+                        position=intern_data['position'],
+                        start_date=start_date,
+                        end_date=end_date,
+                        description=intern_data.get('description', '')
+                    )
+                except ValueError as e:
+                    logger.warning(f"Invalid date format in internship data: {e}")
+                    continue
+                except KeyError as e:
+                    logger.warning(f"Missing required field in internship data: {e}")
+                    continue
             
             # Save job recommendations
             for rec in job_recommendations:
