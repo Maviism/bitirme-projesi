@@ -4,8 +4,35 @@
 
 // Function to initialize existing student data
 function initExistingStudentData() {
+
+  // Check for existing courses data
+  const coursesJsonScript = document.getElementById('courses-json');
+  if (coursesJsonScript) {
+    try {
+      // Parse courses data
+      const courses = JSON.parse(coursesJsonScript.textContent);
+      // Pre-populate the courses data input
+      const coursesDataElement = document.getElementById('courses_data');
+      if (coursesDataElement) {
+        coursesDataElement.value = JSON.stringify(courses);
+      }
+      
+      // Import form processing to display courses table
+      import('./form-processing.js').then(module => {
+        if (module.default && module.default.displayCoursesTable) {
+          // Display courses table
+          module.default.displayCoursesTable(courses);
+        }
+      });
+    } catch (error) {
+      console.error('Error parsing existing courses data:', error);
+    }
+  }
+  
+
   // Check if existing skills data is available
   const existingSkillsElement = document.getElementById('existing_skills');
+  console.log('Existing skills element:', existingSkillsElement);
   if (existingSkillsElement && existingSkillsElement.value) {
     try {
       // Parse existing skills data

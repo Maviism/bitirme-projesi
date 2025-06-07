@@ -36,6 +36,16 @@ def career_form(request):
         # Convert birth date to string format DD/MM/YYYY
         birth_date_str = student.birth_date.strftime('%d/%m/%Y') if student.birth_date else ""
         
+        # Get student courses
+        courses = student.courses.all()
+        formatted_courses = []
+        for course in courses:
+            formatted_courses.append({
+                'code': course.code,
+                'name': course.name,
+                'grade': course.grade
+            })
+        
         # Pass student data to template
         context = {
             'student': {
@@ -50,9 +60,9 @@ def career_form(request):
                 'gpa': float(student.gpa),
                 'skills': student.skills
             },
+            'courses': formatted_courses,
             'has_existing_profile': True
         }
-        
         logger.info(f"Found existing student profile for user: {request.user.username}")
     else:
         context['has_existing_profile'] = False
