@@ -1,14 +1,38 @@
 from collections import Counter
 from .models import Student, Course, Experience, Job, JobRecommendation, Alumni
 from sentence_transformers import SentenceTransformer, util
+import logging
+import os
 
-# Updated function to retrieve alumni data from the database
+logger = logging.getLogger(__name__)
+
+# Import the model loader functions
+try:
+    from .ml_model.model_generator import MLModelGenerator
+except ImportError:
+    logger.error("Failed to import MLModelGenerator. Falling back to database queries.")
+
+# Updated function to retrieve alumni data from the model or database
 def get_alumni_database():
     """
-    Retrieve alumni data from the database using the dedicated Alumni model
+    Retrieve alumni data from the ML model or from database if model is not available
     """
     try:
-        # Find alumni using the Alumni model
+        # First try to load from the pre-generated model
+        try:
+            if 'MLModelGenerator' in globals():
+                # Load alumni data from the pre-generated model
+                logger.info("Trying to load alumni data from pre-generated model")
+                alumni_data = MLModelGenerator.load_alumni_model()
+                if alumni_data:
+                    logger.info(f"Successfully loaded alumni data from model, {len(alumni_data)} records found")
+                    return alumni_data
+                logger.warning("No alumni data loaded from model, falling back to database")
+        except Exception as model_error:
+            logger.error(f"Error loading alumni model: {model_error}, falling back to database")
+            
+        # If the model loading fails or returns empty, fall back to database query
+        logger.info("Loading alumni data directly from database")
         alumni_records = Alumni.objects.select_related('student', 'current_job').all()
         
         # Structure alumni data as needed for recommendations
@@ -52,16 +76,32 @@ def get_alumni_database():
             }
             alumni_data.append(alumni_record_data)
             
+        logger.info(f"Loaded {len(alumni_data)} alumni records from database")
         return alumni_data
     except Exception as e:
+        logger.error(f"Error in get_alumni_database: {e}")
         return []
 
 def get_job_postings_database():
     """
-    Retrieve job postings from the database
+    Retrieve job postings from the ML model or from database if model is not available
     """
     try:
-        # Get job postings from the database
+        # First try to load from the pre-generated model
+        try:
+            if 'MLModelGenerator' in globals():
+                # Load job data from the pre-generated model
+                logger.info("Trying to load job data from pre-generated model")
+                job_postings = MLModelGenerator.load_job_model()
+                if job_postings:
+                    logger.info(f"Successfully loaded job data from model, {len(job_postings)} records found")
+                    return job_postings
+                logger.warning("No job data loaded from model, falling back to database")
+        except Exception as model_error:
+            logger.error(f"Error loading job model: {model_error}, falling back to database")
+        
+        # If the model loading fails or returns empty, fall back to database query
+        logger.info("Loading job data directly from database")
         jobs = Job.objects.all()
         
         # Convert to the format expected by the recommender
@@ -75,9 +115,11 @@ def get_job_postings_database():
                 'required_majors': job.required_majors,
                 'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
             })
-            
+        
+        logger.info(f"Loaded {len(job_postings)} job postings from database")
         return job_postings
     except Exception as e:
+        logger.error(f"Error in get_job_postings_database: {e}")
         return []
 
 class HybridRecommender:

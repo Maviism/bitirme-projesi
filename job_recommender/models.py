@@ -148,3 +148,24 @@ class JobRecommendation(models.Model):
     
     class Meta:
         unique_together = ('student', 'job')
+
+
+class MLModelInfo(models.Model):
+    """
+    Model to track ML model generation information. 
+    This is not a real ML model - it just tracks information about model generation.
+    """
+    model_type = models.CharField(max_length=20, choices=[
+        ('alumni', 'Alumni Model'),
+        ('job', 'Job Model')
+    ])
+    file_path = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.get_model_type_display()} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+    
+    class Meta:
+        verbose_name = 'ML Model Info'
+        verbose_name_plural = 'ML Model Info'
