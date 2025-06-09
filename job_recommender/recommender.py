@@ -1,125 +1,101 @@
+"""
+Job Recommendation System
+
+This module implements a hybrid job recommendation system that uses pre-generated 
+ML models rather than direct database queries. The system combines:
+
+1. Alumni-based recommendations: Matching students with jobs based on similar academic profiles
+2. Job-based recommendations: Using experience and skills to match with suitable job postings
+
+Models are loaded from disk or generated on first use, and contain pre-computed data
+structures to speed up the recommendation process.
+"""
+
 from collections import Counter
-from .models import Student, Course, Experience, Job, JobRecommendation, Alumni
 from sentence_transformers import SentenceTransformer, util
+import torch
 import logging
 import os
 
 logger = logging.getLogger(__name__)
 
-# Import the model loader functions
+# Import the ML model generator
 try:
     from .ml_model.model_generator import MLModelGenerator
 except ImportError:
-    logger.error("Failed to import MLModelGenerator. Falling back to database queries.")
+    logger.error("Failed to import MLModelGenerator. A model needs to be generated before recommendations will work.")
 
-# Updated function to retrieve alumni data from the model or database
+# Function to access alumni model data
 def get_alumni_database():
     """
-    Retrieve alumni data from the ML model or from database if model is not available
+    Load alumni model data from the pre-generated model or generate a new one.
+    Returns the data as a list structure or empty list if no model is available.
     """
     try:
-        # First try to load from the pre-generated model
-        try:
-            if 'MLModelGenerator' in globals():
-                # Load alumni data from the pre-generated model
-                logger.info("Trying to load alumni data from pre-generated model")
-                alumni_data = MLModelGenerator.load_alumni_model()
-                if alumni_data:
-                    logger.info(f"Successfully loaded alumni data from model, {len(alumni_data)} records found")
-                    return alumni_data
-                logger.warning("No alumni data loaded from model, falling back to database")
-        except Exception as model_error:
-            logger.error(f"Error loading alumni model: {model_error}, falling back to database")
+        if 'MLModelGenerator' not in globals():
+            logger.error("MLModelGenerator not available")
+            return []
             
-        # If the model loading fails or returns empty, fall back to database query
-        logger.info("Loading alumni data directly from database")
-        alumni_records = Alumni.objects.select_related('student', 'current_job').all()
+        # First try to load existing model
+        logger.info("Loading alumni model data")
+        alumni_data = MLModelGenerator.load_alumni_model()
         
-        # Structure alumni data as needed for recommendations
-        alumni_data = []
-        grade_mapping = {
-            'AA': 4.0, 'BA': 3.5, 'BB': 3.0, 'CB': 2.5, 
-            'CC': 2.0, 'DC': 1.5, 'DD': 1.0, 'FF': 0.0
-        }
+        if alumni_data:
+            logger.info(f"Alumni model loaded successfully with {len(alumni_data)} records")
+            return alumni_data
         
-        for alumni_record in alumni_records:
-            student = alumni_record.student
-            
-            # Skip alumni without a current job
-            if not alumni_record.current_job:
-                continue
-                
-            # Build course grades dictionary
-            courses = student.courses.all()
-            course_grades = {}
-            for course in courses:
-                course_grades[course.code] = grade_mapping.get(course.grade, 0)
-            
-            # Structure the alumni data
-            alumni_record_data = {
-                'student': {
-                    'id': student.student_id,
-                    'program': student.program,
-                    'gpa': float(student.gpa),
-                    'skills': student.skills if hasattr(student, 'skills') else []
-                },
-                'course_grades': course_grades,
-                'graduation_date': alumni_record.graduation_date,
-                'current_job': {
-                    'id': alumni_record.current_job.id,
-                    'title': alumni_record.current_job.title,
-                    'company': alumni_record.current_job.company,
-                    'description': alumni_record.current_job.description,
-                    'required_majors': alumni_record.current_job.required_majors,
-                    'required_skills': alumni_record.current_job.required_skills if hasattr(alumni_record.current_job, 'required_skills') else []
-                }
-            }
-            alumni_data.append(alumni_record_data)
-            
-        logger.info(f"Loaded {len(alumni_data)} alumni records from database")
-        return alumni_data
+        # If no model found, generate a new one
+        logger.info("No alumni model found, generating new model")
+        model_generator = MLModelGenerator()
+        file_path = model_generator.generate_alumni_model()
+        
+        if file_path:
+            # Load the newly generated model
+            alumni_data = MLModelGenerator.load_alumni_model()
+            if alumni_data:
+                logger.info(f"New alumni model generated and loaded with {len(alumni_data)} records")
+                return alumni_data
+        
+        logger.warning("Could not generate or load alumni model")
+        return []
     except Exception as e:
-        logger.error(f"Error in get_alumni_database: {e}")
+        logger.error(f"Error in alumni model processing: {e}")
         return []
 
 def get_job_postings_database():
     """
-    Retrieve job postings from the ML model or from database if model is not available
+    Load job model data from the pre-generated model or generate a new one.
+    Returns the data as a list structure or empty list if no model is available.
     """
     try:
-        # First try to load from the pre-generated model
-        try:
-            if 'MLModelGenerator' in globals():
-                # Load job data from the pre-generated model
-                logger.info("Trying to load job data from pre-generated model")
-                job_postings = MLModelGenerator.load_job_model()
-                if job_postings:
-                    logger.info(f"Successfully loaded job data from model, {len(job_postings)} records found")
-                    return job_postings
-                logger.warning("No job data loaded from model, falling back to database")
-        except Exception as model_error:
-            logger.error(f"Error loading job model: {model_error}, falling back to database")
+        if 'MLModelGenerator' not in globals():
+            logger.error("MLModelGenerator not available")
+            return []
+            
+        # First try to load existing model
+        logger.info("Loading job model data")
+        job_postings = MLModelGenerator.load_job_model()
         
-        # If the model loading fails or returns empty, fall back to database query
-        logger.info("Loading job data directly from database")
-        jobs = Job.objects.all()
+        if job_postings:
+            logger.info(f"Job model loaded successfully with {len(job_postings)} records")
+            return job_postings
         
-        # Convert to the format expected by the recommender
-        job_postings = []
-        for job in jobs:
-            job_postings.append({
-                'id': job.id,
-                'title': job.title,
-                'company': job.company,
-                'description': job.description,
-                'required_majors': job.required_majors,
-                'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
-            })
+        # If no model found, generate a new one
+        logger.info("No job model found, generating new model")
+        model_generator = MLModelGenerator()
+        file_path = model_generator.generate_job_model()
         
-        logger.info(f"Loaded {len(job_postings)} job postings from database")
-        return job_postings
+        if file_path:
+            # Load the newly generated model
+            job_postings = MLModelGenerator.load_job_model()
+            if job_postings:
+                logger.info(f"New job model generated and loaded with {len(job_postings)} records")
+                return job_postings
+        
+        logger.warning("Could not generate or load job model")
+        return []
     except Exception as e:
-        logger.error(f"Error in get_job_postings_database: {e}")
+        logger.error(f"Error in job model processing: {e}")
         return []
 
 class HybridRecommender:
@@ -262,14 +238,21 @@ class HybridRecommender:
         return recommendations
     
     def get_job_recommendations(self, student_data, orgs, internships, skills=None):
+        """
+        Generate job recommendations based on experience similarity and skills matching.
+        Uses pre-computed embeddings when available.
+        """
+        # Get job data from model
         job_postings = get_job_postings_database()
         if not job_postings:
             return []
 
+        # Validate inputs
         if not isinstance(orgs, list): orgs = []
         if not isinstance(internships, list): internships = []
+        if not isinstance(skills, list): skills = []
 
-        # Gabungkan semua pengalaman menjadi satu teks
+        # Combine all experience text
         experience_texts = []
         for org in orgs:
             if isinstance(org, dict):
@@ -286,28 +269,38 @@ class HybridRecommender:
         if not combined_experience:
             return []
 
-        # Encode pengalaman pakai SBERT
+        # Generate embedding for student experience
         try:
             experience_embedding = self.model.encode(combined_experience, convert_to_tensor=True)
         except Exception as e:
+            logger.error(f"Error encoding experience: {e}")
             return []
 
         matches = []
+        program = student_data.get('program', '')
 
         for job in job_postings:
             try:
-                job_text = f"{job.get('title', '')}. {job.get('description', '')}"
-                job_embedding = self.model.encode(job_text, convert_to_tensor=True)
+                # Use pre-computed embedding if available
+                if 'embedding' in job and job['embedding']:
+                    # Convert the stored embedding back to tensor for comparison
+                    import torch
+                    job_embedding = torch.tensor(job['embedding'])
+                else:
+                    # Generate embedding on the fly if not pre-computed
+                    job_text = f"{job.get('title', '')}. {job.get('description', '')}"
+                    job_embedding = self.model.encode(job_text, convert_to_tensor=True)
+                
+                # Calculate similarity score
                 similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
 
-                # Bonus jika program mahasiswa cocok
-                program = student_data.get('program', '')
+                # Program match bonus
                 required_majors = job.get('required_majors', '')
-                program_match = 1.5 if program in required_majors else 1.0
+                program_match = 1.5 if program and program in required_majors else 1.0
                 
                 # Skills matching bonus
                 skill_bonus = 1.0
-                if skills and isinstance(skills, list) and len(skills) > 0:
+                if skills and len(skills) > 0:
                     job_skills = job.get('required_skills', [])
                     if job_skills and isinstance(job_skills, list):
                         matching_skills = len(set(skills) & set(job_skills))
@@ -318,10 +311,14 @@ class HybridRecommender:
                 total_score = similarity_score * program_match * skill_bonus
 
                 matches.append((total_score, job))
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Skipping job {job.get('id')}: {e}")
                 continue
 
+        # Sort by similarity score (highest first)
         matches.sort(key=lambda x: x[0], reverse=True)
+        
+        # Return top recommendations
         recommendations = [item[1] for item in matches[:10]]
         return recommendations
 
