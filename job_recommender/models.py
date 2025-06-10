@@ -1,8 +1,10 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.models import User
 
 class Student(models.Model):
     """Model representing student information"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='student_profiles', null=True, blank=True)
     student_id = models.CharField(max_length=20, unique=True)
     id_number = models.CharField(max_length=20, blank=True, null=True)
     fullname = models.CharField(max_length=100)
@@ -11,14 +13,31 @@ class Student(models.Model):
     faculty = models.CharField(max_length=100)
     program = models.CharField(max_length=100)
     gpa = models.DecimalField(max_digits=3, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(4.0)])
+    email = models.EmailField(max_length=255, blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    linkedin_profile = models.URLField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     # Add a flag to differentiate regular students from alumni
     is_alumni = models.BooleanField(default=False)
+    
+    # Student's skill preferences
+    skills = models.JSONField(default=list, blank=True)  # Store selected skills as JSON array
 
     def __str__(self):
         return f"{self.fullname} {self.last_name} ({self.student_id})"
+    
+    # Properties for backward compatibility with templates
+    @property
+    def internships(self):
+        """Return experiences with type 'internship'"""
+        return self.experiences.filter(experience_type='internship')
+    
+    @property
+    def organizations(self):
+        """Return experiences with type 'organization'"""
+        return self.experiences.filter(experience_type='organization')
 
 class Alumni(models.Model):
     """Model representing alumni information, extending the Student model"""
@@ -64,29 +83,40 @@ class Course(models.Model):
     class Meta:
         unique_together = ('student', 'code')
 
-class Organization(models.Model):
-    """Model representing student's organizational experience"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='organizations')
-    name = models.CharField(max_length=100)
+class Experience(models.Model):
+    """Model representing student's experience (organization or internship)"""
+    EXPERIENCE_TYPE_CHOICES = [
+        ('organization', 'Organization'),
+        ('internship', 'Internship'),
+    ]
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='experiences')
+    experience_type = models.CharField(max_length=20, choices=EXPERIENCE_TYPE_CHOICES, default='internship')
+    institution_name = models.CharField(max_length=100)  # Generic name for company/organization
     position = models.CharField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)
     description = models.TextField(blank=True)
     
     def __str__(self):
-        return f"{self.name} - {self.position}"
-
-class Internship(models.Model):
-    """Model representing student's internship experience"""
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='internships')
-    company = models.CharField(max_length=100)
-    position = models.CharField(max_length=100)
-    start_date = models.DateField()
-    end_date = models.DateField(null=True, blank=True)
-    description = models.TextField(blank=True)
+        return f"{self.institution_name} - {self.position} ({self.get_experience_type_display()})"
     
-    def __str__(self):
-        return f"{self.company} - {self.position}"
+    @property
+    def is_organization(self):
+        return self.experience_type == 'organization'
+    
+    @property
+    def is_internship(self):
+        return self.experience_type == 'internship'
+    
+    @property
+    def name(self):
+        """For backward compatibility with Organization model"""
+        return self.institution_name
+    
+    @property
+    def company(self):
+        """For backward compatibility with Internship model"""
+        return self.institution_name
 
 class Job(models.Model):
     """Model representing a job posting"""
@@ -94,6 +124,7 @@ class Job(models.Model):
     company = models.CharField(max_length=100)
     description = models.TextField()
     required_majors = models.JSONField(default=list)  # Stored as a JSON array
+    required_skills = models.JSONField(default=list, blank=True)  # Required skills for the job
     
     def __str__(self):
         return f"{self.title} at {self.company}"
@@ -117,3 +148,24 @@ class JobRecommendation(models.Model):
     
     class Meta:
         unique_together = ('student', 'job')
+
+
+class MLModelInfo(models.Model):
+    """
+    Model to track ML model generation information. 
+    This is not a real ML model - it just tracks information about model generation.
+    """
+    model_type = models.CharField(max_length=20, choices=[
+        ('alumni', 'Alumni Model'),
+        ('job', 'Job Model')
+    ])
+    file_path = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    
+    def __str__(self):
+        return f"{self.get_model_type_display()} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+    
+    class Meta:
+        verbose_name = 'ML Model Info'
+        verbose_name_plural = 'ML Model Info'

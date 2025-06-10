@@ -4,62 +4,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Job Recommender{% endblock %}</title>
+    <title>{% block title %}İşeYarıyo{% endblock %}</title>
+    <!-- Favicon -->
+    <link rel="icon" type="image/webp" href="{% static 'images/icon.webp' %}">
+    <link rel="shortcut icon" type="image/webp" href="{% static 'images/icon.webp' %}">
     <!-- Bootstrap CSS -->
     <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <!-- Custom CSS -->
     <style>
         body {
             display: flex;
             flex-direction: column;
             min-height: 100vh;
+            padding-top: 0;
         }
         main {
             flex: 1 0 auto;
+            margin-top: 56px; /* Height of navbar */
+        }
+        /* Navbar styling */
+        .navbar.navbar-transparent {
+            background-color: transparent;
+            box-shadow: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            padding-top: 0.5rem;
+            padding-bottom: 0.5rem;
+            height: 56px;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar.navbar-scrolled {
+            background-color: #fff;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .navbar.navbar-transparent .navbar-brand,
+        .navbar.navbar-transparent .nav-link {
+            color: #333;
+            text-shadow: none;
+            font-weight: 500;
+        }
+        .navbar.navbar-transparent .nav-link:hover {
+            color: #007bff;
+        }
+        .navbar.navbar-transparent .navbar-toggler {
+            border-color: rgba(0,0,0,0.2);
+        }
+        .navbar.navbar-transparent .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' width='30' height='30' viewBox='0 0 30 30'%3e%3cpath stroke='rgba(0, 0, 0, 0.5)' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+        /* Remove duplicate spacing */
+        /* Transparent footer */
+        .footer.footer-transparent {
+            background: transparent !important;
+        }
+        .footer.footer-transparent .text-muted {
+            color: #333 !important;
+            text-shadow: none;
+        }
+        /* Brand style */
+        .navbar-brand .brand-underline {
+            display: block;
+            width: 55%;
+            height: 2.4px;
+            background: currentColor;
+            margin: 0 auto;
+            margin-top: -4px;
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body class="d-flex flex-column h-100">
+    {% block particles_bg %}{% endblock %}
     <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
-            <div class="container">
-                <a class="navbar-brand" href="{% url 'landing_page' %}">Job Recommender</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav me-auto">
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'home' %}">Home</a>
-                        </li>
-                    </ul>
-                    <ul class="navbar-nav">
-                        {% if user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{ user.username }}
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
-                                <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
-                            </ul>
-                        </li>
-                        {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">Login</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'register' %}">Register</a>
-                        </li>
-                        {% endif %}
-                    </ul>
-                </div>
+        <nav class="navbar navbar-expand-lg navbar-transparent">
+          <div class="container d-flex justify-content-between align-items-center">
+            <a class="navbar-brand d-flex align-items-center ms-0" href="{% url 'landing_page' %}">
+              <img src="{% static 'images/icon.webp' %}" alt="İşeYarıyo Logo" width="30" height="30" class="me-2 rounded">
+              <span class="fw-bold d-flex flex-column align-items-start">
+                İşeYarıyo
+                <span class="brand-underline"></span>
+              </span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+              <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+              <ul class="navbar-nav ms-auto">
+                {% if user.is_authenticated %}
+                <li class="nav-item dropdown">
+                  <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    {{ user.username }}
+                  </a>
+                  <ul class="dropdown-menu" aria-labelledby="navbarDropdown">
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+                  </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'login' %}">Login</a>
+                </li>
+                <li class="nav-item">
+                  <a class="nav-link" href="{% url 'register' %}">Register</a>
+                </li>
+                {% endif %}
+              </ul>
             </div>
+          </div>
         </nav>
     </header>
 
     <main class="flex-shrink-0">
-        <div class="container mt-4">
+        <div class="container {% block container_class %}mt-5{% endblock %}">
             {% if messages %}
                 {% for message in messages %}
                     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -73,14 +134,44 @@
         </div>
     </main>
 
-    <footer class="footer mt-auto py-3 bg-light">
+    <footer class="footer footer-transparent mt-auto py-3">
         <div class="container text-center">
-            <span class="text-muted">© 2025 Job Recommender</span>
+            <span class="text-muted">© 2025 İşeYarıyo</span>
         </div>
     </footer>
 
     <!-- Bootstrap JS Bundle with Popper -->
     <script src="{% static 'js/bootstrap.bundle.min.js' %}"></script>
+    
+    <!-- Navbar Scroll Effect -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const navbar = document.querySelector('.navbar');
+            let lastScrollTop = 0;
+            
+            // Function to handle scroll
+            function handleScroll() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+                
+                // Add background when scrolling down
+                if (scrollTop > 10) {
+                    navbar.classList.add('navbar-scrolled');
+                } else {
+                    navbar.classList.remove('navbar-scrolled');
+                }
+                
+                // Save current scroll position
+                lastScrollTop = scrollTop;
+            }
+            
+            // Listen for scroll events
+            window.addEventListener('scroll', handleScroll, { passive: true });
+            
+            // Check initial state
+            handleScroll();
+        });
+    </script>
+    
     <!-- Custom JavaScript -->
     {% block extra_js %}{% endblock %}
 </body>

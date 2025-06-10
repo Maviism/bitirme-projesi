@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Select Student Profile - Career Dashboard{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/global-theme.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container py-4">
+        <h1 class="hero-title display-4">Select Student Profile</h1>
+        <p class="hero-subtitle lead">Choose which student profile to use for resume generation</p>
+    </div>
+</div>
+
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="form-card mb-4">
+                <div class="form-section-header">
+                    <div class="form-section-icon">
+                        <i class="fas fa-user-graduate"></i>
+                    </div>
+                    <h3 class="h5 mb-0">Your Student Profiles</h3>
+                </div>
+                <div class="card-body">
+                    {% if profiles %}
+                        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+                            <i class="fas fa-info-circle me-3 fs-4"></i>
+                            <div>
+                                <p class="mb-0">You have multiple student profiles. Please select which one you want to use.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            {% for profile in profiles %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100 {% if profile.id == active_profile_id %}border-primary{% else %}border-light{% endif %}">
+                                        <div class="card-body">
+                                            <h5 class="card-title">{{ profile.fullname }} {{ profile.last_name }}</h5>
+                                            <div class="text-muted mb-3">
+                                                <div><i class="fas fa-graduation-cap me-2"></i>{{ profile.faculty }}</div>
+                                                <div><i class="fas fa-book me-2"></i>{{ profile.program }}</div>
+                                                <div><i class="fas fa-id-card me-2"></i>ID: {{ profile.student_id }}</div>
+                                            </div>
+                                            
+                                            {% if profile.id == active_profile_id %}
+                                                <button class="btn btn-primary btn-sm" disabled>
+                                                    <i class="fas fa-check me-2"></i>Current Profile
+                                                </button>
+                                            {% else %}
+                                                <form method="post" action="{% url 'resume_generator:select_profile' %}">
+                                                    {% csrf_token %}
+                                                    <input type="hidden" name="profile_id" value="{{ profile.id }}">
+                                                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-user-check me-2"></i>Use This Profile
+                                                    </button>
+                                                </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="text-center mt-4">
+                            <a href="{% url 'resume_generator:generate_resume' %}" class="btn btn-success">
+                                <i class="fas fa-arrow-right me-2"></i>Continue to Resume Generator
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            No student profiles found linked to your account.
+                        </div>
+                        <div class="text-center">
+                            <a href="#" class="btn btn-primary">
+                                <i class="fas fa-plus-circle me-2"></i>Create a Student Profile
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label='job_recommender' %}">Job Recommender</a>
+  &rsaquo; {% trans 'Generate ML Models' %}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <div class="module">
+    <h2>Generate ML Models for Job Recommender</h2>
+    <p>
+      Generate ML models to improve recommender system performance. This will create machine learning models
+      based on the current data in the database, which can be used by the recommender system instead of
+      directly querying the database.
+    </p>
+    <p>
+      <strong>Note:</strong> This operation may take some time depending on the amount of data in the database.
+      The models will be saved in the job_recommender/ml_model/stored_models directory.
+    </p>
+    
+    <form method="post">
+      {% csrf_token %}
+      <fieldset class="module aligned">
+        <div class="form-row">
+          <div>
+            <label for="id_model_type">Model Type:</label>
+            <select name="model_type" id="id_model_type">
+              <option value="all" selected>All Models</option>
+              <option value="alumni">Alumni Model Only</option>
+              <option value="job">Job Model Only</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+      
+      <div class="submit-row">
+        <input type="submit" class="default" value="Generate Models">
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

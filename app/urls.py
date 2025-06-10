@@ -21,4 +21,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include("job_recommender.urls")),
     path('', include("accounts.urls")),
+    path('interview/', include("interview.urls")),
+    path('resume/', include("resume_generator.urls")),
 ]

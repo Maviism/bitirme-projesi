@@ -36,14 +36,18 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'interview',
+    'job_recommender',
+    'accounts',
+    'resume_generator',
+    'utils',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'job_recommender',
-    'accounts',
 ]
 
 MIDDLEWARE = [
@@ -140,3 +144,74 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = 'home'
 LOGOUT_REDIRECT_URL = 'landing_page'
 LOGIN_URL = 'login'
+
+# Authentication backends
+AUTHENTICATION_BACKENDS = [
+    'accounts.backends.EmailOrUsernameModelBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
+# LLM Configuration
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+
+# Auto-select provider based on available API keys if not explicitly set
+if os.environ.get('DEFAULT_LLM_PROVIDER'):
+    DEFAULT_LLM_PROVIDER = os.environ.get('DEFAULT_LLM_PROVIDER')
+elif OPENAI_API_KEY:
+    DEFAULT_LLM_PROVIDER = 'openai'
+elif GEMINI_API_KEY:
+    DEFAULT_LLM_PROVIDER = 'gemini'
+else:
+    DEFAULT_LLM_PROVIDER = 'openai'  # Default, but will use fallback responses
+    
+# Configure logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'resume_generator': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
+
+# Cache configuration for LLM responses
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'llm-cache',
+        'TIMEOUT': 3600,  # 1 hour
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+ASGI_APPLICATION= 'app.asgi.application'
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
+# Deepgram API settings
+DEEPGRAM_API_KEY = os.environ.get('DEEPGRAM_API_KEY', 'e100be4bf9db8db782649b9342eeb3fe1cac9557')
+
+# Audio debug settings
+AUDIO_DEBUG_DIR = os.path.join(BASE_DIR, 'audio_debug')

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Interview Transcript - {{ interview_session.job.title|default:"Interview" }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{% static 'css/global-theme.css' %}">
+<style>
+  .btn-custom.btn-purple {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
+    color: white;
+  }
+  .btn-custom.btn-purple:hover {
+    background-color: #5a32a3;
+    border-color: #5a32a3;
+    color: white;
+  }
+  .ai-message {
+    background-color: #f1f0f7;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  .user-message {
+    background-color: #e7f3fe;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+  }
+  .message-time {
+    font-size: 0.8rem;
+    color: #6c757d;
+    margin-top: 5px;
+  }
+  .message-header {
+    font-weight: bold;
+    margin-bottom: 8px;
+  }
+  .transcript-container {
+    max-height: 600px;
+    overflow-y: auto;
+    padding: 15px;
+  }
+  .feedback-card {
+    border-left: 4px solid #6f42c1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+  <div class="container py-4">
+    <h1 class="hero-title display-4">Interview Transcript</h1>
+    <p class="hero-subtitle lead">Review your interview conversation and feedback</p>
+  </div>
+</div>
+
+<div class="container py-4">
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="form-card mb-4">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-comments"></i>
+          </div>
+          <h3 class="h5 mb-0">Interview Conversation</h3>
+        </div>
+        <div class="transcript-container">
+          {% if transcript_data %}
+            {% for message in transcript_data %}
+              {% if message.role == 'assistant' %}
+                <div class="ai-message">
+                  <div class="message-header">
+                    <i class="fas fa-robot me-2"></i>AI Interviewer
+                  </div>
+                  <div class="message-content">
+                    {{ message.content }}
+                  </div>
+                  {% if message.timestamp %}
+                    <div class="message-time">
+                      {{ message.timestamp }}
+                    </div>
+                  {% endif %}
+                </div>
+              {% else %}
+                <div class="user-message">
+                  <div class="message-header">
+                    <i class="fas fa-user me-2"></i>You
+                  </div>
+                  <div class="message-content">
+                    {{ message.content }}
+                  </div>
+                  {% if message.timestamp %}
+                    <div class="message-time">
+                      {{ message.timestamp }}
+                    </div>
+                  {% endif %}
+                </div>
+              {% endif %}
+            {% endfor %}
+          {% else %}
+            <div class="alert alert-info">
+              <i class="fas fa-info-circle me-2"></i>
+              No transcript data available for this interview.
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-lg-4">
+      <div class="form-card mb-4">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-info-circle"></i>
+          </div>
+          <h3 class="h5 mb-0">Interview Details</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <h5>
+              {% if interview_session.job %}
+                {{ interview_session.job.title }} at {{ interview_session.job.company }}
+              {% else %}
+                General Interview Practice
+              {% endif %}
+            </h5>
+            <p class="text-muted mb-0">
+              <i class="fas fa-calendar-alt me-2"></i>{{ interview_session.created_at|date:"F j, Y" }}
+            </p>
+            <p class="text-muted mb-0">
+              <i class="fas fa-clock me-2"></i>{{ interview_session.created_at|time:"g:i A" }}
+            </p>
+            {% if interview_session.interview_duration %}
+              <p class="text-muted">
+                <i class="fas fa-hourglass-half me-2"></i>Duration: {{ interview_session.interview_duration|divisibleby:60 }} minutes
+              </p>
+            {% endif %}
+          </div>
+          
+          <hr>
+          
+          <div class="mb-3">
+            <h6><i class="fas fa-star me-2"></i>Interview Performance:</h6>
+            {% if interview_session.feedback %}
+              {% with feedback=interview_session.feedback|safe %}
+                <div class="feedback-card p-3 bg-light rounded">
+                  <p class="mb-1"><strong>Rating:</strong> {{ feedback.rating|default:"N/A" }}/5</p>
+                  <p class="mb-0"><strong>Feedback:</strong> {{ feedback.text|default:"No feedback provided" }}</p>
+                </div>
+              {% endwith %}
+            {% else %}
+              <div class="alert alert-light">
+                <i class="fas fa-info-circle me-2"></i>
+                No feedback available for this interview.
+              </div>
+            {% endif %}
+          </div>
+          
+          <div class="d-grid gap-2">
+            <a href="{% url 'interview:index' %}" class="btn btn-custom btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>Back to Interviews
+            </a>
+            {% if not interview_session.completed %}
+              <a href="{% url 'interview:room' interview_session.room_name %}" class="btn btn-custom btn-success">
+                <i class="fas fa-play me-2"></i>Continue Interview
+              </a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      
+      <div class="form-card mb-4">
+        <div class="form-section-header">
+          <div class="form-section-icon">
+            <i class="fas fa-lightbulb"></i>
+          </div>
+          <h3 class="h5 mb-0">Improvement Tips</h3>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>
+              Review your answers and identify areas for improvement
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>
+              Practice more concise responses to common questions
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>
+              Prepare specific examples from your experience
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

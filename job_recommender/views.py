@@ -1,31 +1,154 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from datetime import datetime
 from django.db import transaction
+from django.contrib.auth.decorators import login_required
+import logging
 
 # Import our recommender system
 from .recommender import HybridRecommender
 # Import our models
-from .models import Student, Course, Organization, Internship, Job, JobRecommendation
+from .models import Student, Course, Experience, Job, JobRecommendation
+# Import LLM utils
+from utils.llm_utils import get_llm_instance, cache_llm_response
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Initialize the recommender system
 recommender = HybridRecommender(alumni_weight=0.6, job_weight=0.4)
 
 # Create your views here.
 def landing_page(request):
-    return render(request, 'landing_page.html')
+    return render(request, 'common/landing_page.html')
 
+@login_required
 def career_form(request):
-    return render(request, 'career_form.html')
+    from .views_utils import get_current_student
+    
+    # Get current student profile if exists
+    student = get_current_student(request)
+    context = {}
+    
+    if student:
+        # Convert birth date to string format DD/MM/YYYY
+        birth_date_str = student.birth_date.strftime('%d/%m/%Y') if student.birth_date else ""
+        
+        # Get student courses
+        courses = student.courses.all()
+        formatted_courses = []
+        for course in courses:
+            formatted_courses.append({
+                'code': course.code,
+                'name': course.name,
+                'grade': course.grade
+            })
+        
+        # Get student experiences
+        organizations = student.experiences.filter(experience_type='organization')
+        formatted_organizations = []
+        for org in organizations:
+            formatted_organizations.append({
+                'institution_name': org.institution_name,
+                'position': org.position,
+                'start_date': org.start_date.strftime('%Y-%m-%d') if org.start_date else '',
+                'end_date': org.end_date.strftime('%Y-%m-%d') if org.end_date else '',
+                'description': org.description
+            })
+        
+        internships = student.experiences.filter(experience_type='internship')
+        formatted_internships = []
+        for internship in internships:
+            formatted_internships.append({
+                'institution_name': internship.institution_name,
+                'position': internship.position,
+                'start_date': internship.start_date.strftime('%Y-%m-%d') if internship.start_date else '',
+                'end_date': internship.end_date.strftime('%Y-%m-%d') if internship.end_date else '',
+                'description': internship.description
+            })
+        print(f"[DEBUG] Formatted internships: {formatted_internships}")
+        print(f"[DEBUG] Formatted organizations: {formatted_organizations}")
+        # Pass student data to template
+        context = {
+            'student': {
+                'id': student.id,
+                'student_id': student.student_id,
+                'id_number': student.id_number,
+                'fullname': student.fullname,
+                'last_name': student.last_name,
+                'birth_date': birth_date_str,
+                'faculty': student.faculty,
+                'program': student.program, 
+                'gpa': float(student.gpa),
+                'skills': student.skills
+            },
+            'courses': formatted_courses,
+            'organizations': formatted_organizations,
+            'internships': formatted_internships,
+            'has_existing_profile': True
+        }
+        logger.info(f"Found existing student profile for user: {request.user.username}")
+    else:
+        context['has_existing_profile'] = False
+        logger.info(f"No existing student profile found for user: {request.user.username}")
+    
+    return render(request, 'job_recommender/career_form.html', context)
 
 # View for the recommendation results page
+@login_required
 def recommendation_results(request):
-    return render(request, 'recommendation_results.html')
+    from .views_utils import get_current_student
+    
+    # Get the current user's student profile
+    student = get_current_student(request)
+    
+    if student:
+        # Get the student's job recommendations
+        recommendations = JobRecommendation.objects.filter(
+            student=student
+        ).select_related('job').order_by('-match_score')[:10]
+        
+        # Format the recommendations for the template
+        formatted_recommendations = []
+        for rec in recommendations:
+            # Define the recommendation sources based on the source field
+            sources = []
+            if rec.source == 'alumni':
+                sources = ['alumni']
+            elif rec.source == 'job_posting':
+                sources = ['job_posting']
+            elif rec.source == 'hybrid':
+                sources = ['alumni', 'job_posting']  # Hybrid means both sources contributed
+            
+            formatted_recommendations.append({
+                'id': rec.job.id,
+                'title': rec.job.title,
+                'company': rec.job.company,
+                'description': rec.job.description,
+                'match_score': float(rec.match_score),
+                'recommendation_sources': sources
+            })
+        
+        context = {
+            'has_recommendations': len(formatted_recommendations) > 0,
+            'job_recommendations': formatted_recommendations
+        }
+        logger.info(f"Found {len(formatted_recommendations)} recommendations for user {request.user.username}")
+        
+    else:
+        context = {
+            'has_recommendations': False,
+            'error_message': 'No student profile found. Please complete your profile first.'
+        }
+        logger.warning(f"No student profile found for user {request.user.username}")
+    
+    return render(request, 'job_recommender/recommendation_results.html', context)
 
 # View to handle form submission
 @csrf_exempt
+@login_required
 def submit_application(request):
     """
     View to receive POST data from career form and return JSON response with job recommendations
@@ -34,6 +157,11 @@ def submit_application(request):
         return JsonResponse({"error": "Only POST method is allowed"}, status=405)
     
     try:
+        # Try to find an existing student profile for the logged-in user
+        existing_student = None
+        if request.user.is_authenticated:
+            existing_student = Student.objects.filter(user=request.user).first()
+        
         # Extract basic student information
         student_data = {
             'student_id': request.POST.get('student_id'),
@@ -56,12 +184,22 @@ def submit_application(request):
         else:
             print("[DEBUG] No courses data provided")
         
+        # Parse skills data from JSON string
+        skills_data = []
+        if 'skills_data' in request.POST:
+            try:
+                skills_data = json.loads(request.POST.get('skills_data'))
+            except json.JSONDecodeError:
+                return JsonResponse({"error": "Invalid skills data format"}, status=400)
+        else:
+            print("[DEBUG] No skills data provided")
+        
         # Process organization experiences
         organizations = []
-        org_fields = ['name', 'position', 'start_date', 'end_date', 'description']
+        org_fields = ['institution_name', 'position', 'start_date', 'end_date', 'description']
         i = 0
         while True:
-            if f'organizations[{i}][name]' not in request.POST:
+            if f'organizations[{i}][institution_name]' not in request.POST:
                 break
             
             org = {}
@@ -76,10 +214,10 @@ def submit_application(request):
         
         # Process internship experiences
         internships = []
-        intern_fields = ['company', 'position', 'start_date', 'end_date', 'description']
+        intern_fields = ['institution_name', 'position', 'start_date', 'end_date', 'description']
         i = 0
         while True:
-            if f'internships[{i}][company]' not in request.POST:
+            if f'internships[{i}][institution_name]' not in request.POST:
                 break
             
             intern = {}
@@ -97,7 +235,8 @@ def submit_application(request):
             student_data,
             courses_data,
             organizations,
-            internships
+            internships,
+            skills_data  # Add skills data to the recommender
         )
         
         # Format job recommendations for response
@@ -126,18 +265,37 @@ def submit_application(request):
                     return JsonResponse({"error": "Invalid birth date format. Use DD/MM/YYYY"}, status=400)
             
             # Create or update student record
-            student, created = Student.objects.update_or_create(
-                student_id=student_data['student_id'],
-                defaults={
-                    'id_number': student_data['id_number'],
-                    'fullname': student_data['fullname'],
-                    'last_name': student_data['last_name'],
-                    'birth_date': birth_date,
-                    'faculty': student_data['faculty'],
-                    'program': student_data['program'],
-                    'gpa': float(student_data['gpa']) if student_data['gpa'] else 0.0,
-                }
-            )
+            if existing_student:
+                # Update existing student record
+                existing_student.id_number = student_data['id_number']
+                existing_student.fullname = student_data['fullname']  
+                existing_student.last_name = student_data['last_name']
+                existing_student.birth_date = birth_date
+                existing_student.faculty = student_data['faculty']
+                existing_student.program = student_data['program']
+                existing_student.gpa = float(student_data['gpa']) if student_data['gpa'] else 0.0
+                existing_student.skills = skills_data  # Save the skills data
+                existing_student.save()
+                student = existing_student
+                created = False
+                logger.info(f"Updated existing student record for user {request.user.username}")
+            else:
+                # Create new student record
+                student, created = Student.objects.update_or_create(
+                    student_id=student_data['student_id'],
+                    defaults={
+                        'id_number': student_data['id_number'],
+                        'fullname': student_data['fullname'],
+                        'last_name': student_data['last_name'],
+                        'birth_date': birth_date,
+                        'faculty': student_data['faculty'],
+                        'program': student_data['program'],
+                        'gpa': float(student_data['gpa']) if student_data['gpa'] else 0.0,
+                        'skills': skills_data,  # Save the skills data
+                        'user': request.user,  # Link the student to the current logged-in user
+                    }
+                )
+                logger.info(f"Created new student record for user {request.user.username}")
             
             # Save courses
             for course_data in courses_data:
@@ -150,37 +308,57 @@ def submit_application(request):
                     }
                 )
             
-            # Save organizations
-            for org_data in organizations:
-                start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
-                end_date = None
-                if org_data.get('end_date'):
-                    end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
-                
-                Organization.objects.create(
-                    student=student,
-                    name=org_data['name'],
-                    position=org_data['position'],
-                    start_date=start_date,
-                    end_date=end_date,
-                    description=org_data.get('description', '')
-                )
+            # Clear existing experiences before saving new ones if updating profile
+            if not created:
+                Experience.objects.filter(student=student).delete()
             
-            # Save internships
+            # Save organizations as experiences
+            for org_data in organizations:
+                try:
+                    start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
+                    end_date = None
+                    if org_data.get('end_date'):
+                        end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
+                    
+                    Experience.objects.create(
+                        student=student,
+                        experience_type='organization',
+                        institution_name=org_data['institution_name'],
+                        position=org_data['position'],
+                        start_date=start_date,
+                        end_date=end_date,
+                        description=org_data.get('description', '')
+                    )
+                except ValueError as e:
+                    logger.warning(f"Invalid date format in organization data: {e}")
+                    continue
+                except KeyError as e:
+                    logger.warning(f"Missing required field in organization data: {e}")
+                    continue
+            
+            # Save internships as experiences
             for intern_data in internships:
-                start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
-                end_date = None
-                if intern_data.get('end_date'):
-                    end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
-                
-                Internship.objects.create(
-                    student=student,
-                    company=intern_data['company'],
-                    position=intern_data['position'],
-                    start_date=start_date,
-                    end_date=end_date,
-                    description=intern_data.get('description', '')
-                )
+                try:
+                    start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
+                    end_date = None
+                    if intern_data.get('end_date'):
+                        end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
+                    
+                    Experience.objects.create(
+                        student=student,
+                        experience_type='internship',
+                        institution_name=intern_data['institution_name'],
+                        position=intern_data['position'],
+                        start_date=start_date,
+                        end_date=end_date,
+                        description=intern_data.get('description', '')
+                    )
+                except ValueError as e:
+                    logger.warning(f"Invalid date format in internship data: {e}")
+                    continue
+                except KeyError as e:
+                    logger.warning(f"Missing required field in internship data: {e}")
+                    continue
             
             # Save job recommendations
             for rec in job_recommendations:
@@ -191,7 +369,8 @@ def submit_application(request):
                     company=job_data.get('company', ''),
                     defaults={
                         'description': job_data.get('description', ''),
-                        'required_majors': job_data.get('required_majors', [])
+                        'required_majors': job_data.get('required_majors', []),
+                        'required_skills': job_data.get('required_skills', []),  # Add required skills
                     }
                 )
                 
@@ -221,6 +400,7 @@ def submit_application(request):
             "data": {
                 "student": student_data,
                 "courses": courses_data,
+                "skills": skills_data,  # Include skills in the response
                 "organizations": organizations,
                 "internships": internships,
                 "job_recommendations": formatted_recommendations
@@ -232,5 +412,291 @@ def submit_application(request):
     except Exception as e:
         print(f"[DEBUG] Error in submit_application: {str(e)}")
         return JsonResponse({"error": str(e)}, status=400)
+
+
+@cache_llm_response("job_compatibility")
+@login_required
+def analyze_job_compatibility(request):
+    """Analyze compatibility between student profile and specific job using AI"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
+    
+    try:
+        # Get student ID and job ID from request
+        student_id = request.POST.get('student_id')
+        job_id = request.POST.get('job_id')
+        
+        if not student_id or not job_id:
+            return JsonResponse({"error": "Student ID and Job ID are required"}, status=400)
+        
+        # Get student and job objects
+        try:
+            student = Student.objects.get(pk=student_id)
+            job = Job.objects.get(pk=job_id)
+        except (Student.DoesNotExist, Job.DoesNotExist):
+            return JsonResponse({"error": "Student or Job not found"}, status=404)
+        
+        # Prepare user profile data
+        user_profile = {
+            'personal_info': {
+                'name': f"{student.fullname} {student.last_name}",
+                'faculty': student.faculty,
+                'program': student.program,
+                'gpa': str(student.gpa)
+            },
+            'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
+            'courses': [
+                {
+                    'name': course.course_name,
+                    'grade': getattr(course, 'grade', 'N/A')
+                } for course in Course.objects.filter(student=student)
+            ],
+            'experience': [
+                {
+                    'company': exp.institution_name,
+                    'position': getattr(exp, 'position', 'Intern'),
+                    'duration': getattr(exp, 'duration', 'N/A')
+                } for exp in Experience.objects.filter(student=student, experience_type='internship')
+            ],
+            'organizations': [
+                {
+                    'name': exp.institution_name,
+                    'role': getattr(exp, 'position', 'Member')
+                } for exp in Experience.objects.filter(student=student, experience_type='organization')
+            ]
+        }
+        
+        # Prepare job data
+        job_data = {
+            'title': job.title,
+            'company': job.company,
+            'description': job.description,
+            'required_majors': job.required_majors if hasattr(job, 'required_majors') else [],
+            'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
+        }
+        
+        # Get LLM instance and analyze compatibility
+        llm = get_llm_instance()
+        compatibility_analysis = llm.analyze_job_compatibility(user_profile, job_data)
+        
+        return JsonResponse({
+            'success': True,
+            'analysis': compatibility_analysis
+        })
+        
+    except Exception as e:
+        logger.error(f"Error analyzing job compatibility: {e}")
+        return JsonResponse({
+            'error': 'Failed to analyze job compatibility',
+            'details': str(e)
+        }, status=500)
+
+
+@login_required
+def get_ai_job_recommendations(request):
+    """Get AI-powered job recommendations for a student"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
+    
+    try:
+        student_id = request.POST.get('student_id')
+        if not student_id:
+            return JsonResponse({"error": "Student ID is required"}, status=400)
+        
+        try:
+            student = Student.objects.get(pk=student_id)
+        except Student.DoesNotExist:
+            return JsonResponse({"error": "Student not found"}, status=404)
+        
+        # Prepare user profile
+        user_profile = {
+            'personal_info': {
+                'name': f"{student.fullname} {student.last_name}",
+                'faculty': student.faculty,
+                'program': student.program,
+                'gpa': str(student.gpa)
+            },
+            'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
+            'experience_level': 'entry' if not Experience.objects.filter(student=student, experience_type='internship').exists() else 'experienced',
+            'preferences': {
+                'industry': request.POST.get('preferred_industry', ''),
+                'location': request.POST.get('preferred_location', ''),
+                'salary_range': request.POST.get('preferred_salary', '')
+            }
+        }
+        
+        # Get available jobs (limit to active/recent jobs)
+        available_jobs = []
+        for job in Job.objects.all()[:20]:  # Limit to 20 jobs for performance
+            available_jobs.append({
+                'id': job.id,
+                'title': job.title,
+                'company': job.company,
+                'description': job.description[:500],  # Truncate description
+                'required_majors': job.required_majors if hasattr(job, 'required_majors') else [],
+                'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
+            })
+        
+        # Get LLM instance and generate recommendations
+        llm = get_llm_instance()
+        ai_recommendations = llm.generate_job_recommendations(user_profile, available_jobs)
+        
+        return JsonResponse({
+            'success': True,
+            'recommendations': ai_recommendations
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting AI job recommendations: {e}")
+        return JsonResponse({
+            'error': 'Failed to get AI recommendations',
+            'details': str(e)
+        }, status=500)
+
+
+@login_required
+def get_career_advice(request):
+    """Get personalized career advice using AI"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
+    
+    try:
+        student_id = request.POST.get('student_id')
+        career_goal = request.POST.get('career_goal', '')
+        
+        if not student_id:
+            return JsonResponse({"error": "Student ID is required"}, status=400)
+        
+        try:
+            student = Student.objects.get(pk=student_id)
+        except Student.DoesNotExist:
+            return JsonResponse({"error": "Student not found"}, status=404)
+        
+        # Prepare user data for career advice
+        user_data = {
+            'name': f"{student.fullname} {student.last_name}",
+            'faculty': student.faculty,
+            'program': student.program,
+            'gpa': str(student.gpa),
+            'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
+            'courses': [course.course_name for course in Course.objects.filter(student=student)],
+            'experience': [
+                {
+                    'company': exp.institution_name,
+                    'position': getattr(exp, 'position', 'Intern')
+                } for exp in Experience.objects.filter(student=student, experience_type='internship')
+            ],
+            'career_goal': career_goal
+        }
+        
+        # Generate career advice prompt
+        prompt = f"""
+        Provide personalized career advice for this student:
+        
+        Student Profile:
+        {json.dumps(user_data, indent=2)}
+        
+        Please provide advice on:
+        1. Skills to develop
+        2. Career paths to consider
+        3. Next steps to take
+        4. Industry insights
+        5. Professional development recommendations
+        
+        Make the advice specific, actionable, and encouraging.
+        """
+        
+        llm = get_llm_instance()
+        career_advice = llm.provider.generate_text(prompt)
+        
+        return JsonResponse({
+            'success': True,
+            'advice': career_advice
+        })
+        
+    except Exception as e:
+        logger.error(f"Error generating career advice: {e}")
+        return JsonResponse({
+            'error': 'Failed to generate career advice',
+            'details': str(e)
+        }, status=500)
+
+
+@login_required
+def get_skill_gap_analysis(request):
+    """Analyze skill gaps for specific job or career path"""
+    if request.method != 'POST':
+        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
+    
+    try:
+        student_id = request.POST.get('student_id')
+        target_job_id = request.POST.get('job_id')
+        target_role = request.POST.get('target_role', '')
+        
+        if not student_id:
+            return JsonResponse({"error": "Student ID is required"}, status=400)
+        
+        try:
+            student = Student.objects.get(pk=student_id)
+        except Student.DoesNotExist:
+            return JsonResponse({"error": "Student not found"}, status=404)
+        
+        # Prepare current skills
+        current_skills = student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else []
+        current_experience = [
+            exp.institution_name for exp in Experience.objects.filter(student=student, experience_type='internship')
+        ]
+        
+        # Get target job requirements
+        target_requirements = {}
+        if target_job_id:
+            try:
+                job = Job.objects.get(pk=target_job_id)
+                target_requirements = {
+                    'title': job.title,
+                    'company': job.company,
+                    'required_skills': job.required_skills if hasattr(job, 'required_skills') else [],
+                    'description': job.description
+                }
+            except Job.DoesNotExist:
+                pass
+        
+        # Generate skill gap analysis
+        prompt = f"""
+        Analyze the skill gap for this student:
+        
+        Current Profile:
+        - Name: {student.fullname} {student.last_name}
+        - Program: {student.program}
+        - Current Skills: {current_skills}
+        - Experience: {current_experience}
+        
+        Target Position:
+        {json.dumps(target_requirements, indent=2) if target_requirements else f"Role: {target_role}"}
+        
+        Provide a detailed skill gap analysis including:
+        1. Skills the student already has that match
+        2. Missing skills that need to be developed
+        3. Recommended learning resources or courses
+        4. Timeline for skill development
+        5. Alternative skills that could compensate
+        
+        Format the response as a structured analysis.
+        """
+        
+        llm = get_llm_instance()
+        gap_analysis = llm.provider.generate_text(prompt)
+        
+        return JsonResponse({
+            'success': True,
+            'analysis': gap_analysis
+        })
+        
+    except Exception as e:
+        logger.error(f"Error analyzing skill gap: {e}")
+        return JsonResponse({
+            'error': 'Failed to analyze skill gap',
+            'details': str(e)
+        }, status=500)
 
 

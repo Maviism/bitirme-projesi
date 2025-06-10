@@ -1,80 +1,101 @@
-from collections import Counter
-from .models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
-from sentence_transformers import SentenceTransformer, util
+"""
+Job Recommendation System
 
-# Updated function to retrieve alumni data from the database
+This module implements a hybrid job recommendation system that uses pre-generated 
+ML models rather than direct database queries. The system combines:
+
+1. Alumni-based recommendations: Matching students with jobs based on similar academic profiles
+2. Job-based recommendations: Using experience and skills to match with suitable job postings
+
+Models are loaded from disk or generated on first use, and contain pre-computed data
+structures to speed up the recommendation process.
+"""
+
+from collections import Counter
+from sentence_transformers import SentenceTransformer, util
+import torch
+import logging
+import os
+
+logger = logging.getLogger(__name__)
+
+# Import the ML model generator
+try:
+    from .ml_model.model_generator import MLModelGenerator
+except ImportError:
+    logger.error("Failed to import MLModelGenerator. A model needs to be generated before recommendations will work.")
+
+# Function to access alumni model data
 def get_alumni_database():
     """
-    Retrieve alumni data from the database using the dedicated Alumni model
+    Load alumni model data from the pre-generated model or generate a new one.
+    Returns the data as a list structure or empty list if no model is available.
     """
     try:
-        # Find alumni using the Alumni model
-        alumni_records = Alumni.objects.select_related('student', 'current_job').all()
+        if 'MLModelGenerator' not in globals():
+            logger.error("MLModelGenerator not available")
+            return []
+            
+        # First try to load existing model
+        logger.info("Loading alumni model data")
+        alumni_data = MLModelGenerator.load_alumni_model()
         
-        # Structure alumni data as needed for recommendations
-        alumni_data = []
-        grade_mapping = {
-            'AA': 4.0, 'BA': 3.5, 'BB': 3.0, 'CB': 2.5, 
-            'CC': 2.0, 'DC': 1.5, 'DD': 1.0, 'FF': 0.0
-        }
+        if alumni_data:
+            logger.info(f"Alumni model loaded successfully with {len(alumni_data)} records")
+            return alumni_data
         
-        for alumni_record in alumni_records:
-            student = alumni_record.student
-            
-            # Skip alumni without a current job
-            if not alumni_record.current_job:
-                continue
-                
-            # Build course grades dictionary
-            courses = student.courses.all()
-            course_grades = {}
-            for course in courses:
-                course_grades[course.code] = grade_mapping.get(course.grade, 0)
-            
-            # Structure the alumni data
-            alumni_record_data = {
-                'student': {
-                    'id': student.student_id,
-                    'program': student.program,
-                    'gpa': float(student.gpa)
-                },
-                'course_grades': course_grades,
-                'graduation_date': alumni_record.graduation_date,
-                'current_job': {
-                    'id': alumni_record.current_job.id,
-                    'title': alumni_record.current_job.title,
-                    'company': alumni_record.current_job.company,
-                    'description': alumni_record.current_job.description,
-                    'required_majors': alumni_record.current_job.required_majors
-                }
-            }
-            alumni_data.append(alumni_record_data)
-            
-        return alumni_data
+        # If no model found, generate a new one
+        logger.info("No alumni model found, generating new model")
+        model_generator = MLModelGenerator()
+        file_path = model_generator.generate_alumni_model()
+        
+        if file_path:
+            # Load the newly generated model
+            alumni_data = MLModelGenerator.load_alumni_model()
+            if alumni_data:
+                logger.info(f"New alumni model generated and loaded with {len(alumni_data)} records")
+                return alumni_data
+        
+        logger.warning("Could not generate or load alumni model")
+        return []
     except Exception as e:
+        logger.error(f"Error in alumni model processing: {e}")
         return []
 
 def get_job_postings_database():
     """
-    Retrieve job postings from the database
+    Load job model data from the pre-generated model or generate a new one.
+    Returns the data as a list structure or empty list if no model is available.
     """
     try:
-        # Get job postings from the database
-        jobs = Job.objects.all()
-        
-        # Convert to the format expected by the recommender
-        job_postings = []
-        for job in jobs:
-            job_postings.append({
-                'id': job.id,
-                'title': job.title,
-                'company': job.company,
-                'description': job.description,
-                'required_majors': job.required_majors
-            })
+        if 'MLModelGenerator' not in globals():
+            logger.error("MLModelGenerator not available")
+            return []
             
-        return job_postings
+        # First try to load existing model
+        logger.info("Loading job model data")
+        job_postings = MLModelGenerator.load_job_model()
+        
+        if job_postings:
+            logger.info(f"Job model loaded successfully with {len(job_postings)} records")
+            return job_postings
+        
+        # If no model found, generate a new one
+        logger.info("No job model found, generating new model")
+        model_generator = MLModelGenerator()
+        file_path = model_generator.generate_job_model()
+        
+        if file_path:
+            # Load the newly generated model
+            job_postings = MLModelGenerator.load_job_model()
+            if job_postings:
+                logger.info(f"New job model generated and loaded with {len(job_postings)} records")
+                return job_postings
+        
+        logger.warning("Could not generate or load job model")
+        return []
     except Exception as e:
+        logger.error(f"Error in job model processing: {e}")
         return []
 
 class HybridRecommender:
@@ -110,7 +131,7 @@ class HybridRecommender:
         keywords = [word.lower().strip() for word in text.split() if word.strip()]
         return keywords
     
-    def get_alumni_recommendations(self, student_data, courses):
+    def get_alumni_recommendations(self, student_data, courses, skills=None):
         """
         Generate job recommendations based on alumni with similar academic profiles.
         
@@ -120,6 +141,8 @@ class HybridRecommender:
             Student information including GPA, program, etc.
         courses : list
             List of courses taken by the student with grades
+        skills : list
+            List of student skill preferences
             
         Returns:
         --------
@@ -185,8 +208,20 @@ class HybridRecommender:
                     avg_grade_diff = grade_diff_sum / common_courses
                     course_similarity = max(0, 1 - avg_grade_diff / 4.0)
                 
-                # Calculate overall similarity
-                similarity = (0.3 * gpa_similarity + 0.7 * course_similarity) * program_bonus
+                # Skills similarity bonus
+                skill_bonus = 1.0
+                if skills and isinstance(skills, list) and len(skills) > 0:
+                    # Get the job's required skills
+                    job_skills = alumni['current_job'].get('required_skills', [])
+                    if job_skills and isinstance(job_skills, list):
+                        # Calculate number of matching skills
+                        matching_skills = len(set(skills) & set(job_skills))
+                        if matching_skills > 0:
+                            # More matching skills = higher bonus
+                            skill_bonus = 1.0 + (matching_skills / max(len(skills), 1)) * 0.5
+                
+                # Calculate overall similarity with skill bonus
+                similarity = (0.3 * gpa_similarity + 0.7 * course_similarity) * program_bonus * skill_bonus
                 
                 # Get recommended job for this alumni
                 job = alumni['current_job']
@@ -202,61 +237,92 @@ class HybridRecommender:
         recommendations = [item[1] for item in similarities[:10]]
         return recommendations
     
-    def get_job_recommendations(self, student_data, orgs, internships):
-      job_postings = get_job_postings_database()
-      if not job_postings:
-          return []
+    def get_job_recommendations(self, student_data, orgs, internships, skills=None):
+        """
+        Generate job recommendations based on experience similarity and skills matching.
+        Uses pre-computed embeddings when available.
+        """
+        # Get job data from model
+        job_postings = get_job_postings_database()
+        if not job_postings:
+            return []
 
-      if not isinstance(orgs, list): orgs = []
-      if not isinstance(internships, list): internships = []
+        # Validate inputs
+        if not isinstance(orgs, list): orgs = []
+        if not isinstance(internships, list): internships = []
+        if not isinstance(skills, list): skills = []
 
-      # Gabungkan semua pengalaman menjadi satu teks
-      experience_texts = []
-      for org in orgs:
-          if isinstance(org, dict):
-              experience_texts.append(org.get('description', ''))
-              experience_texts.append(org.get('position', ''))
-      
-      for internship in internships:
-          if isinstance(internship, dict):
-              experience_texts.append(internship.get('description', ''))
-              experience_texts.append(internship.get('position', ''))
-              experience_texts.append(internship.get('company', ''))
+        # Combine all experience text
+        experience_texts = []
+        for org in orgs:
+            if isinstance(org, dict):
+                experience_texts.append(org.get('description', ''))
+                experience_texts.append(org.get('position', ''))
+        
+        for internship in internships:
+            if isinstance(internship, dict):
+                experience_texts.append(internship.get('description', ''))
+                experience_texts.append(internship.get('position', ''))
+                experience_texts.append(internship.get('company', ''))
 
-      combined_experience = ' '.join(filter(None, experience_texts)).strip()
-      if not combined_experience:
-          return []
+        combined_experience = ' '.join(filter(None, experience_texts)).strip()
+        if not combined_experience:
+            return []
 
-      # Encode pengalaman pakai SBERT
-      try:
-          experience_embedding = self.model.encode(combined_experience, convert_to_tensor=True)
-      except Exception as e:
-          return []
+        # Generate embedding for student experience
+        try:
+            experience_embedding = self.model.encode(combined_experience, convert_to_tensor=True)
+        except Exception as e:
+            logger.error(f"Error encoding experience: {e}")
+            return []
 
-      matches = []
+        matches = []
+        program = student_data.get('program', '')
 
-      for job in job_postings:
-          try:
-              job_text = f"{job.get('title', '')}. {job.get('description', '')}"
-              job_embedding = self.model.encode(job_text, convert_to_tensor=True)
-              similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
+        for job in job_postings:
+            try:
+                # Use pre-computed embedding if available
+                if 'embedding' in job and job['embedding']:
+                    # Convert the stored embedding back to tensor for comparison
+                    import torch
+                    job_embedding = torch.tensor(job['embedding'])
+                else:
+                    # Generate embedding on the fly if not pre-computed
+                    job_text = f"{job.get('title', '')}. {job.get('description', '')}"
+                    job_embedding = self.model.encode(job_text, convert_to_tensor=True)
+                
+                # Calculate similarity score
+                similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
 
-              # Bonus jika program mahasiswa cocok
-              program = student_data.get('program', '')
-              required_majors = job.get('required_majors', '')
-              program_match = 1.5 if program in required_majors else 1.0
-              total_score = similarity_score * program_match
+                # Program match bonus
+                required_majors = job.get('required_majors', '')
+                program_match = 1.5 if program and program in required_majors else 1.0
+                
+                # Skills matching bonus
+                skill_bonus = 1.0
+                if skills and len(skills) > 0:
+                    job_skills = job.get('required_skills', [])
+                    if job_skills and isinstance(job_skills, list):
+                        matching_skills = len(set(skills) & set(job_skills))
+                        if matching_skills > 0:
+                            skill_bonus = 1.0 + (matching_skills / max(len(skills), 1)) * 0.5
+                
+                # Calculate total score with all bonuses
+                total_score = similarity_score * program_match * skill_bonus
 
-              matches.append((total_score, job))
-          except Exception:
-              continue
+                matches.append((total_score, job))
+            except Exception as e:
+                logger.debug(f"Skipping job {job.get('id')}: {e}")
+                continue
 
-      matches.sort(key=lambda x: x[0], reverse=True)
-      recommendations = [item[1] for item in matches[:10]]
-      return recommendations
+        # Sort by similarity score (highest first)
+        matches.sort(key=lambda x: x[0], reverse=True)
+        
+        # Return top recommendations
+        recommendations = [item[1] for item in matches[:10]]
+        return recommendations
 
-    
-    def get_hybrid_recommendations(self, student_data, courses, orgs, internships):
+    def get_hybrid_recommendations(self, student_data, courses, orgs, internships, skills=None):
         """
         Generate hybrid job recommendations combining both approaches.
         
@@ -270,6 +336,8 @@ class HybridRecommender:
             List of organization experiences
         internships : list
             List of internship experiences
+        skills : list
+            List of student skill preferences
             
         Returns:
         --------
@@ -285,13 +353,15 @@ class HybridRecommender:
             orgs = []
         if not isinstance(internships, list):
             internships = []
+        if not isinstance(skills, list):
+            skills = []
             
         # Get recommendations from both sources
         try:
-            alumni_recs = self.get_alumni_recommendations(student_data, courses)
+            alumni_recs = self.get_alumni_recommendations(student_data, courses, skills)
             
             # Even with empty orgs and internships, try to get recommendations
-            job_recs = self.get_job_recommendations(student_data, orgs, internships)
+            job_recs = self.get_job_recommendations(student_data, orgs, internships, skills)
         except Exception as e:
             # If there's an error but we don't want to fail completely,
             # return a "no recommendations" message

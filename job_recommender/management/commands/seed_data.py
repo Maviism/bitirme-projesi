@@ -5,7 +5,7 @@ import random
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
 from django.conf import settings
-from job_recommender.models import Student, Course, Organization, Internship, Job, JobRecommendation, Alumni
+from job_recommender.models import Student, Course, Experience, Job, JobRecommendation, Alumni
 
 class Command(BaseCommand):
     help = 'Seeds the database with initial data from CSV files'
@@ -22,11 +22,8 @@ class Command(BaseCommand):
         # Import Courses
         self.import_courses(os.path.join(base_path, 'courses.csv'))
         
-        # Import Organizations
-        self.import_organizations(os.path.join(base_path, 'organizations.csv'))
-        
-        # Import Internships
-        self.import_internships(os.path.join(base_path, 'internships.csv'))
+        # Import Organizations and Internships (as experiences)
+        self.import_experiences(os.path.join(base_path, 'experiences.csv'))
         
         # Import Jobs
         self.import_jobs(os.path.join(base_path, 'jobs.csv'))
@@ -92,8 +89,8 @@ class Command(BaseCommand):
         
         self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} courses'))
     
-    def import_organizations(self, file_path):
-        self.stdout.write('Importing organizations...')
+    def import_experiences(self, file_path):
+        self.stdout.write('Importing experiences...')
         count = 0
         
         with open(file_path, 'r') as file:
@@ -107,10 +104,11 @@ class Command(BaseCommand):
                     start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
                     end_date = datetime.strptime(row['end_date'], '%Y-%m-%d').date() if row['end_date'] else None
                     
-                    # Create the organization
-                    Organization.objects.create(
+                    # Create the experience
+                    Experience.objects.create(
                         student=student,
-                        name=row['name'],
+                        experience_type=row['experience_type'],
+                        institution_name=row['institution_name'],
                         position=row['position'],
                         start_date=start_date,
                         end_date=end_date,
@@ -118,43 +116,11 @@ class Command(BaseCommand):
                     )
                     count += 1
                 except Student.DoesNotExist:
-                    self.stdout.write(self.style.WARNING(f"Student {row['student_id']} not found, skipping organization {row['name']}"))
+                    self.stdout.write(self.style.WARNING(f"Student {row['student_id']} not found, skipping experience at {row['institution_name']}"))
                 except Exception as e:
-                    self.stdout.write(self.style.ERROR(f"Error importing organization: {e}"))
+                    self.stdout.write(self.style.ERROR(f"Error importing experience: {e}"))
         
-        self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} organizations'))
-    
-    def import_internships(self, file_path):
-        self.stdout.write('Importing internships...')
-        count = 0
-        
-        with open(file_path, 'r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                # Get the student
-                try:
-                    student = Student.objects.get(student_id=row['student_id'])
-                    
-                    # Parse dates
-                    start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
-                    end_date = datetime.strptime(row['end_date'], '%Y-%m-%d').date() if row['end_date'] else None
-                    
-                    # Create the internship
-                    Internship.objects.create(
-                        student=student,
-                        company=row['company'],
-                        position=row['position'],
-                        start_date=start_date,
-                        end_date=end_date,
-                        description=row['description']
-                    )
-                    count += 1
-                except Student.DoesNotExist:
-                    self.stdout.write(self.style.WARNING(f"Student {row['student_id']} not found, skipping internship at {row['company']}"))
-                except Exception as e:
-                    self.stdout.write(self.style.ERROR(f"Error importing internship: {e}"))
-        
-        self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} internships'))
+        self.stdout.write(self.style.SUCCESS(f'Successfully imported {count} experiences'))
     
     def import_jobs(self, file_path):
         self.stdout.write('Importing jobs...')
@@ -243,8 +209,8 @@ class Command(BaseCommand):
                         match_score += 5.0
                 
                 # Check internship experience for company match
-                if match_score > 0 or job.company in [i.company for i in student.internships.all()]:
-                    if job.company in [i.company for i in student.internships.all()]:
+                if match_score > 0 or job.company in [i.institution_name for i in student.internships.all()]:
+                    if job.company in [i.institution_name for i in student.internships.all()]:
                         match_score = max(match_score, 90.0)  # Higher score for company match
                     
                     # Check alumni connection

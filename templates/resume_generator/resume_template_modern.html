@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume - {{ student.fullname }} {{ student.last_name }} (Modern)</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #4A4A4A;
+            background-color: #F0F2F5; /* Light background for the page */
+            margin: 0;
+            padding: 0;
+            font-size: 10pt;
+        }
+        .resume-container {
+            max-width: 850px;
+            margin: 30px auto;
+            padding: 30px;
+            background: #FFFFFF; /* White paper background */
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007BFF; /* Accent color */
+        }
+        .header h1 { /* Name */
+            font-size: 28pt;
+            color: #007BFF; /* Accent color */
+            margin-bottom: 5px;
+            font-weight: 300; /* Lighter font weight for modern feel */
+        }
+        .contact-info {
+            font-size: 9pt;
+            color: #555;
+        }
+        .contact-info span {
+            margin: 0 10px;
+            display: inline-block; /* Ensures proper spacing */
+        }
+        .contact-info a {
+            color: #007BFF;
+            text-decoration: none;
+        }
+        .contact-info a:hover {
+            text-decoration: underline;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 16pt;
+            font-weight: 500; /* Medium weight */
+            color: #333;
+            margin-bottom: 12px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #E0E0E0; /* Lighter border */
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .content-item {
+            margin-bottom: 15px;
+        }
+        .item-header {
+            display: flex; /* Using flex for better alignment */
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 3px;
+        }
+        .item-title { /* e.g., Job Title, Degree */
+            font-size: 11pt;
+            font-weight: 500;
+            color: #007BFF;
+        }
+        .item-subtitle { /* e.g., Company, University */
+            font-size: 10pt;
+            font-style: normal; /* Modern templates often avoid italics here */
+            color: #5A5A5A;
+            margin-bottom: 3px;
+        }
+        .item-dates { /* Dates */
+            font-size: 9pt;
+            color: #777;
+            font-style: italic;
+        }
+        .item-description, .item-list {
+            font-size: 9.5pt;
+            margin-left: 0; /* No extra indent for modern look */
+            color: #4A4A4A;
+            padding-left: 5px; /* Slight padding for readability */
+        }
+        .item-list ul {
+            list-style-type: none; /* Modern often uses custom bullets or no bullets */
+            padding-left: 0;
+            margin-top: 5px;
+        }
+        .item-list li {
+            margin-bottom: 4px;
+            position: relative;
+            padding-left: 15px; /* Space for custom bullet */
+        }
+        .item-list li::before { /* Custom bullet */
+            content: '\\2022'; /* Unicode bullet character */
+            color: #007BFF;
+            font-weight: bold;
+            display: inline-block; 
+            width: 1em;
+            margin-left: -1em; /* Position to the left */
+            position: absolute;
+            left: 0;
+        }
+        .skills-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin-top: 5px;
+            display: flex; /* Flex layout for skills */
+            flex-wrap: wrap; /* Allow skills to wrap */
+        }
+        .skills-list li {
+            background-color: #EBF4FF; /* Light blue accent */
+            color: #0056b3; /* Darker blue text */
+            padding: 5px 10px;
+            border-radius: 15px; /* Pill shape */
+            margin-right: 8px;
+            margin-bottom: 8px;
+            font-size: 9pt;
+            font-weight: 500;
+        }
+        .summary-text {
+            font-size: 10pt;
+            color: #4A4A4A;
+            margin-bottom: 15px;
+            padding-left: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="resume-container">
+        <div class="header">
+            <h1>{{ student.fullname }} {{ student.last_name }}</h1>
+            <div class="contact-info">
+                {% if student.phone %}<span>{{ student.phone }}</span>{% endif %}
+                {% if student.email %}{% if student.phone %}<span>&bull;</span>{% endif %}<span>{{ student.email }}</span>{% endif %}
+                {% if student.linkedin_profile %}{% if student.phone or student.email %}<span>&bull;</span>{% endif %}<span><a href="{{ student.linkedin_profile }}">LinkedIn Profile</a></span>{% endif %}
+            </div>
+        </div>
+
+        {% if student.summary %}
+        <div class="section">
+            <div class="section-title">Summary</div>
+            <p class="summary-text">{{ student.summary }}</p>
+        </div>
+        {% endif %}
+
+        {% if student.skills %}
+        <div class="section">
+            <div class="section-title">Skills</div>
+            <ul class="skills-list">
+                {% for skill in student.skills %}
+                    <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if student.internships %}
+        <div class="section">
+            <div class="section-title">Experience</div>
+            {% for exp in student.internships %}
+            <div class="content-item">
+                <div class="item-header">
+                    <span class="item-title">{{ exp.position }}</span>
+                    <span class="item-dates">{{ exp.start_date|date:"M Y" }} – {{ exp.end_date|date:"M Y"|default:"Present" }}</span>
+                </div>
+                <div class="item-subtitle">{{ exp.institution_name }}</div>
+                {% if exp.description %}
+                <div class="item-description">
+                    {{ exp.description }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if student.organizations %}
+        <div class="section">
+            <div class="section-title">Organizational Experience</div>
+            {% for org in student.organizations %}
+            <div class="content-item">
+                 <div class="item-header">
+                    <span class="item-title">{{ org.position }}</span>
+                    <span class="item-dates">{{ org.start_date|date:"M Y" }} – {{ org.end_date|date:"M Y"|default:"Present" }}</span>
+                </div>
+                <div class="item-subtitle">{{ org.name }}</div>
+                {% if org.description %}
+                <div class="item-description">
+                    {{ org.description }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="section">
+            <div class="section-title">Education</div>
+            <div class="content-item">
+                <div class="item-header">
+                    <span class="item-title">{{ student.program }}</span>
+                    {# Add graduation date if available #}
+                </div>
+                <div class="item-subtitle">{{ student.faculty }}</div>
+                {% if student.gpa %}<p style="font-size:10pt; margin-top:3px; color: #555;">GPA: {{ student.gpa }}</p>{% endif %}
+            </div>
+        </div>
+
+        <div style="text-align:center; font-size:8pt; color: #999; margin-top:30px;">
+            <p>Resume for {{ job_title }} at {{ job_company }}</p>
+        </div>
+    </div>
+</body>
+</html>

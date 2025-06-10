@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Resume - {{ student.fullname }} {{ student.last_name }}</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            line-height: 1.4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            font-size: 11pt; /* Standard resume font size */
+        }
+        .resume-container {
+            width: 100%; /* For WeasyPrint, often better to let it manage page width */
+            max-width: 800px; /* Optional: if you want to constrain content width */
+            margin: 20px auto; /* Centering for screen view, WeasyPrint handles page margins */
+            padding: 25px; /* Standard resume margin */
+            background: #fff;
+        }
+        h1, h2, h3, h4 {
+            margin: 0;
+            padding: 0;
+            color: #222;
+        }
+        h1 { /* Name */
+            font-size: 24pt;
+            text-align: center;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .contact-info {
+            text-align: center;
+            font-size: 10pt;
+            margin-bottom: 15px;
+            color: #444;
+        }
+        .contact-info span {
+            margin: 0 8px;
+        }
+        .section {
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-size: 14pt;
+            font-weight: bold;
+            border-bottom: 1.5px solid #333;
+            padding-bottom: 3px;
+            margin-bottom: 8px;
+            text-transform: uppercase; /* Common resume style */
+        }
+        .content-item {
+            margin-bottom: 10px;
+        }
+        .item-header {
+            display: block; /* Changed from flex for simpler ATS parsing */
+            margin-bottom: 2px;
+        }
+        .item-title { /* e.g., Job Title, Degree */
+            font-size: 11pt;
+            font-weight: bold;
+            color: #333;
+        }
+        .item-subtitle { /* e.g., Company, University */
+            font-size: 11pt;
+            font-style: italic;
+            color: #555;
+        }
+        .item-dates { /* Dates */
+            font-size: 10pt;
+            color: #555;
+            text-align: right; /* Align dates to the right if on same line, or place below */
+        }
+        .item-description, .item-list {
+            font-size: 10pt;
+            margin-left: 15px; /* Indent bullet points or descriptions */
+            color: #444;
+        }
+        .item-list ul {
+            list-style-type: disc; /* Standard bullets */
+            padding-left: 15px; /* Indent bullets */
+            margin-top: 3px;
+        }
+        .item-list li {
+            margin-bottom: 3px;
+        }
+        .skills-list {
+            list-style-type: none;
+            padding-left: 0;
+            margin-left: 0;
+        }
+        .skills-list li {
+            display: inline-block; /* Or block for one skill per line */
+            background-color: #f0f0f0;
+            padding: 3px 7px;
+            border-radius: 3px;
+            margin-right: 5px;
+            margin-bottom: 5px;
+            font-size: 9pt;
+        }
+        .summary-text {
+            font-size: 10pt;
+            margin-left: 5px;
+            margin-bottom: 10px;
+        }
+
+        /* For ATS, avoid complex layouts, but some basic structure is fine */
+        .header-line {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="resume-container">
+        <h1>{{ student.fullname }} {{ student.last_name }}</h1>
+        <div class="contact-info">
+            {% if student.phone %}<span>{{ student.phone }}</span>{% endif %}
+            {% if student.email %}<span>&bull; {{ student.email }}</span>{% endif %}
+            {% if student.linkedin_profile %}<span>&bull; <a href="{{ student.linkedin_profile }}" style="color: #337ab7; text-decoration: none;">LinkedIn</a></span>{% endif %}
+            {# Add address if available and desired #}
+        </div>
+
+        {% if student.summary %}
+        <div class="section">
+            <div class="section-title">Summary</div>
+            <p class="summary-text">{{ student.summary }}</p>
+        </div>
+        {% endif %}
+
+        {% if student.skills %}
+        <div class="section">
+            <div class="section-title">Skills</div>
+            <ul class="skills-list">
+                {% for skill in student.skills %}
+                    <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        {% if student.internships %}
+        <div class="section">
+            <div class="section-title">Experience</div>
+            {% for exp in student.internships %}
+            <div class="content-item">
+                <div class="header-line">
+                    <span class="item-title">{{ exp.position }}</span>
+                    <span class="item-dates">{{ exp.start_date|date:"M Y" }} – {{ exp.end_date|date:"M Y"|default:"Present" }}</span>
+                </div>
+                <div class="item-subtitle">{{ exp.institution_name }}</div>
+                {% if exp.description %}
+                <div class="item-description">
+                    {{ exp.description }} {# Consider formatting this as bullet points if it's multi-line #}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% if student.organizations %}
+        <div class="section">
+            <div class="section-title">Organizational Experience</div>
+            {% for org in student.organizations %}
+            <div class="content-item">
+                 <div class="header-line">
+                    <span class="item-title">{{ org.position }}</span>
+                    <span class="item-dates">{{ org.start_date|date:"M Y" }} – {{ org.end_date|date:"M Y"|default:"Present" }}</span>
+                </div>
+                <div class="item-subtitle">{{ org.name }}</div>
+                {% if org.description %}
+                <div class="item-description">
+                    {{ org.description }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="section">
+            <div class="section-title">Education</div>
+            <div class="content-item">
+                <div class="header-line">
+                    <span class="item-title">{{ student.program }}</span>
+                    {# Add graduation date if available #}
+                </div>
+                <div class="item-subtitle">{{ student.faculty }}</div>
+                {% if student.gpa %}<p style="font-size:10pt; margin-top:2px; margin-left: 5px;">GPA: {{ student.gpa }}</p>{% endif %}
+            </div>
+        </div>
+
+        <div class="section job-application-note" style="text-align:center; font-size:8pt; color: #777; margin-top:20px;">
+            <p>This resume was generated for the application to <strong>{{ job_title }}</strong> at <strong>{{ job_company }}</strong>.</p>
+        </div>
+
+    </div>
+</body>
+</html>

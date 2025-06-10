@@ -1,0 +1,496 @@
+/* Global Theme CSS - Modern UI with Animations */
+
+:root {
+  --primary-color: #4361ee;
+  --secondary-color: #3a0ca3;
+  --accent-color: #4cc9f0;
+  --success-color: #2ec4b6;
+  --danger-color: #e71d36;
+  --light-bg: #f8f9fa;
+  --dark-bg: #343a40;
+  --card-shadow: 0 10px 20px rgba(0,0,0,0.05), 0 6px 6px rgba(0,0,0,0.06);
+  --transition: all 0.3s ease;
+}
+
+body {
+  background-color: #fafafa;
+  color: #333;
+}
+
+.hero-section {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  padding: 3rem 0;
+  margin-bottom: 2rem;
+  color: white;
+  border-radius: 0 0 20px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 300px;
+  height: 300px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+}
+
+.hero-section::after {
+  content: "";
+  position: absolute;
+  bottom: -20%;
+  left: -10%;
+  width: 400px;
+  height: 400px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.05);
+}
+
+.hero-title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-subtitle {
+  opacity: 0.9;
+  margin-bottom: 2rem;
+  max-width: 700px;
+  position: relative;
+  z-index: 2;
+}
+
+.form-card {
+  border-radius: 15px;
+  border: none;
+  box-shadow: var(--card-shadow);
+  transition: var(--transition);
+  overflow: hidden;
+  margin-bottom: 2rem;
+  padding: 16px; /* Added padding to prevent content from appearing too tight */
+}
+
+.form-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.1), 0 8px 8px rgba(0,0,0,0.08);
+}
+
+.card-body {
+  padding: 1.25rem; /* Added consistent padding */
+}
+
+.card-header {
+  border-bottom: none;
+}
+
+.form-section-header {
+  display: flex;
+  align-items: center;
+  padding: 1.25rem;
+  background: linear-gradient(to right, #f8f9fa, white);
+}
+
+.form-section-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 50%;
+  margin-right: 1rem;
+  font-size: 1.2rem;
+}
+
+.form-label {
+  font-weight: 500;
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.upload-container {
+  border: 2px dashed #ccc;
+  border-radius: 15px;
+  padding: 2rem;
+  text-align: center;
+  background-color: #f8f9fa;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.upload-container:hover {
+  border-color: var(--primary-color);
+}
+
+.upload-container.drag-over {
+  border-color: var(--accent-color);
+  background-color: rgba(76, 201, 240, 0.05);
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: #6c757d;
+  margin-bottom: 1rem;
+}
+
+.upload-text {
+  margin-bottom: 1rem;
+  color: #495057;
+}
+
+.file-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.btn-custom {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: var(--transition);
+  letter-spacing: 0.5px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  border: none;
+}
+
+.btn-primary:hover, .btn-primary:focus {
+  background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(67, 97, 238, 0.4);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, var(--success-color), #38b2ac);
+  border: none;
+}
+
+.btn-success:hover, .btn-success:focus {
+  background: linear-gradient(135deg, #38b2ac, var(--success-color));
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(46, 196, 182, 0.4);
+}
+
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger-color), #e53e3e);
+  border: none;
+  color: white;
+}
+
+.btn-danger:hover, .btn-danger:focus {
+  background: linear-gradient(135deg, #e53e3e, var(--danger-color));
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(231, 29, 54, 0.4);
+}
+
+#loadingSpinner {
+  text-align: center;
+  padding: 2rem;
+  position: relative;
+  display: none; /* Hide by default */
+}
+
+#loadingSpinner .spinner-text {
+  margin-top: 1.5rem;
+  font-weight: 500;
+}
+
+#loadingSpinner .spinner-border,
+#loadingSpinner .spinner-grow {
+  width: 3rem;
+  height: 3rem;
+  border-width: 0.25rem;
+}
+
+#loadingSpinner .progress {
+  height: 10px;
+  margin-top: 1rem;
+}
+
+#loadingSpinner .progress .progress-bar {
+  width: 0%; /* Initial width */
+}
+
+.skills-section {
+  margin-bottom: 1.5rem;
+}
+
+.skills-section-title {
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.skills-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.skill-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem;
+  border-radius: 8px;
+  transition: var(--transition);
+}
+
+.skill-checkbox:hover {
+  background-color: #f8f9fa;
+}
+
+.skill-checkbox input {
+  margin-right: 0.5rem;
+}
+
+.custom-checkbox {
+  position: relative;
+  padding-left: 35px;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  font-size: 0.95rem;
+}
+
+.custom-checkbox input {
+  position: absolute;
+  opacity: 0;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  left: 0;
+  height: 20px;
+  width: 20px;
+  background-color: #f1f1f1;
+  border-radius: 5px;
+  transition: var(--transition);
+}
+
+.custom-checkbox input:checked ~ .checkmark {
+  background-color: var(--primary-color);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.custom-checkbox input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.custom-checkbox .checkmark:after {
+  left: 7px;
+  top: 3px;
+  width: 6px;
+  height: 12px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.accordion-button:not(.collapsed) {
+  background: linear-gradient(to right, #f8f9fa, white);
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.accordion-button:focus {
+  box-shadow: none;
+  border-color: rgba(0,0,0,.125);
+}
+
+.accordion-button::after {
+  background-color: var(--primary-color);
+  border-radius: 50%;
+  background-position: center;
+  background-size: 14px;
+  width: 24px;
+  height: 24px;
+}
+
+
+textarea.form-control {
+  height: 100px;
+}
+
+/* Progress bar */
+.progress-bar-container {
+  margin-bottom: 2rem;
+}
+
+.progress-steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin-bottom: 30px;
+}
+
+.progress-steps::before {
+  content: '';
+  position: absolute;
+  top: 15px;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  background-color: #e9ecef;
+  z-index: 0;
+}
+
+.progress-steps .progress-line {
+  position: absolute;
+  height: 2px;
+  background-color: var(--primary-color);
+  transition: width 0.3s ease;
+  top: 15px;
+  left: 0;
+  z-index: 0;
+  width: 0%; /* Initial width */
+}
+
+.progress-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  z-index: 1;
+}
+
+.step-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: white;
+  border: 2px solid #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  color: #6c757d;
+  transition: var(--transition);
+  margin-bottom: 0.5rem;
+}
+
+.step-text {
+  font-size: 0.8rem;
+  color: #6c757d;
+  transition: var(--transition);
+}
+
+.progress-step.active .step-icon,
+.progress-step.completed .step-icon {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+  color: white;
+}
+
+.progress-step.active .step-text,
+.progress-step.completed .step-text {
+  color: var(--primary-color);
+  font-weight: 500;
+}
+
+.progress-steps .progress-line {
+  position: absolute;
+  height: 2px;
+  background-color: var(--primary-color);
+  transition: width 0.3s ease;
+  top: 15px;
+  left: 0;
+  z-index: 0;
+}
+
+/* Animation - simplified */
+.animate-fade-in {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* Course table styling */
+.table-container {
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.table thead {
+  background-color: #f8f9fa;
+}
+
+.table thead th {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+/* Field highlighting - simplified */
+.highlight-field {
+  background-color: rgba(67, 97, 238, 0.05);
+  border-radius: 8px;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+  padding: 10px;
+  margin: 5px 0;
+}
+
+/* Section divider */
+hr.my-4 {
+  border-color: rgba(67, 97, 238, 0.1);
+  opacity: 0.5;
+}
+
+/* Bootstrap Toast Customizations */
+.toast-container {
+  z-index: 1080;
+}
+
+.toast {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  overflow: hidden;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.toast.bg-success .btn-close-white,
+.toast.bg-danger .btn-close-white {
+  opacity: 0.8;
+}
+
+.toast.bg-success .btn-close-white:hover,
+.toast.bg-danger .btn-close-white:hover {
+  opacity: 1;
+}
+
+.toast.hide {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* Activity icons for dashboard */
+.activity-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
