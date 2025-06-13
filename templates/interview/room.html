@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Interview Simulation - {{ interview_session.job.title|default:"Job Interview" }}{% endblock %}
+{% block title %}Mülakat Simülasyonu - {{ interview_session.job.title|default:"İş Mülakatı" }}{% endblock %}
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -239,8 +239,8 @@
 {% block content %}
 <div class="hero-section">
   <div class="container py-4">
-    <h1 class="hero-title display-4">Interview Simulation</h1>
-    <p class="hero-subtitle lead">Practice your interview skills with our AI-powered interviewer</p>
+    <h1 class="hero-title display-4">Mülakat Simülasyonu</h1>
+    <p class="hero-subtitle lead">AI destekli mülakat sistemimizle mülakat becerilerinizi geliştirin</p>
   </div>
 </div>
 
@@ -252,31 +252,39 @@
           <div class="form-section-icon">
             <i class="fas fa-briefcase"></i>
           </div>
-          <h3 class="h5 mb-0">Interview Details</h3>
+          <h3 class="h5 mb-0">Mülakat Detayları</h3>
         </div>
         <div class="card-body">
           {% if interview_session.job %}
           <h5 class="card-title">{{ interview_session.job.title }}</h5>
           {% else %}
-          <h5 class="card-title">General Interview Practice</h5>
+          <h5 class="card-title">Genel Mülakat Pratiği</h5>
           {% endif %}
 
           <div class="alert alert-info d-flex align-items-center mt-3">
             <i class="fas fa-info-circle me-3 fs-4"></i>
             <div>
-              <p class="mb-0">Speak clearly and naturally when answering questions.</p>
+              <p class="mb-0">Soruları yanıtlarken açık ve doğal bir şekilde konuşun.</p>
+            </div>
+          </div>
+
+          <div class="alert alert-warning d-flex align-items-center mt-3">
+            <i class="fas fa-language me-3 fs-4"></i>
+            <div>
+              <strong>Dil Desteği:</strong>
+              <p class="mb-0">Bu mülakat simülasyonu şu anda sadece İngilizce desteklemektedir. En iyi deneyim için mülakatınızı İngilizce olarak gerçekleştiriniz.</p>
             </div>
           </div>
 
           <div class="mt-4">
-            <div id="status" class="status disconnected">Ready to start interview</div>
+            <div id="status" class="status disconnected">Mülakat başlamaya hazır</div>
           </div>
 
           {% if interview_session %}
           <hr>
           <div class="d-grid mt-3">
             <a href="{% url 'interview:index' %}" class="btn btn-custom btn-outline-secondary">
-              <i class="fas fa-arrow-left me-2"></i>Back to Interview List
+              <i class="fas fa-arrow-left me-2"></i>Mülakat Listesine Dön
             </a>
           </div>
           {% endif %}
@@ -288,28 +296,28 @@
           <div class="form-section-icon">
             <i class="fas fa-comment-dots"></i>
           </div>
-          <h3 class="h5 mb-0">Provide Feedback</h3>
+          <h3 class="h5 mb-0">Geri Bildirim Ver</h3>
         </div>
         <div class="card-body">
           <form id="feedbackForm" method="post" action="{% url 'interview:save_feedback' interview_session.id %}">
             {% csrf_token %}
             <div class="mb-3">
-              <label for="rating" class="form-label">How helpful was this interview?</label>
+              <label for="rating" class="form-label">Bu mülakat ne kadar faydalıydı?</label>
               <select class="form-select" id="rating" name="rating" required>
-                <option value="5">Excellent</option>
-                <option value="4">Very Good</option>
-                <option value="3" selected>Good</option>
-                <option value="2">Fair</option>
-                <option value="1">Poor</option>
+                <option value="5">Mükemmel</option>
+                <option value="4">Çok İyi</option>
+                <option value="3" selected>İyi</option>
+                <option value="2">Orta</option>
+                <option value="1">Zayıf</option>
               </select>
             </div>
             <div class="mb-3">
-              <label for="feedback" class="form-label">Comments:</label>
-              <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Share your thoughts about this interview experience..."></textarea>
+              <label for="feedback" class="form-label">Yorumlar:</label>
+              <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Bu mülakat deneyimi hakkındaki düşüncelerinizi paylaşın..."></textarea>
             </div>
             <div class="d-grid">
               <button type="submit" class="btn btn-custom btn-primary">
-                <i class="fas fa-paper-plane me-2"></i>Submit Feedback
+                <i class="fas fa-paper-plane me-2"></i>Geri Bildirimi Gönder
               </button>
             </div>
           </form>
@@ -324,27 +332,27 @@
           <div class="form-section-icon">
             <i class="fas fa-wave-square"></i>
           </div>
-          <h3 class="h5 mb-0">Interview Studio</h3>
+          <h3 class="h5 mb-0">Mülakat Stüdyosu</h3>
         </div>
         <div class="card-body p-0">
           <div class="audio-visualizer" id="audioVisualizer">
             <div class="recording-indicator" id="recordingIndicator">
               <span class="recording-pulse"></span>
-              Recording
+              Kayıt Yapılıyor
             </div>
             
             <div class="ai-speaking-indicator" id="aiSpeakingIndicator">
               <span class="ai-pulse"></span>
-              Interviewer Speaking
+              Mülakatçı Konuşuyor
             </div>
             
             <!-- Interview Controls inside visualizer -->
             <div class="visualizer-controls">
               <button id="startBtn" class="btn btn-custom btn-success btn-lg px-4">
-                <i class="fas fa-microphone me-2"></i>Start Interview
+                <i class="fas fa-microphone me-2"></i>Mülakatı Başlat
               </button>
               <button id="stopBtn" class="btn btn-custom btn-danger btn-lg px-4" disabled>
-                <i class="fas fa-stop-circle me-2"></i>End Interview
+                <i class="fas fa-stop-circle me-2"></i>Mülakatı Sonlandır
               </button>
             </div>
             
@@ -632,14 +640,14 @@
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/interview/{{ room_name }}/`;
     
-    updateStatus("Connecting...", "connecting");
+    updateStatus("Bağlanıyor...", "connecting");
     
     try {
       socket = new WebSocket(wsUrl);
       
       socket.onopen = () => {
         isConnected = true;
-        updateStatus("Connected to voice agent", "connected");
+        updateStatus("Ses ajanına bağlandı", "connected");
         startRecording();
       };
       
@@ -676,7 +684,7 @@
           } else if (data.type === 'interview_complete') {
             stopConnection();
             feedbackSection.classList.remove('d-none');
-            updateStatus("Interview completed", "connected");
+            updateStatus("Mülakat tamamlandı", "connected");
           }
         } catch (error) {
           console.error('Error processing message:', error);
@@ -685,19 +693,19 @@
       
       socket.onerror = error => {
         console.error('WebSocket error:', error);
-        updateStatus("Connection error", "disconnected");
+        updateStatus("Bağlantı hatası", "disconnected");
       };
       
       socket.onclose = event => {
         console.log('WebSocket closed:', event.code);
         isConnected = false;
-        updateStatus("Disconnected", "disconnected");
+        updateStatus("Bağlantı kesildi", "disconnected");
         cleanup();
         resetUI();
       };
     } catch (e) {
       console.error('Socket creation error:', e);
-      updateStatus("Failed to create connection", "disconnected");
+      updateStatus("Bağlantı oluşturulamadı", "disconnected");
     }
   }
 
@@ -750,14 +758,14 @@
       recordingIndicator.classList.add('active');
       updateVisualizer();
       
-      updateStatus("Recording and listening...", "connected");
+      updateStatus("Kayıt yapılıyor ve dinleniyor...", "connected");
       startBtn.disabled = true;
       stopBtn.disabled = false;
 
     } catch (err) {
       console.error('Microphone error:', err);
-      updateStatus("Microphone access denied", "disconnected");
-      alert("Microphone error: " + err.message);
+      updateStatus("Mikrofon erişimi reddedildi", "disconnected");
+      alert("Mikrofon hatası: " + err.message);
       resetUI();
     }
   }
@@ -881,19 +889,19 @@
     .then(response => response.json())
     .then(data => {
       if (data.status === 'success') {
-        alert('Thank you for your feedback!');
+        alert('Geri bildiriminiz için teşekkürler!');
         feedbackSection.classList.add('d-none');
       } else {
-        alert('Error saving feedback: ' + data.message);
+        alert('Geri bildirim kaydetme hatası: ' + data.message);
       }
     })
     .catch(error => {
       console.error('Error:', error);
-      alert('Error saving feedback. Please try again.');
+      alert('Geri bildirim kaydetme hatası. Lütfen tekrar deneyin.');
     });
   });
 
-  console.log('Interview room ready');
+  console.log('Mülakat odası hazır');
   
   // Initialize visualizer when page loads
   if (document.readyState === 'loading') {

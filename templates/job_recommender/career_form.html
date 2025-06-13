@@ -209,7 +209,7 @@
             <button class="nav-link active" id="organization-tab" data-bs-toggle="pill"
               data-bs-target="#organization-tab-content" type="button" role="tab"
               aria-controls="organization-tab-content" aria-selected="true">
-              <i class="fas fa-users me-2"></i>Kuruluşlar
+              <i class="fas fa-users me-2"></i>Topluluklar
             </button>
           </li>
           <li class="nav-item" role="presentation">
@@ -226,14 +226,14 @@
             aria-labelledby="organization-tab">
             <div class="alert alert-light border-start border-4 mb-4">
               <i class="fas fa-lightbulb text-warning me-2"></i>
-              Kuruluş deneyimlerinizi ekleyerek liderlik ve takım çalışması becerilerinizi sergileyin.
+              Topluluk deneyimlerinizi ekleyerek liderlik ve takım çalışması becerilerinizi sergileyin.
             </div>
             <div id="organization-inputs" class="mb-3"></div>
             {% if organizations %}
             {{ organizations|json_script:"existing-organizations-json" }}
             {% endif %}
             <button type="button" id="add-organization" class="btn btn-custom btn-primary">
-              <i class="fas fa-plus-circle me-2"></i>Kuruluş Deneyimi Ekle
+              <i class="fas fa-plus-circle me-2"></i>Topluluk Deneyimi Ekle
             </button>
           </div>
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Resume - {{ student.fullname }} {{ student.last_name }}</title>
+    <title>Özgeçmiş - {{ student.fullname }} {{ student.last_name }}</title>
     <style>
         body {
             font-family: Arial, Helvetica, sans-serif;
@@ -126,14 +126,14 @@
 
         {% if student.summary %}
         <div class="section">
-            <div class="section-title">Summary</div>
+            <div class="section-title">Özet</div>
             <p class="summary-text">{{ student.summary }}</p>
         </div>
         {% endif %}
 
         {% if student.skills %}
         <div class="section">
-            <div class="section-title">Skills</div>
+            <div class="section-title">Beceriler</div>
             <ul class="skills-list">
                 {% for skill in student.skills %}
                     <li>{{ skill }}</li>
@@ -144,12 +144,12 @@
 
         {% if student.internships %}
         <div class="section">
-            <div class="section-title">Experience</div>
+            <div class="section-title">Deneyim</div>
             {% for exp in student.internships %}
             <div class="content-item">
                 <div class="header-line">
                     <span class="item-title">{{ exp.position }}</span>
-                    <span class="item-dates">{{ exp.start_date|date:"M Y" }} – {{ exp.end_date|date:"M Y"|default:"Present" }}</span>
+                    <span class="item-dates">{{ exp.start_date|date:"M Y" }} – {{ exp.end_date|date:"M Y"|default:"Halen" }}</span>
                 </div>
                 <div class="item-subtitle">{{ exp.institution_name }}</div>
                 {% if exp.description %}
@@ -164,12 +164,12 @@
         
         {% if student.organizations %}
         <div class="section">
-            <div class="section-title">Organizational Experience</div>
+            <div class="section-title">Topluluk Deneyimi</div>
             {% for org in student.organizations %}
             <div class="content-item">
                  <div class="header-line">
                     <span class="item-title">{{ org.position }}</span>
-                    <span class="item-dates">{{ org.start_date|date:"M Y" }} – {{ org.end_date|date:"M Y"|default:"Present" }}</span>
+                    <span class="item-dates">{{ org.start_date|date:"M Y" }} – {{ org.end_date|date:"M Y"|default:"Halen" }}</span>
                 </div>
                 <div class="item-subtitle">{{ org.name }}</div>
                 {% if org.description %}
@@ -183,19 +183,19 @@
         {% endif %}
 
         <div class="section">
-            <div class="section-title">Education</div>
+            <div class="section-title">Eğitim</div>
             <div class="content-item">
                 <div class="header-line">
                     <span class="item-title">{{ student.program }}</span>
                     {# Add graduation date if available #}
                 </div>
                 <div class="item-subtitle">{{ student.faculty }}</div>
-                {% if student.gpa %}<p style="font-size:10pt; margin-top:2px; margin-left: 5px;">GPA: {{ student.gpa }}</p>{% endif %}
+                {% if student.gpa %}<p style="font-size:10pt; margin-top:2px; margin-left: 5px;">GANO: {{ student.gpa }}</p>{% endif %}
             </div>
         </div>
 
         <div class="section job-application-note" style="text-align:center; font-size:8pt; color: #777; margin-top:20px;">
-            <p>This resume was generated for the application to <strong>{{ job_title }}</strong> at <strong>{{ job_company }}</strong>.</p>
+            <p>Bu özgeçmiş <strong>{{ job_company }}</strong> şirketindeki <strong>{{ job_title }}</strong> pozisyonuna başvuru için oluşturulmuştur.</p>
         </div>
 
     </div>
