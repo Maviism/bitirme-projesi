@@ -26,14 +26,6 @@
   .connected { background-color: #d4edda; color: #155724; }
   .disconnected { background-color: #f8d7da; color: #721c24; }
   .connecting { background-color: #fff3cd; color: #856404; }
-  .debug-info {
-    margin: 20px 0;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    font-family: monospace;
-    font-size: 12px;
-  }
   .audio-visualizer {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 15px;
@@ -142,6 +134,105 @@
     height: 10px;
     min-height: 10px;
   }
+  
+  /* Enhanced button styling */
+  .btn-lg {
+    font-size: 1.1rem;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+  }
+  
+  .btn-custom.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+  }
+  
+  .btn-custom.btn-success:hover {
+    background: linear-gradient(135deg, #1e7e34 0%, #17a2b8 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .btn-custom.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+    border: none;
+  }
+  
+  .btn-custom.btn-danger:hover {
+    background: linear-gradient(135deg, #c82333 0%, #e8590c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .btn-custom:disabled {
+    background: #6c757d !important;
+    border-color: #6c757d !important;
+    transform: none !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    opacity: 0.6;
+  }
+  
+  /* Interview controls section */
+  .form-card .card-body {
+    padding: 1.5rem;
+  }
+  
+  .interview-controls-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  /* Visualizer controls styling */
+  .visualizer-controls {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    margin: 20px 0;
+    z-index: 10;
+    position: relative;
+  }
+  
+  .visualizer-controls .btn {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+  }
+  
+  .visualizer-controls .btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .visualizer-controls .btn-success:hover {
+    background: rgba(40, 167, 69, 0.8);
+    border-color: #28a745;
+  }
+  
+  .visualizer-controls .btn-danger:hover {
+    background: rgba(220, 53, 69, 0.8);
+    border-color: #dc3545;
+  }
+  
+  .visualizer-controls .btn:disabled {
+    background: rgba(108, 117, 125, 0.4) !important;
+    border-color: rgba(108, 117, 125, 0.3) !important;
+    color: rgba(255, 255, 255, 0.5) !important;
+    transform: none !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+    opacity: 0.6;
+  }
 </style>
 {% endblock %}
 
@@ -166,7 +257,6 @@
         <div class="card-body">
           {% if interview_session.job %}
           <h5 class="card-title">{{ interview_session.job.title }}</h5>
-          <h6 class="card-subtitle mb-2 text-muted">{{ interview_session.job.company }}</h6>
           {% else %}
           <h5 class="card-title">General Interview Practice</h5>
           {% endif %}
@@ -180,22 +270,6 @@
 
           <div class="mt-4">
             <div id="status" class="status disconnected">Ready to start interview</div>
-            <div class="d-grid gap-2">
-              <button id="startBtn" class="btn btn-custom btn-success">
-                <i class="fas fa-microphone me-2"></i>Start Interview
-              </button>
-              <button id="stopBtn" class="btn btn-custom btn-danger" disabled>
-                <i class="fas fa-stop-circle me-2"></i>End Interview
-              </button>
-            </div>
-          </div>
-
-          <div class="volume-control mt-3">
-            <label for="volumeSlider" class="form-label">
-              <i class="fas fa-volume-up me-2"></i>Microphone Sensitivity: 
-              <span id="volumeValue">100%</span>
-            </label>
-            <input type="range" id="volumeSlider" class="form-range" min="0.1" max="2.0" step="0.1" value="1.0">
           </div>
 
           {% if interview_session %}
@@ -244,12 +318,13 @@
     </div>
 
     <div class="col-md-8">
+      <!-- Audio Visualizer with Integrated Controls -->
       <div class="form-card mb-4">
         <div class="form-section-header">
           <div class="form-section-icon">
             <i class="fas fa-wave-square"></i>
           </div>
-          <h3 class="h5 mb-0">Audio Visualizer</h3>
+          <h3 class="h5 mb-0">Interview Studio</h3>
         </div>
         <div class="card-body p-0">
           <div class="audio-visualizer" id="audioVisualizer">
@@ -263,29 +338,18 @@
               Interviewer Speaking
             </div>
             
+            <!-- Interview Controls inside visualizer -->
+            <div class="visualizer-controls">
+              <button id="startBtn" class="btn btn-custom btn-success btn-lg px-4">
+                <i class="fas fa-microphone me-2"></i>Start Interview
+              </button>
+              <button id="stopBtn" class="btn btn-custom btn-danger btn-lg px-4" disabled>
+                <i class="fas fa-stop-circle me-2"></i>End Interview
+              </button>
+            </div>
+            
             <div class="frequency-bars" id="frequencyBars">
               <!-- Frequency bars will be generated by JavaScript -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Technical Info (Collapsed by default) -->
-      <div class="form-card mb-4">
-        <div class="form-section-header" data-bs-toggle="collapse" data-bs-target="#debugSection" aria-expanded="false" style="cursor: pointer;">
-          <div class="form-section-icon">
-            <i class="fas fa-code"></i>
-          </div>
-          <h3 class="h5 mb-0">Technical Information</h3>
-          <i class="fas fa-chevron-down ms-auto"></i>
-        </div>
-        <div class="collapse" id="debugSection">
-          <div class="card-body">
-            <div id="debugInfo" class="debug-info">
-              Audio format: Not started<br>
-              Bytes sent: 0<br>
-              Samples processed: 0<br>
-              Recording: false
             </div>
           </div>
         </div>
@@ -333,9 +397,6 @@
   const statusDiv = document.getElementById('status');
   const recordingIndicator = document.getElementById('recordingIndicator');
   const aiSpeakingIndicator = document.getElementById('aiSpeakingIndicator');
-  const volumeSlider = document.getElementById('volumeSlider');
-  const volumeValue = document.getElementById('volumeValue');
-  const debugInfo = document.getElementById('debugInfo');
   const feedbackSection = document.getElementById('feedbackSection');
   const frequencyBarsContainer = document.getElementById('frequencyBars');
 
@@ -424,25 +485,10 @@
     }
   }
 
-  volumeSlider.addEventListener('input', (e) => {
-    volumeMultiplier = parseFloat(e.target.value);
-    volumeValue.textContent = Math.round(volumeMultiplier * 100) + '%';
-  });
-
-  function updateDebugInfo() {
-    debugInfo.innerHTML = `
-      Audio format: ${audioContext ? audioContext.sampleRate + 'Hz, PCM 16-bit' : 'Not started'}<br>
-      Bytes sent: ${bytesSent}<br>
-      Samples processed: ${samplesProcessed}<br>
-      Recording: ${isRecording}
-    `;
-  }
-
   function updateStatus(message, className) {
     statusDiv.textContent = message;
     statusDiv.className = `status ${className}`;
     console.log(`Status: ${message}`);
-    updateDebugInfo();
   }
 
   async function initAudioContext() {
@@ -579,11 +625,6 @@
       bytesSent += pcmBuffer.byteLength;
       samplesProcessed += pcmBuffer.length;
     }
-    
-    // Update debug display periodically
-    if (samplesProcessed % 16000 === 0) {
-      updateDebugInfo();
-    }
   }
 
   function startConnection() {
@@ -712,7 +753,6 @@
       updateStatus("Recording and listening...", "connected");
       startBtn.disabled = true;
       stopBtn.disabled = false;
-      updateDebugInfo();
 
     } catch (err) {
       console.error('Microphone error:', err);
@@ -810,7 +850,6 @@
   function resetUI() {
     startBtn.disabled = false;
     stopBtn.disabled = true;
-    updateDebugInfo();
   }
 
   // Event listeners
@@ -855,7 +894,6 @@
   });
 
   console.log('Interview room ready');
-  updateDebugInfo();
   
   // Initialize visualizer when page loads
   if (document.readyState === 'loading') {
