@@ -166,11 +166,11 @@ function createExperienceInputWithData(type, index, data) {
   const endDate = data.end_date || '';
 
   return `
-  <div class="form-card mb-3 animate-fade-in">
+  <div class="form-card mb-3 animate-fade-in position-relative">
     <div class="card-body">
       <div class="text-${color} mb-3">
         <i class="fas ${icon} fa-2x"></i>
-        <span class="badge bg-light text-dark position-absolute top-0 end-0 m-3">#${index + 1}</span>
+        <span class="badge bg-light text-dark position-absolute top-0 end-0 m-2" style="z-index: 10;">#${index + 1}</span>
       </div>
       
       <div class="row">
