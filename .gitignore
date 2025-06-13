@@ -8,3 +8,4 @@ __pycache__/
 db.sqlite3
 
 audio_debug/
+stored_models

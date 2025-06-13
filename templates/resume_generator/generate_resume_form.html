@@ -7,12 +7,12 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/global-theme.css' %}">
 <style>
-  .btn-custom.btn-purple {
+  .btn-purple {
     background-color: #6f42c1;
     border-color: #6f42c1;
     color: white;
   }
-  .btn-custom.btn-purple:hover {
+  .btn-purple:hover {
     background-color: #5a32a3;
     border-color: #5a32a3;
     color: white;
@@ -26,15 +26,59 @@
     background-color: #6f42c1;
     border-color: #6f42c1;
   }
+  .text-purple {
+    color: #6f42c1;
+  }
+  .card {
+    transition: all 0.3s ease;
+    width: 100%; /* Ensure cards take full width of their container */
+  }
+  .card:hover {
+    transform: translateY(-3px);
+  }
+  .form-select:focus, .form-control:focus {
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 0.25rem rgba(111, 66, 193, 0.25);
+  }
+  /* Ensure consistent width for all sections */
+  .hero-section .container,
+  .container {
+    max-width: 1140px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 991px) {
+    .card {
+      width: 100%;
+    }
+    .container {
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+  }
+  
+  @media (max-width: 767px) {
+    .d-flex.flex-column.flex-md-row {
+      gap: 1rem !important;
+    }
+    .hero-title {
+      font-size: 2rem;
+    }
+    .card-body {
+      padding: 1rem;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="hero-section">
   <div class="container py-4">
-    <h1 class="hero-title display-4">Create Your Tailored Resume</h1>
-    <p class="hero-subtitle lead">Customize and generate a professional resume optimized for: {{ job_title }} at {{
-      job_company }}</p>
+    <h1 class="hero-title display-4">Professional Resume Builder</h1>
+    <p class="hero-subtitle lead">Create a tailored resume optimized for your target role: <span class="fw-bold">{{ job_title }}</span></p>
   </div>
 </div>
 
@@ -51,55 +95,56 @@
     <input type="hidden" name="hidden_cover_letter" id="hidden_cover_letter" value="">
     <input type="hidden" name="has_generated_cover_letter" id="has_generated_cover_letter" value="false">
 
-    <div class="form-card mb-4">
-      <div class="form-section-header">
-        <div class="form-section-icon">
-          <i class="fas fa-building"></i>
-        </div>
-        <h3 class="h5 mb-0">Job Details</h3>
-      </div>
-      <div class="card-body">
-        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-          <i class="fas fa-info-circle me-3 fs-4"></i>
-          <div>
-            <strong>Target Position:</strong> Your resume will be tailored for this specific job position.
+    <div class="mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="card-title mb-3"><i class="fas fa-briefcase text-primary me-2"></i>Target Role Details</h4>
+          
+          <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-info-circle me-3 fs-4"></i>
+            <div>
+              <strong>Target Position:</strong> Your resume will be tailored for this specific role.
+            </div>
           </div>
-        </div>
-        <h5 class="card-title">{{ job_title }}</h5>
-        <h6 class="card-subtitle mb-2 text-muted">{{ job_company }}</h6>
-        <p class="card-text" style="white-space: pre-wrap;">{{ job_description }}</p>
+          
+          <h5 class="card-title fw-bold">{{ job_title }}</h5>
+          <div class="p-3 bg-light rounded">
+            <p class="card-text" style="white-space: pre-wrap;">{{ job_description }}</p>
+          </div>
         
         {% if job_recommendations %}
         <div class="mt-4">
-          <div class="alert alert-success bg-light">
-            <div class="d-flex align-items-center mb-2">
-              <i class="fas fa-chart-line text-success me-2"></i>
-              <strong>Career Match Data</strong>
-            </div>
-            <div class="row">
-              <div class="col-md-6">
-                {% if job_recommendations.current_job_rec %}
-                <div class="mb-2">
-                  <span class="badge bg-primary rounded-pill">
-                    <i class="fas fa-percentage me-1"></i> {{ job_recommendations.current_job_rec.match_score|floatformat:0 }}% Match
-                  </span>
-                  <span class="badge bg-info text-dark rounded-pill ms-1">
-                    <i class="fas fa-{{ job_recommendations.current_job_rec.source|default:"layer-group" }}-circle me-1"></i>
-                    {{ job_recommendations.current_job_rec.get_source_display|default:"Match" }}
-                  </span>
-                </div>
-                <small class="text-muted">This resume will be optimized for your match profile</small>
-                {% else %}
-                <div class="mb-2">
-                  <span class="badge bg-secondary rounded-pill">
-                    <i class="fas fa-info-circle me-1"></i> Match Data Unavailable
-                  </span>
-                </div>
-                <small class="text-muted">No specific match data found for this job position</small>
-                {% endif %}
+          <div class="card border border-success border-opacity-25 bg-light">
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <i class="fas fa-chart-line text-success me-2 fs-4"></i>
+                <h6 class="mb-0 fw-bold">Skills Match Analysis</h6>
               </div>
-              <div class="col-md-6">
-                <div class="small text-muted text-end">Using AI and your match data to enhance your resume</div>
+              <div class="row">
+                <div class="col-md-7">
+                  {% if job_recommendations.current_job_rec %}
+                  <div class="mb-2">
+                    <span class="badge bg-primary rounded-pill">
+                      <i class="fas fa-percentage me-1"></i> {{ job_recommendations.current_job_rec.match_score|floatformat:0 }}% Match
+                    </span>
+                    <span class="badge bg-info text-dark rounded-pill ms-1">
+                      <i class="fas fa-{{ job_recommendations.current_job_rec.source|default:"layer-group" }}-circle me-1"></i>
+                      {{ job_recommendations.current_job_rec.get_source_display|default:"Match" }}
+                    </span>
+                  </div>
+                  <small class="text-muted">Resume will be optimized for your skills profile</small>
+                  {% else %}
+                  <div class="mb-2">
+                    <span class="badge bg-secondary rounded-pill">
+                      <i class="fas fa-info-circle me-1"></i> Match Data Unavailable
+                    </span>
+                  </div>
+                  <small class="text-muted">No specific match data found for this role</small>
+                  {% endif %}
+                </div>
+                <div class="col-md-5">
+                  <div class="small text-muted text-end">AI optimization enhances your qualifications</div>
+                </div>
               </div>
             </div>
           </div>
@@ -108,95 +153,46 @@
       </div>
     </div>
     
-    <div class="form-card mb-4">
-      <div class="form-section-header">
-        <div class="form-section-icon">
-          <i class="fas fa-robot"></i>
+    <!-- AI Progress and Results -->
+    <div id="aiProgress" class="d-none">
+      <div class="py-3 my-3 text-center">
+        <div class="spinner-grow text-primary mb-3" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
-        <h3 class="h5 mb-0">AI-Powered Resume Enhancement</h3>
-      </div>
-      <div class="card-body">
-        <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-          <i class="fas fa-magic me-3 fs-4"></i>
-          <div>
-            <strong>Let AI do the work!</strong> Our AI can generate a complete resume tailored to this job or create a
-            personalized cover letter.
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
           </div>
         </div>
-
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <div class="card h-100 border-0 bg-light">
-              <div class="card-body text-center">
-                <i class="fas fa-file-alt text-primary mb-3 fa-3x"></i>
-                <h5 class="card-title">Complete Resume</h5>
-                <p class="card-text">Generate all resume sections using AI based on your profile</p>
-                <button type="button" class="btn btn-custom btn-primary" onclick="generateFullAIResume()">
-                  <i class="fas fa-magic me-2"></i> Generate AI Resume
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="col-md-6 mb-3">
-            <div class="card h-100 border-0 bg-light">
-              <div class="card-body text-center">
-                <i class="fas fa-envelope-open-text text-success mb-3 fa-3x"></i>
-                <h5 class="card-title">Cover Letter</h5>
-                <p class="card-text">Create a personalized cover letter for this specific job</p>
-                <button type="button" class="btn btn-custom btn-success" onclick="generateCoverLetter()">
-                  <i class="fas fa-file-alt me-2"></i> Generate Cover Letter
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- AI Progress and Results -->
-        <div id="aiProgress" class="d-none">
-          <div class="py-3 my-3 text-center">
-            <div class="spinner-grow text-primary mb-3" role="status">
-              <span class="visually-hidden">Loading...</span>
-            </div>
-            <div class="progress">
-              <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
-              </div>
-            </div>
-            <div id="aiStatus" class="text-center mt-3">Initializing AI...</div>
-          </div>
-        </div>
-
-        <!-- Cover Letter Display -->
-        <div id="coverLetterResult" class="d-none">
-          <hr>
-          <div class="d-flex align-items-center mb-3">
-            <div class="fs-5 me-2">
-              <i class="fas fa-envelope-open-text text-success"></i>
-            </div>
-            <h4 class="mb-0">Generated Cover Letter</h4>
-          </div>
-          <div class="border p-4 bg-light rounded shadow-sm">
-            <div id="coverLetterContent"></div>
-          </div>
-          <div class="d-flex gap-2 mt-3">
-            <button type="button" class="btn btn-custom btn-outline-primary" onclick="copyCoverLetter()">
-              <i class="fas fa-copy me-2"></i> Copy to Clipboard
-            </button>
-            <button type="button" class="btn btn-custom btn-outline-secondary" onclick="downloadCoverLetter()">
-              <i class="fas fa-download me-2"></i> Download as Text
-            </button>
-          </div>
-        </div>
+        <div id="aiStatus" class="text-center mt-3">Initializing AI...</div>
       </div>
     </div>
 
-    <div class="form-card mb-4">
-      <div class="form-section-header">
-        <div class="form-section-icon">
-          <i class="fas fa-user"></i>
+    <!-- Cover Letter Display -->
+    <div id="coverLetterResult" class="d-none">
+      <hr>
+      <div class="d-flex align-items-center mb-3">
+        <div class="fs-5 me-2">
+          <i class="fas fa-envelope-open-text text-success"></i>
         </div>
-        <h3 class="h5 mb-0">Personal Information</h3>
+        <h4 class="mb-0">Generated Cover Letter</h4>
       </div>
-      <div class="card-body">
+      <div class="border p-4 bg-light rounded shadow-sm">
+        <div id="coverLetterContent"></div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn btn-custom btn-outline-primary" onclick="copyCoverLetter()">
+          <i class="fas fa-copy me-2"></i> Copy to Clipboard
+        </button>
+        <button type="button" class="btn btn-custom btn-outline-secondary" onclick="downloadCoverLetter()">
+          <i class="fas fa-download me-2"></i> Download as Text
+        </button>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="card-title mb-3"><i class="fas fa-user text-primary me-2"></i>Personal Information</h4>
         <div class="row">
           <div class="col-md-6 mb-3">
             <div class="form-floating">
@@ -277,18 +273,13 @@
             </div>
             <h5 class="mb-0">Professional Summary/Objective</h5>
           </div>
-          <div class="d-flex gap-2 mb-2">
-            <button type="button" class="btn btn-custom btn-primary btn-sm" onclick="generateAISummary()">
-              <i class="fas fa-magic me-2"></i> Generate AI Summary
-            </button>
-            <button type="button" class="btn btn-custom btn-secondary btn-sm" onclick="improveSummary()">
-              <i class="fas fa-edit me-2"></i> Improve with AI
-            </button>
-          </div>
           <textarea class="form-control" id="student_summary" name="student_summary"
             rows="3">{{ student.summary }}</textarea>
-          <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> AI can help generate or
-            improve your professional summary based on your profile and the job description.</small>
+          <div class="d-flex justify-content-end mt-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="improveSummary()">
+              <i class="fas fa-magic me-1"></i> Generate/Update with AI
+            </button>
+          </div>
         </div>
         <hr>
         <div class="mb-4">
@@ -392,94 +383,103 @@
       </div>
     </div>
 
-    <div class="form-card mb-4">
-      <div class="form-section-header">
-        <div class="form-section-icon">
-          <i class="fas fa-sliders-h"></i>
-        </div>
-        <h3 class="h5 mb-0">Resume Options</h3>
-      </div>
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-6 offset-md-3">
-            <div class="mb-3">
-              <label for="resume_template_style" class="form-label fw-bold"><i class="fas fa-file-alt me-2"></i>Choose
-                Resume Template:</label>
-              <select class="form-select form-control-lg" id="resume_template_style" name="resume_template_style">
-                <option value="ats" selected>ATS Friendly (Recommended)</option>
-                <option value="modern">Modern Design</option>
-              </select>
-              <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> ATS friendly templates
-                are optimized for applicant tracking systems used by employers.</small>
+    <div class="mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="card-title mb-3"><i class="fas fa-sliders-h text-primary me-2"></i>Resume Format</h4>
+          <div class="row">
+            <div class="col-md-8">
+              <div class="mb-3">
+                <select class="form-select form-control-lg" id="resume_template_style" name="resume_template_style">
+                  <option value="ats" selected>ATS Friendly (Recommended)</option>
+                  <option value="modern">Modern Design</option>
+                </select>
+                <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> ATS friendly templates
+                  are optimized for applicant tracking systems used by employers.</small>
+              </div>
+            </div>
+            <div class="col-md-4 d-flex align-items-center">
+              <button type="button" class="btn btn-outline-secondary w-100" onclick="generateCoverLetter()">
+                <i class="fas fa-envelope me-2"></i> Generate Cover Letter
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="d-grid gap-2 col-lg-8 mx-auto mb-5">
-      <button type="submit" class="btn btn-custom btn-info btn-lg"
-        formaction="{% url 'resume_generator:preview_resume' %}" formmethod="POST" id="previewButton">
-        <i class="fas fa-eye me-2"></i> Preview Resume
-      </button>
-      <button type="submit" class="btn btn-custom btn-success btn-lg"
-        formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">
-        <i class="fas fa-download me-2"></i> Generate and Download Resume
-      </button>
+    <div class="mb-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="card-title mb-3"><i class="fas fa-file-alt text-primary me-2"></i>Resume Actions</h4>
+          
+          <div class="d-flex flex-column flex-md-row gap-3">
+            <button type="submit" class="btn btn-info btn-lg flex-grow-1"
+              formaction="{% url 'resume_generator:preview_resume' %}" formmethod="POST" id="previewButton">
+              <i class="fas fa-eye me-2"></i> Preview Resume
+            </button>
+            <button type="submit" class="btn btn-success btn-lg flex-grow-1"
+              formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">
+              <i class="fas fa-download me-2"></i> Generate & Download
+            </button>
+          </div>
+        </div>
+      </div>
       
-      <div class="text-center mt-4">
-        <h5><i class="fas fa-graduation-cap me-2"></i>Ready to practice for your interview?</h5>
-        <p class="text-muted mb-3">Our AI-powered interview simulator will help you prepare for questions related to this job.</p>
-        <button type="submit" class="btn btn-custom btn-purple btn-lg"
-          formaction="{% url 'resume_generator:start_interview' %}" formmethod="POST" id="interviewButton">
-          <i class="fas fa-comments me-2"></i> Prepare for Interview
-        </button>
+      <div class="card border-0 shadow-sm mt-4">
+        <div class="card-body p-4">
+          <h4 class="card-title"><i class="fas fa-graduation-cap text-purple me-2"></i>Interview Practice</h4>
+          <p class="text-muted mb-3">Our AI-powered interview simulator will help you prepare for questions related to this job.</p>
+          <div class="text-center">
+            <button type="submit" class="btn btn-purple btn-lg"
+              formaction="{% url 'resume_generator:start_interview' %}" formmethod="POST" id="interviewButton">
+              <i class="fas fa-comments me-2"></i> Prepare for Interview
+            </button>
+          </div>
+        </div>
       </div>
     </div>
     
     {% if job_recommendations and job_recommendations.recommendations|length > 1 %}
-    <div class="form-card mb-5">
-      <div class="form-section-header">
-        <div class="form-section-icon">
-          <i class="fas fa-briefcase"></i>
-        </div>
-        <h3 class="h5 mb-0">Other Job Matches</h3>
-      </div>
-      <div class="card-body">
-        <div class="alert alert-light border-start border-4 mb-4">
-          <i class="fas fa-lightbulb text-warning me-2"></i>
-          Consider creating tailored resumes for these other job matches as well to increase your chances.
-        </div>
+    <div class="mb-5">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-4">
+          <h4 class="card-title mb-3"><i class="fas fa-briefcase text-primary me-2"></i>Other Job Matches</h4>
+          <div class="alert alert-light border-start border-4 mb-4">
+            <i class="fas fa-lightbulb text-warning me-2"></i>
+            Consider creating tailored resumes for these other job matches as well to increase your chances.
+          </div>
         
-        <div class="row">
-          {% for rec in job_recommendations.recommendations %}
-            {% if not job_recommendations.current_job_rec or rec.job.id != job_recommendations.current_job_rec.job.id %}
-            <div class="col-md-6 mb-3">
-              <div class="card border-0 shadow-sm h-100">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h5 class="card-title mb-1">{{ rec.job.title }}</h5>
-                    <span class="badge bg-primary rounded-pill">{{ rec.match_score|floatformat:0 }}%</span>
+          <div class="row">
+            {% for rec in job_recommendations.recommendations %}
+              {% if not job_recommendations.current_job_rec or rec.job.id != job_recommendations.current_job_rec.job.id %}
+              <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm h-100">
+                  <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <h5 class="card-title mb-1">{{ rec.job.title }}</h5>
+                      <span class="badge bg-primary rounded-pill">{{ rec.match_score|floatformat:0 }}%</span>
+                    </div>
+                    <h6 class="card-subtitle text-muted mb-2">{{ rec.job.company }}</h6>
+                    <p class="card-text small">{{ rec.job.description|truncatechars:120 }}</p>
                   </div>
-                  <h6 class="card-subtitle text-muted mb-2">{{ rec.job.company }}</h6>
-                  <p class="card-text small">{{ rec.job.description|truncatechars:120 }}</p>
-                </div>
-                <div class="card-footer bg-transparent">
-                  <div class="d-grid gap-2">
-                    <a href="{% url 'resume_generator:generate_resume' %}?job_id={{ rec.job.id }}&title={{ rec.job.title|urlencode }}&company={{ rec.job.company|urlencode }}&description={{ rec.job.description|truncatechars:200|urlencode }}" 
-                      class="btn btn-sm btn-outline-primary">
-                      <i class="fas fa-file-alt me-2"></i>Create Resume for This Job
-                    </a>
-                    <a href="{% url 'interview:prepare_interview' %}?job_id={{ rec.job.id }}&student_id={{ student.id }}" 
-                      class="btn btn-sm btn-outline-purple">
-                      <i class="fas fa-comments me-2"></i>Practice Interview
-                    </a>
+                  <div class="card-footer bg-transparent">
+                    <div class="d-grid gap-2">
+                      <a href="{% url 'resume_generator:generate_resume' %}?job_id={{ rec.job.id }}&title={{ rec.job.title|urlencode }}&company={{ rec.job.company|urlencode }}&description={{ rec.job.description|truncatechars:200|urlencode }}" 
+                        class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-file-alt me-2"></i>Create Resume for This Job
+                      </a>
+                      <a href="{% url 'interview:prepare_interview' %}?job_id={{ rec.job.id }}&student_id={{ student.id }}" 
+                        class="btn btn-sm btn-outline-purple">
+                        <i class="fas fa-comments me-2"></i>Practice Interview
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-            {% endif %}
-          {% endfor %}
+              {% endif %}
+            {% endfor %}
+          </div>
         </div>
       </div>
     </div>
@@ -521,74 +521,131 @@
     statusDiv.textContent = message;
   }
 
-  // Generate AI Summary
+  // For backwards compatibility, now just calls improveSummary
   async function generateAISummary() {
+    // First make sure the summary is empty
+    document.getElementById('student_summary').value = '';
+    // Then call improveSummary which will handle generation
+    await improveSummary();
+  }
+
+  // Generate or Update Professional Summary with AI
+  async function improveSummary() {
     try {
-      showAIProgress('Generating professional summary...');
-      updateAIProgress(50, 'Analyzing your profile...');
+      const currentSummary = document.getElementById('student_summary').value;
+      const isGenerating = !currentSummary.trim();
+      
+      // If no summary exists, we'll generate one; otherwise, we'll improve the existing one
+      showAIProgress(isGenerating ? 'Creating your professional summary...' : 'Updating your professional summary...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
       formData.append('student_id', document.querySelector('[name=student_id]').value);
       formData.append('job_description', document.querySelector('[name=job_description]').value);
+      formData.append('job_title', document.querySelector('[name=job_title]').value);
+      formData.append('job_company', document.querySelector('[name=job_company]').value);
+      
+      // Include job ID if available
+      const jobId = document.querySelector('[name=job_id]').value;
+      if (jobId) {
+        formData.append('job_id', jobId);
+      }
 
-      const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
-        method: 'POST',
-        body: formData
-      });
-
-      updateAIProgress(80, 'Generating content...');
-      const data = await response.json();
-
-      if (data.success && data.content.summary) {
-        document.getElementById('student_summary').value = data.content.summary;
-        updateAIProgress(100, 'Summary generated successfully!');
-        setTimeout(() => hideAIProgress(), 2000);
+      updateAIProgress(40, isGenerating ? 'Analyzing profile and job...' : 'Enhancing your summary...');
+      
+      let response, data;
+      
+      // Choose API endpoint based on whether we're generating or improving
+      if (isGenerating) {
+        // Generate new summary
+        response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+        
+        data = await response.json();
+        
+        if (data.success && data.content && data.content.summary) {
+          document.getElementById('student_summary').value = data.content.summary;
+          updateAIProgress(100, 'Professional summary created!');
+          setTimeout(() => hideAIProgress(), 2000);
+        } else {
+          throw new Error(data.error || 'Failed to generate summary');
+        }
       } else {
-        throw new Error(data.error || 'Failed to generate summary');
+        // Improve existing summary
+        formData.append('section_content', currentSummary);
+        formData.append('section_type', 'summary');
+        formData.append('job_context', document.querySelector('[name=job_description]').value);
+        
+        response = await fetch('{% url "resume_generator:ai_improve_section" %}', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+        
+        data = await response.json();
+        
+        if (data.success && data.improved_content) {
+          document.getElementById('student_summary').value = data.improved_content;
+          updateAIProgress(100, 'Professional summary updated!');
+          setTimeout(() => hideAIProgress(), 2000);
+        } else {
+          throw new Error(data.error || 'Failed to update summary');
+        }
       }
     } catch (error) {
       hideAIProgress();
-      alert('Error generating AI summary: ' + error.message);
-    }
-  }
-
-  // Improve Summary with AI
-  async function improveSummary() {
-    try {
-      const currentSummary = document.getElementById('student_summary').value;
-      if (!currentSummary.trim()) {
-        alert('Please enter a summary first, then use AI to improve it.');
-        return;
+      console.error('Error with professional summary:', error);
+      
+      // Fallback mechanism
+      try {
+        const currentSummary = document.getElementById('student_summary').value;
+        const isGenerating = !currentSummary.trim();
+        
+        if (isGenerating) {
+          // Generate a fallback summary if none exists
+          const program = "{{student.program}}";
+          const faculty = "{{student.faculty}}";
+          const title = document.querySelector('[name=job_title]').value || 'professional position';
+          
+          // Build a more detailed fallback summary without mentioning the company
+          const gpa = "{{student.gpa}}";
+          const topSkills = 'problem-solving, communication, and teamwork';
+          
+          let fallbackSummary = `Recent graduate with a ${gpa ? gpa + ' GPA and ' : ''}strong background in ${program} from ${faculty}. `;
+          fallbackSummary += `Seeking to leverage academic knowledge and professional skills in ${topSkills} to excel in a ${title} role. `;
+          fallbackSummary += `Dedicated to delivering high-quality results through analytical thinking, effective communication, and continuous professional development. `;
+          fallbackSummary += `Eager to contribute fresh perspectives and innovative solutions to help achieve business objectives.`;
+          
+          document.getElementById('student_summary').value = fallbackSummary;
+          alert('Generated a basic professional summary due to service limitations. Feel free to edit it to better match your profile.');
+        } else {
+          // Enhance existing summary without mentioning company
+          const jobTitle = document.querySelector('[name=job_title]').value || 'professional position';
+          
+          // Simple enhancement that focuses on the job
+          let enhancedSummary = currentSummary;
+          
+          if (!currentSummary.includes(jobTitle)) {
+            enhancedSummary += ` Particularly interested in applying these skills in a ${jobTitle} role.`;
+          }
+          
+          document.getElementById('student_summary').value = enhancedSummary;
+          alert('Enhanced your summary with basic improvements. The AI service is currently unavailable for more advanced updates.');
+        }
+      } catch (fallbackError) {
+        alert('Error with professional summary. Please try manually editing your summary.');
       }
-
-      showAIProgress('Improving your summary...');
-
-      const formData = new FormData();
-      formData.append('csrfmiddlewaretoken', getCSRFToken());
-      formData.append('section_content', currentSummary);
-      formData.append('section_type', 'summary');
-      formData.append('job_context', document.querySelector('[name=job_description]').value);
-
-      updateAIProgress(60, 'Enhancing content...');
-
-      const response = await fetch('{% url "resume_generator:ai_improve_section" %}', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        document.getElementById('student_summary').value = data.improved_content;
-        updateAIProgress(100, 'Summary improved successfully!');
-        setTimeout(() => hideAIProgress(), 2000);
-      } else {
-        throw new Error(data.error || 'Failed to improve summary');
-      }
-    } catch (error) {
-      hideAIProgress();
-      alert('Error improving summary: ' + error.message);
     }
   }
 
@@ -639,17 +696,20 @@
   }
 
   // Generate Full AI Resume
+  // This function is kept for internal use even though its button was removed
   async function generateFullAIResume() {
     try {
-      showAIProgress('Generating complete AI resume...');
+      showAIProgress('Generating resume content...');
       updateAIProgress(30, 'Analyzing your profile...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
       formData.append('student_id', document.querySelector('[name=student_id]').value);
       formData.append('job_description', document.querySelector('[name=job_description]').value);
+      formData.append('job_title', document.querySelector('[name=job_title]').value);
+      formData.append('job_company', document.querySelector('[name=job_company]').value);
 
-      updateAIProgress(60, 'Generating all sections...');
+      updateAIProgress(60, 'Generating content...');
 
       const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
         method: 'POST',
@@ -659,9 +719,9 @@
       const data = await response.json();
 
       if (data.success && data.content) {
-        updateAIProgress(90, 'Populating form fields...');
+        updateAIProgress(90, 'Updating form with generated content...');
 
-        // Update form fields with AI-generated content
+        // Update form fields with generated content
         if (data.content.summary) {
           document.getElementById('student_summary').value = data.content.summary;
         }
@@ -670,16 +730,14 @@
           document.getElementById('student_skills').value = skills;
         }
 
-        updateAIProgress(100, 'Resume generated successfully!');
+        updateAIProgress(100, 'Content generated successfully!');
         setTimeout(() => hideAIProgress(), 2000);
-
-        alert('AI resume generation complete! Review the generated content and make any necessary adjustments.');
       } else {
-        throw new Error(data.error || 'Failed to generate resume');
+        throw new Error(data.error || 'Failed to generate resume content');
       }
     } catch (error) {
       hideAIProgress();
-      alert('Error generating AI resume: ' + error.message);
+      alert('Error generating resume content: ' + error.message);
     }
   }
 
@@ -788,6 +846,39 @@
     const form = document.getElementById('resumeForm');
     const previewButton = document.getElementById('previewButton');
     const downloadButton = document.getElementById('downloadButton');
+
+    // Auto-generate professional summary if empty
+    const summaryElem = document.getElementById('student_summary');
+    const currentSummary = summaryElem.value.trim();
+    
+    if (!currentSummary || currentSummary === 'A brief professional summary.') {
+      // Generate a comprehensive professional summary
+      try {
+        const program = "{{student.program}}";
+        const faculty = "{{student.faculty}}";
+        const gpa = "{{student.gpa}}";
+        const jobTitle = document.querySelector('[name=job_title]').value || '';
+        const jobCompany = document.querySelector('[name=job_company]').value || '';
+        
+        // Create a comprehensive professional summary without mentioning the company
+        let generatedSummary = `Recent graduate with ${gpa ? 'a ' + gpa + ' GPA and ' : ''}strong background in ${program} from ${faculty}.`;
+        
+        if (jobTitle) {
+          generatedSummary += ` Seeking to leverage academic knowledge and professional skills to excel in a ${jobTitle} role.`;
+        } else {
+          generatedSummary += ` Equipped with strong academic foundation and practical skills to contribute effectively in a professional environment.`;
+        }
+        
+        generatedSummary += ` Demonstrates excellent analytical thinking, effective communication, and a commitment to continuous learning and growth. Ready to bring fresh perspectives and innovative solutions to help achieve organizational objectives.`;
+        
+        // Set the generated summary
+        summaryElem.value = generatedSummary;
+        
+        console.log('Auto-generated comprehensive professional summary');
+      } catch (error) {
+        console.error('Error auto-generating summary:', error);
+      }
+    }
 
     // Initialize Bootstrap components
     // Enable dismissing of alerts

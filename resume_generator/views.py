@@ -216,7 +216,7 @@ def generate_resume_view(request: HttpRequest):
         'program': student.program,
         'gpa': str(student.gpa),
         'skills': ', '.join(student.skills) if isinstance(student.skills, list) else student.skills,
-        'summary': getattr(student, 'summary', 'A brief professional summary.'), # Assuming a summary field
+        'summary': getattr(student, 'summary', ''), # Empty to trigger auto-generation
         'courses': courses,
         'internships': internships,
         'organizations': organizations
