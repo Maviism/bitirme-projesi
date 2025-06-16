@@ -174,6 +174,9 @@ def submit_application(request):
             'gpa': request.POST.get('gpa')
         }
         
+        print(f"[DEBUG] Extracted student_data: {student_data}")
+        print(f"[DEBUG] Birth date value: '{student_data['birth_date']}' (type: {type(student_data['birth_date'])})")
+        
         # Parse courses data from JSON string
         courses_data = []
         if 'courses_data' in request.POST:
@@ -255,14 +258,16 @@ def submit_application(request):
         # Save all data to the database
         with transaction.atomic():
             # Save student data
-            try:
-                # Convert birth date string to date object
-                birth_date = datetime.strptime(student_data['birth_date'], '%d/%m/%Y').date()
-            except ValueError:
+            birth_date = None
+            if student_data['birth_date']:
                 try:
-                    birth_date = datetime.strptime(student_data['birth_date'], '%Y-%m-%d').date()
+                    # Convert birth date string to date object
+                    birth_date = datetime.strptime(student_data['birth_date'], '%d/%m/%Y').date()
                 except ValueError:
-                    return JsonResponse({"error": "Invalid birth date format. Use DD/MM/YYYY"}, status=400)
+                    try:
+                        birth_date = datetime.strptime(student_data['birth_date'], '%Y-%m-%d').date()
+                    except ValueError:
+                        return JsonResponse({"error": "Invalid birth date format. Use DD/MM/YYYY"}, status=400)
             
             # Create or update student record
             if existing_student:
@@ -315,20 +320,25 @@ def submit_application(request):
             # Save organizations as experiences
             for org_data in organizations:
                 try:
-                    start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
+                    start_date = None
+                    if org_data.get('start_date'):
+                        start_date = datetime.strptime(org_data['start_date'], '%Y-%m-%d').date()
+                    
                     end_date = None
                     if org_data.get('end_date'):
                         end_date = datetime.strptime(org_data['end_date'], '%Y-%m-%d').date()
                     
-                    Experience.objects.create(
-                        student=student,
-                        experience_type='organization',
-                        institution_name=org_data['institution_name'],
-                        position=org_data['position'],
-                        start_date=start_date,
-                        end_date=end_date,
-                        description=org_data.get('description', '')
-                    )
+                    # Only create experience if we have required fields
+                    if start_date and org_data.get('institution_name') and org_data.get('position'):
+                        Experience.objects.create(
+                            student=student,
+                            experience_type='organization',
+                            institution_name=org_data['institution_name'],
+                            position=org_data['position'],
+                            start_date=start_date,
+                            end_date=end_date,
+                            description=org_data.get('description', '')
+                        )
                 except ValueError as e:
                     logger.warning(f"Invalid date format in organization data: {e}")
                     continue
@@ -339,20 +349,25 @@ def submit_application(request):
             # Save internships as experiences
             for intern_data in internships:
                 try:
-                    start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
+                    start_date = None
+                    if intern_data.get('start_date'):
+                        start_date = datetime.strptime(intern_data['start_date'], '%Y-%m-%d').date()
+                    
                     end_date = None
                     if intern_data.get('end_date'):
                         end_date = datetime.strptime(intern_data['end_date'], '%Y-%m-%d').date()
                     
-                    Experience.objects.create(
-                        student=student,
-                        experience_type='internship',
-                        institution_name=intern_data['institution_name'],
-                        position=intern_data['position'],
-                        start_date=start_date,
-                        end_date=end_date,
-                        description=intern_data.get('description', '')
-                    )
+                    # Only create experience if we have required fields
+                    if start_date and intern_data.get('institution_name') and intern_data.get('position'):
+                        Experience.objects.create(
+                            student=student,
+                            experience_type='internship',
+                            institution_name=intern_data['institution_name'],
+                            position=intern_data['position'],
+                            start_date=start_date,
+                            end_date=end_date,
+                            description=intern_data.get('description', '')
+                        )
                 except ValueError as e:
                     logger.warning(f"Invalid date format in internship data: {e}")
                     continue

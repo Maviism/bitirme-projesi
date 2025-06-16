@@ -94,7 +94,7 @@
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="fullname" name="fullname" class="form-control" required disabled
+              <input type="text" id="fullname" name="fullname" class="form-control" required readonly
                 placeholder="Adınız" value="{{ student.fullname|default:'' }}">
               <label for="fullname">
                 <i class="fas fa-user me-2"></i>Ad
@@ -104,7 +104,7 @@
 
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="last_name" name="last_name" class="form-control" required disabled
+              <input type="text" id="last_name" name="last_name" class="form-control" required readonly
                 placeholder="Soyadınız" value="{{ student.last_name|default:'' }}">
               <label for="last_name"><i class="fas fa-user me-2"></i>Soyad</label>
             </div>
@@ -114,7 +114,7 @@
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="birth_date" name="birth_date" class="form-control" required disabled
+              <input type="text" id="birth_date" name="birth_date" class="form-control" required readonly
                 placeholder="GG/AA/YYYY" value="{{ student.birth_date|default:'' }}">
               <label for="birth_date"><i class="fas fa-calendar me-2"></i>Doğum Tarihi</label>
             </div>
@@ -122,7 +122,7 @@
 
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="gpa" name="gpa" class="form-control" required disabled placeholder="0.00" 
+              <input type="text" id="gpa" name="gpa" class="form-control" required readonly placeholder="0.00" 
                 value="{{ student.gpa|default:'' }}">
               <label for="gpa"><i class="fas fa-chart-line me-2"></i>GANO</label>
             </div>
@@ -132,7 +132,7 @@
         <div class="row">
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="faculty" name="faculty" class="form-control" required disabled placeholder="Fakülteniz" 
+              <input type="text" id="faculty" name="faculty" class="form-control" required readonly placeholder="Fakülteniz" 
                 value="{{ student.faculty|default:'' }}">
               <label for="faculty"><i class="fas fa-university me-2"></i>Fakülte</label>
             </div>
@@ -140,7 +140,7 @@
 
           <div class="col-md-6">
             <div class="mb-3 form-floating">
-              <input type="text" id="program" name="program" class="form-control" required disabled placeholder="Programınız" 
+              <input type="text" id="program" name="program" class="form-control" required readonly placeholder="Programınız" 
                 value="{{ student.program|default:'' }}">
               <label for="program"><i class="fas fa-graduation-cap me-2"></i>Program</label>
             </div>

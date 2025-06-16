@@ -30,7 +30,7 @@
   .hero-content {
     position: relative;
     z-index: 1;
-    padding: 8rem 0 4rem; /* Added top padding for navbar */
+    padding: 6rem 0 4rem; /* Added top padding for navbar */
     pointer-events: none; /* Allow interactions to pass through to particles */
   }
   
@@ -140,13 +140,13 @@
 {% block content %}
 <div id="particles-js"></div>
 <div class="hero-content">
-  <div class="row justify-content-center mt-5">
+  <div class="row justify-content-center">
     <div class="col-md-10 text-center">
       <h1 class="display-4 hero-heading">Ne İş Olsa Demeyelim Diye...</h1>
       <p class="hero-subtext mt-4">
-        <span class="highlight">Ne istediğini bulmana</span>, <span class="highlight">CV'ni düzene sokmana</span> ve 
-        <span class="highlight">görüşmelere hazırlanmana</span> yardımcı oluyoruz. 
-        Kolay mı? <strong>Değil</strong>. Ama birlikte daha az stresli olabilir.
+        <span class="highlight">Ne istediğini bulmana</span>, <span class="highlight">CV’ni hazırlamana</span> ve 
+        <span class="highlight">mülakatlara hazırlanırken yanında</span> oluyoruz.
+        Kolay mı? <strong>Değil</strong>. Ama birlikte daha kolay olabilir.
       </p>
       <div class="mt-5">
         <a href="{% url 'job_recommendations' %}" class="btn btn-primary btn-lg cta-button">
