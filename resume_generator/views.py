@@ -7,7 +7,12 @@ from job_recommender.models import Student, Course, Experience
 from utils.llm_utils import get_llm_instance, cache_llm_response
 from resume_generator.utils import (
     generate_resume_content, improve_resume_section as improve_section_util,
-    generate_cover_letter_content, improve_cover_letter
+    generate_cover_letter_content, improve_cover_letter,
+    # New utility functions
+    calculate_duration_months, get_student_data_for_resume, get_template_name,
+    get_context_for_resume_template, get_enhanced_user_data_for_llm,
+    get_comprehensive_job_data, get_error_response,
+    generate_fallback_cover_letter, generate_fallback_resume_content
 )
 
 # Import the global student utility function
@@ -19,18 +24,6 @@ import logging
 
 # Standard logger configuration
 logger = logging.getLogger(__name__)
-
-# Helper method for calculating duration in months
-def _calculate_duration_months(start_date, end_date):
-    """Calculate duration between two dates in months"""
-    if not start_date:
-        return 0
-    
-    from datetime import date
-    end = end_date or date.today()
-    
-    months = (end.year - start_date.year) * 12 + (end.month - start_date.month)
-    return max(months, 1)  # Minimum 1 month
 
 # Create your views here.
 def select_profile_view(request: HttpRequest):
@@ -84,39 +77,17 @@ def download_resume_view(request: HttpRequest):
         
         student_obj = get_object_or_404(Student, pk=student_id)
 
-        # 3. Construct student_data for the PDF using POST data for editable fields
-        #    and DB data for non-editable structured data (courses, etc.)
-        skills_str = request.POST.get('student_skills', '')
-        
-        student_data_for_pdf = {
-            'fullname': request.POST.get('student_fullname', student_obj.fullname),
-            'last_name': request.POST.get('student_last_name', student_obj.last_name),
-            'email': request.POST.get('student_email', getattr(student_obj, 'email', '')),
-            'phone': request.POST.get('student_phone', getattr(student_obj, 'phone', '')),
-            'linkedin_profile': request.POST.get('student_linkedin', getattr(student_obj, 'linkedin_profile', '')),
-            'faculty': student_obj.faculty, # Assuming faculty is not editable in this form
-            'program': student_obj.program, # Assuming program is not editable
-            'gpa': str(student_obj.gpa), # Assuming GPA is not editable
-            'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
-            'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
-            'courses': Course.objects.filter(student=student_obj),
-            'internships': Experience.objects.filter(student=student_obj, experience_type='internship'),
-            'organizations': Experience.objects.filter(student=student_obj, experience_type='organization'),
-        }
+        # 3. Construct student_data for the PDF using the utility function
+        student_data_for_pdf = get_student_data_for_resume(student_obj, request.POST)
 
-        # Get selected template style
-        template_style = request.POST.get('resume_template_style', 'ats') # Default to 'ats'
-        if template_style == 'modern':
-            template_name = 'resume_generator/resume_template_modern.html'
-        else: # Default to ATS
-            template_name = 'resume_generator/resume_template_ats.html'
+        # Get template based on style
+        template_style = request.POST.get('resume_template_style', 'ats')
+        template_name = get_template_name(template_style)
 
-        context_for_template = {
-            'job_title': job_title,
-            'job_company': job_company,
-            'job_description': job_description,
-            'student': student_data_for_pdf,
-        }
+        # Get context for template rendering
+        context_for_template = get_context_for_resume_template(
+            job_title, job_company, job_description, student_data_for_pdf
+        )
 
         html_string = render_to_string(template_name, context_for_template)
         
@@ -135,29 +106,7 @@ def download_resume_view(request: HttpRequest):
     
     except Exception as e:
         logger.error(f"Error generating resume PDF: {e}")
-        error_html = f"""
-        <html>
-        <head>
-            <title>Error Generating PDF</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }}
-                .error-container {{ max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #f44336; border-radius: 5px; }}
-                .error-title {{ color: #f44336; }}
-                .error-details {{ background-color: #f9f9f9; padding: 10px; border-left: 3px solid #f44336; }}
-                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #4CAF50; color: white; 
-                               text-decoration: none; border-radius: 4px; }}
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <h2 class="error-title">Error Generating Resume PDF</h2>
-                <p>We encountered an error while generating your resume PDF. Please try again.</p>
-                <a href="javascript:history.back()" class="back-button">Go Back</a>
-            </div>
-        </body>
-        </html>
-        """
-        return HttpResponse(error_html)
+        return get_error_response("We encountered an error while generating your resume PDF. Please try again.")
 
 def preview_resume_view(request: HttpRequest):
     # Check request method
@@ -169,7 +118,7 @@ def preview_resume_view(request: HttpRequest):
         from django.db import transaction
         with transaction.atomic():
             
-            # Essentially the same data gathering logic as download_resume_view
+            # Get basic job and student information
             job_title = request.POST.get('job_title')
             job_company = request.POST.get('job_company')
             job_description = request.POST.get('job_description')
@@ -181,43 +130,16 @@ def preview_resume_view(request: HttpRequest):
             student_obj = get_object_or_404(Student, pk=student_id)
             logger.info(f"Retrieved student: {student_obj.fullname} {student_obj.last_name}")
 
-            skills_str = request.POST.get('student_skills', '')
-            student_data_for_preview = {
-                'fullname': request.POST.get('student_fullname', student_obj.fullname),
-                'last_name': request.POST.get('student_last_name', student_obj.last_name),
-                'email': request.POST.get('student_email', getattr(student_obj, 'email', '')),
-                'phone': request.POST.get('student_phone', getattr(student_obj, 'phone', '')),
-                'linkedin_profile': request.POST.get('student_linkedin', getattr(student_obj, 'linkedin_profile', '')),
-                'faculty': student_obj.faculty,
-                'program': student_obj.program,
-                'gpa': str(student_obj.gpa),
-                'skills': [s.strip() for s in skills_str.split(',') if s.strip()],
-                'summary': request.POST.get('student_summary', getattr(student_obj, 'summary', '')),
-            }
+            # Get student data using the utility function
+            student_data_for_preview = get_student_data_for_resume(student_obj, request.POST)
             
-            # Use select_related to optimize queries
-            courses = Course.objects.filter(student=student_obj).select_related()
-            internships = Experience.objects.filter(student=student_obj, experience_type='internship').select_related()
-            organizations = Experience.objects.filter(student=student_obj, experience_type='organization').select_related()
-            
-            # Add to student data after query optimization
-            student_data_for_preview['courses'] = courses
-            student_data_for_preview['internships'] = internships
-            student_data_for_preview['organizations'] = organizations
-
+            # Get template and context
             template_style = request.POST.get('resume_template_style', 'ats')
-            if template_style == 'modern':
-                template_name = 'resume_generator/resume_template_modern.html'
-            else:
-                template_name = 'resume_generator/resume_template_ats.html'
-
-            context_for_template = {
-                'job_title': job_title,
-                'job_company': job_company,
-                'job_description': job_description,
-                'student': student_data_for_preview,
-                'is_preview': True # Flag to indicate this is a preview
-            }
+            template_name = get_template_name(template_style)
+            
+            context_for_template = get_context_for_resume_template(
+                job_title, job_company, job_description, student_data_for_preview, is_preview=True
+            )
 
             # Render the HTML template to a string
             try:
@@ -320,23 +242,17 @@ def generate_ai_resume_content(request: HttpRequest):
         
         student_obj = get_object_or_404(Student, pk=student_id)
         
-        # Check for API keys
-        try:
-            import os
-            openai_key = os.environ.get('OPENAI_API_KEY')
-            gemini_key = os.environ.get('GEMINI_API_KEY')
-            if not openai_key and not gemini_key:
-                logger.warning("No LLM API keys available - using fallback content")
-                # Return fallback content when no API keys are available
-                return JsonResponse({
-                    'success': True,
-                    'content': {
-                        'summary': f"Recent graduate from {student_obj.program} at {student_obj.faculty} with a GPA of {student_obj.gpa}. Seeking opportunities to apply academic knowledge in a professional setting.",
-                        'skills': ["Communication", "Time Management", "Problem Solving", "Critical Thinking"] + (student_obj.skills if isinstance(student_obj.skills, list) else [])
-                    }
-                })
-        except Exception as e:
-            logger.warning(f"Error checking LLM API keys: {e}")
+        # Try to get LLM instance and use fallback content if it fails
+        llm = get_llm_instance()
+        
+        # Check if we need to use fallback content
+        if not hasattr(llm, 'provider') or not llm.provider:
+            # Return fallback content when LLM is not available
+            fallback_content = generate_fallback_resume_content(student_obj)
+            return JsonResponse({
+                'success': True,
+                'content': fallback_content
+            })
 
         # Get job recommendations to enhance resume content
         job_recommendations = []
@@ -387,75 +303,13 @@ def generate_ai_resume_content(request: HttpRequest):
         except Exception as e:
             logger.warning(f"Error fetching job recommendations: {e}")
         
-        # Prepare enhanced user data for LLM with comprehensive information
-        user_data = {
-            'personal_info': {
-                'name': f"{student_obj.fullname} {student_obj.last_name}",
-                'email': getattr(student_obj, 'email', ''),
-                'phone': getattr(student_obj, 'phone', ''),
-                'linkedin': getattr(student_obj, 'linkedin_profile', ''),
-                'student_id': student_obj.student_id,
-                'birth_date': student_obj.birth_date.strftime('%Y-%m-%d') if student_obj.birth_date else '',
-                'is_alumni': student_obj.is_alumni,
-                'faculty': student_obj.faculty,
-                'program': student_obj.program,
-                'gpa': str(student_obj.gpa)
-            },
-            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else [],
-            'courses': [
-                {
-                    'code': course.code,
-                    'name': course.name,
-                    'grade': getattr(course, 'grade', 'N/A'),
-                    'success_level': 'yüksek' if course.grade in ['AA', 'BA'] else 'orta' if course.grade in ['BB', 'CB'] else 'düşük' if course.grade not in ['--', 'N/A'] else 'belirsiz'
-                } for course in Course.objects.filter(student=student_obj).order_by('-grade')
-            ],
-            'experience': {
-                'internships': [
-                    {
-                        'institution': internship.institution_name,
-                        'position': getattr(internship, 'position', 'Stajyer'),
-                        'start_date': internship.start_date.strftime('%Y-%m-%d') if internship.start_date else '',
-                        'end_date': internship.end_date.strftime('%Y-%m-%d') if internship.end_date else 'Devam ediyor',
-                        'duration': f"{internship.start_date} - {internship.end_date or 'Devam ediyor'}",
-                        'description': getattr(internship, 'description', ''),
-                        'is_current': not internship.end_date
-                    } for internship in Experience.objects.filter(student=student_obj, experience_type='internship').order_by('-start_date')
-                ],
-                'organizations': [
-                    {
-                        'name': org.institution_name,
-                        'role': getattr(org, 'position', 'Üye'),
-                        'start_date': org.start_date.strftime('%Y-%m-%d') if org.start_date else '',
-                        'end_date': org.end_date.strftime('%Y-%m-%d') if org.end_date else 'Devam ediyor',
-                        'duration': f"{org.start_date} - {org.end_date or 'Devam ediyor'}",
-                        'description': getattr(org, 'description', ''),
-                        'is_current': not org.end_date
-                    } for org in Experience.objects.filter(student=student_obj, experience_type='organization').order_by('-start_date')
-                ]
-            },
-            'academic_performance': {
-                'total_courses': Course.objects.filter(student=student_obj).count(),
-                'high_grades_count': Course.objects.filter(student=student_obj, grade__in=['AA', 'BA']).count(),
-                'gpa_level': 'yüksek' if float(student_obj.gpa) >= 3.0 else 'orta' if float(student_obj.gpa) >= 2.5 else 'düşük',
-                'graduation_status': 'mezun' if student_obj.is_alumni else 'öğrenci'
-            },
-            'career_context': {
-                'has_internship_experience': Experience.objects.filter(student=student_obj, experience_type='internship').exists(),
-                'has_organization_experience': Experience.objects.filter(student=student_obj, experience_type='organization').exists(),
-                'total_experiences': Experience.objects.filter(student=student_obj).count(),
-                'has_leadership_experience': any(['başkan' in exp.position.lower() or 'lider' in exp.position.lower() 
-                                                 for exp in Experience.objects.filter(student=student_obj) 
-                                                 if hasattr(exp, 'position') and exp.position])
-            },
-            'job_recommendations': job_recommendations  # Add job recommendations
-        }
+        # Prepare enhanced user data using the utility function
+        user_data = get_enhanced_user_data_for_llm(student_obj, job_recommendations)
         
         # Get job description if provided
         job_description = request.POST.get('job_description', '')
         
-        # Get LLM instance and generate content
-        llm = get_llm_instance()
+        # Generate content with the LLM instance we already have
         content = generate_resume_content(llm, user_data, job_description)
         
         return JsonResponse({
@@ -527,121 +381,49 @@ def generate_cover_letter(request: HttpRequest):
         
         student_obj = get_object_or_404(Student, pk=student_id)
         
-        # Check for API keys
-        try:
-            import os
-            openai_key = os.environ.get('OPENAI_API_KEY')
-            gemini_key = os.environ.get('GEMINI_API_KEY')
-            if not openai_key and not gemini_key:
-                logger.warning("No LLM API keys available - using fallback cover letter")
-                # Return fallback content when no API keys are available
-                job_title = request.POST.get('job_title', 'pozisyon')
-                
-                # Create skills list in Turkish
-                skills_list = student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else ['problem çözme', 'iletişim', 'ekip çalışması']
-                skills_text = ', '.join(skills_list[:3]) if len(skills_list) >= 3 else ', '.join(skills_list + ['analitik düşünce', 'hızlı öğrenme'][:3-len(skills_list)])
-                
-                fallback_letter = f"""Sayın İnsan Kaynakları Müdürü,
-
-{job_title} pozisyonuna olan ilgimi ve başvurumu bildirmek isterim. {student_obj.faculty} {student_obj.program} bölümünden {student_obj.gpa} GNO ile {"mezun" if student_obj.is_alumni else "son sınıf öğrencisi"} olarak, edindiğim bilgi ve becerileri takımınıza katkı sağlamak için sabırsızlanıyorum.
-
-Akademik geçmişim ve sahip olduğum {skills_text} gibi yetenekler sayesinde bu pozisyonda başarılı olabileceğime inanıyorum. {"Mezuniyet" if student_obj.is_alumni else "Öğrencilik"} sürecimde edindiğim teorik bilgileri pratik deneyimlerle harmanlayarak, hem bireysel hem de ekip halinde çalışabilen bir profil geliştirdim.
-
-Bu alandaki güncel gelişmeleri ve profesyonel standartları yakından takip ediyorum. Niteliklerimin pozisyonun gereklilikleriyle ne kadar uyumlu olduğunu görüşme sürecinde detaylı olarak paylaşma fırsatı bulabilirsem çok memnun olurum.
-
-Zamanınız ve ilginiz için teşekkür ederim.
-
-Saygılarımla,
-{student_obj.fullname} {student_obj.last_name}"""
-
-                return JsonResponse({
-                    'success': True,
-                    'cover_letter': fallback_letter
-                })
-        except Exception as e:
-            logger.warning(f"Error checking LLM API keys: {e}")
-        
-        # Prepare comprehensive user data for cover letter generation
-        user_data = {
-            'personal_info': {
-                'name': f"{student_obj.fullname} {student_obj.last_name}",
-                'email': getattr(student_obj, 'email', ''),
-                'phone': getattr(student_obj, 'phone', ''),
-                'linkedin': getattr(student_obj, 'linkedin_profile', ''),
-                'faculty': student_obj.faculty,
-                'program': student_obj.program,
-                'gpa': str(student_obj.gpa),
-                'graduation_status': 'mezun' if student_obj.is_alumni else 'öğrenci'
-            },
-            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else [],
-            'education': {
-                'degree': f"{student_obj.program} - {student_obj.faculty}",
-                'gpa': str(student_obj.gpa),
-                'academic_achievements': [
-                    f"GNO: {student_obj.gpa}",
-                    f"Toplam {Course.objects.filter(student=student_obj).count()} ders tamamlandı",
-                    f"{Course.objects.filter(student=student_obj, grade__in=['AA', 'BA']).count()} yüksek not"
-                ]
-            },
-            'experience': {
-                'internships': [
-                    {
-                        'institution': exp.institution_name,
-                        'position': getattr(exp, 'position', 'Stajyer'),
-                        'duration': f"{exp.start_date.strftime('%m/%Y') if exp.start_date else ''} - {exp.end_date.strftime('%m/%Y') if exp.end_date else 'Devam ediyor'}",
-                        'description': getattr(exp, 'description', ''),
-                        'key_achievements': [
-                            'Pratik deneyim kazandım',
-                            'Ekip çalışması becerilerimi geliştirdim',
-                            'Sektörel bilgi edindim'
-                        ]
-                    } for exp in Experience.objects.filter(student=student_obj, experience_type='internship').order_by('-start_date')
-                ],
-                'organizations': [
-                    {
-                        'name': org.institution_name,
-                        'role': getattr(org, 'position', 'Üye'),
-                        'duration': f"{org.start_date.strftime('%m/%Y') if org.start_date else ''} - {org.end_date.strftime('%m/%Y') if org.end_date else 'Devam ediyor'}",
-                        'description': getattr(org, 'description', ''),
-                        'leadership_skills': 'başkan' in getattr(org, 'position', '').lower() or 'lider' in getattr(org, 'position', '').lower()
-                    } for org in Experience.objects.filter(student=student_obj, experience_type='organization').order_by('-start_date')
-                ]
-            },
-            'strengths': {
-                'academic_performance': 'yüksek' if float(student_obj.gpa) >= 3.0 else 'orta',
-                'practical_experience': Experience.objects.filter(student=student_obj, experience_type='internship').exists(),
-                'leadership_experience': any(['başkan' in exp.position.lower() or 'lider' in exp.position.lower() 
-                                             for exp in Experience.objects.filter(student=student_obj) 
-                                             if hasattr(exp, 'position') and exp.position]),
-                'diverse_background': Experience.objects.filter(student=student_obj).count() > 2,
-                'technical_skills': len(student_obj.skills) if isinstance(student_obj.skills, list) else 1 if student_obj.skills else 0
-            },
-            'career_motivation': {
-                'field_alignment': f"{student_obj.program} alanında kariyer hedefi",
-                'growth_mindset': 'Sürekli öğrenme ve gelişim odaklı',
-                'value_proposition': 'Akademik bilgi ve pratik deneyimi harmanlayan yaklaşım'
-            }
-        }
-        
-        # Get comprehensive job data
-        job_data = {
-            'position': {
-                'title': request.POST.get('job_title', ''),
-                'description': request.POST.get('job_description', '')
-            },
-            'job_context': {
-                'field': 'teknoloji',  # Could be enhanced with job field data
-                'skills_required': ['inovasyon', 'ekip çalışması', 'sürekli gelişim']  # Could be enhanced
-            },
-            'application_context': {
-                'application_date': '2025-06-17',
-                'source': 'kariyer portalı',
-                'motivation': 'kariyer gelişimi ve deneyim kazanımı'
-            }
-        }
-        
-        # Generate cover letter
+        # Try to get LLM instance
         llm = get_llm_instance()
+        
+        # Check if we need to use fallback content
+        if not hasattr(llm, 'provider') or not llm.provider:
+            # Return fallback content when LLM is not available
+            job_title = request.POST.get('job_title', 'pozisyon')
+            fallback_letter = generate_fallback_cover_letter(student_obj, job_title)
+
+            return JsonResponse({
+                'success': True,
+                'cover_letter': fallback_letter
+            })
+        
+        # Get comprehensive user data using the utility function
+        user_data = get_enhanced_user_data_for_llm(student_obj)
+        
+        # Add education-specific fields for cover letter
+        user_data['education'] = {
+            'degree': f"{student_obj.program} - {student_obj.faculty}",
+            'gpa': str(student_obj.gpa),
+            'academic_achievements': [
+                f"GNO: {student_obj.gpa}",
+                f"Toplam {Course.objects.filter(student=student_obj).count()} ders tamamlandı",
+                f"{Course.objects.filter(student=student_obj, grade__in=['AA', 'BA']).count()} yüksek not"
+            ]
+        }
+        
+        # Add career motivation
+        user_data['career_motivation'] = {
+            'field_alignment': f"{student_obj.program} alanında kariyer hedefi",
+            'growth_mindset': 'Sürekli öğrenme ve gelişim odaklı',
+            'value_proposition': 'Akademik bilgi ve pratik deneyimi harmanlayan yaklaşım'
+        }
+        
+        # Get job data from the request
+        job_title = request.POST.get('job_title', '')
+        job_description = request.POST.get('job_description', '')
+        
+        # Create job data using utility function
+        job_data = get_comprehensive_job_data(job_title, job_description)
+        
+        # Generate cover letter using the LLM instance we already have
         cover_letter = generate_cover_letter_content(llm, user_data, job_data)
         
         return JsonResponse({
@@ -657,7 +439,7 @@ Saygılarımla,
         }, status=500)
 
 
-def improve_cover_letter(request: HttpRequest):
+def improve_cover_letter_view(request: HttpRequest):
     """Improve an existing cover letter using AI"""
     if request.method != 'POST':
         return HttpResponse("Invalid request method.", status=405)
@@ -675,11 +457,11 @@ def improve_cover_letter(request: HttpRequest):
         
         student_obj = get_object_or_404(Student, pk=student_id)
         
-        # Check for API keys
-        import os
-        openai_key = os.environ.get('OPENAI_API_KEY')
-        gemini_key = os.environ.get('GEMINI_API_KEY')
-        if not openai_key and not gemini_key:
+        # Try to get LLM instance
+        llm = get_llm_instance()
+        
+        # Check if we need to use fallback content
+        if not hasattr(llm, 'provider') or not llm.provider:
             logger.warning("No LLM API keys available - returning original cover letter")
             # Return the original letter with minimal changes
             return JsonResponse({
@@ -716,8 +498,7 @@ def improve_cover_letter(request: HttpRequest):
             ]
         }
         
-        # Improve cover letter
-        llm = get_llm_instance()
+        # Improve cover letter using the LLM instance we already have
         improved_cover_letter = improve_cover_letter(llm, improvement_context)
         
         return JsonResponse({
@@ -819,32 +600,7 @@ PROFESSIONAL SUMMARY:
         
     except Exception as e:
         logger.error(f"Error starting interview from resume: {e}")
-        error_message = f"""
-        <html>
-        <head>
-            <title>Error Starting Interview</title>
-            <style>
-                body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }}
-                .error-container {{ max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #f44336; border-radius: 5px; }}
-                .error-title {{ color: #f44336; }}
-                .error-details {{ background-color: #f9f9f9; padding: 10px; border-left: 3px solid #f44336; }}
-                .back-button {{ display: inline-block; margin-top: 20px; padding: 10px 15px; background-color: #4CAF50; color: white; 
-                               text-decoration: none; border-radius: 4px; }}
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <h2 class="error-title">Error Starting Interview</h2>
-                <p>We encountered an error while preparing your interview. Please try again.</p>
-                <div class="error-details">
-                    <p>{str(e)}</p>
-                </div>
-                <a href="javascript:history.back()" class="back-button">Go Back</a>
-            </div>
-        </body>
-        </html>
-        """
-        return HttpResponse(error_message, status=500)
+        return get_error_response("We encountered an error while preparing your interview. Please try again.")
 
 def generate_resume_for_job_view(request: HttpRequest):
     """
