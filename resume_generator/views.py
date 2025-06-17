@@ -9,6 +9,10 @@ from resume_generator.utils import (
     generate_resume_content, improve_resume_section as improve_section_util,
     generate_cover_letter_content, improve_cover_letter
 )
+
+# Import the global student utility function
+from utils.user_utils import get_current_student
+
 import json
 import os
 import logging
@@ -27,95 +31,6 @@ def _calculate_duration_months(start_date, end_date):
     
     months = (end.year - start_date.year) * 12 + (end.month - start_date.month)
     return max(months, 1)  # Minimum 1 month
-
-# Function to get the student related to the current user
-def get_current_student(request: HttpRequest):
-    # Check if the user is authenticated
-    if request.user.is_authenticated:
-        try:
-            # Get the username
-            username = request.user.username
-            logger.info(f"Finding student for authenticated user: {username}")
-            
-            # Check if a specific student ID is requested from the session or URL parameter
-            requested_student_id = request.session.get('active_student_id') or request.GET.get('student_profile_id')
-            if requested_student_id:
-                try:
-                    # Try to get the specific student
-                    student = Student.objects.get(id=requested_student_id, user=request.user)
-                    logger.info(f"Using specifically requested student: {student.fullname} {student.last_name}")
-                    return student
-                except Student.DoesNotExist:
-                    logger.warning(f"Requested student ID {requested_student_id} not found or doesn't belong to user")
-            
-            # First try to find student profiles directly linked to the user
-            student_profiles = Student.objects.filter(user=request.user)
-            if student_profiles.exists():
-                # Get the most recently updated student profile
-                student = student_profiles.order_by('-updated_at').first()
-                logger.info(f"Found student by user relation: {student.fullname} {student.last_name}")
-                return student
-            
-            # Try to find student by student_id matching username
-            try:
-                student = Student.objects.get(student_id=username)
-                logger.info(f"Found student by matching student_id: {student.fullname} {student.last_name}")
-                
-                # Link this student to the user if not already linked
-                if not student.user:
-                    student.user = request.user
-                    student.save(update_fields=['user'])
-                    logger.info(f"Linked student {student.student_id} to user {username}")
-                
-                return student
-            except Student.DoesNotExist:
-                logger.info(f"No student found with student_id={username}")
-            
-            # Try by email if available
-            if hasattr(request.user, 'email') and request.user.email:
-                try:
-                    # Look for students with email field
-                    student = Student.objects.filter(email=request.user.email).first()
-                    if student:
-                        logger.info(f"Found student by email: {student.fullname} {student.last_name}")
-                        
-                        # Link this student to the user if not already linked
-                        if not student.user:
-                            student.user = request.user
-                            student.save(update_fields=['user'])
-                            logger.info(f"Linked student with email {request.user.email} to user {username}")
-                        
-                        return student
-                except Exception as e:
-                    logger.info(f"Could not find student by email: {e}")
-            
-            # If we reach here, no student was found for this user
-            logger.warning(f"No student record found for user: {username}")
-            
-        except Exception as e:
-            logger.error(f"Error fetching student for user: {e}")
-    
-    # If not authenticated or no match found, log appropriately
-    if not request.user.is_authenticated:
-        logger.warning("User is not authenticated - using default student")
-    else:
-        logger.warning(f"No student record found for user '{request.user.username}' - using default student")
-    
-    # Fall back to default student (for development only)
-    student = Student.objects.first()
-    if not student:
-        # Create a dummy student if none exist, for development purposes only
-        from datetime import date
-        student = Student.objects.create(
-            student_id="00000", fullname="Dummy", last_name="User",
-            birth_date=date(2000, 1, 1), faculty="Science", program="General Science", gpa="3.0",
-            skills=["Sample Skill 1", "Sample Skill 2"]
-        )
-        logger.warning(f"Created dummy student: {student.fullname} {student.last_name}")
-    else:
-        logger.info(f"Using existing student as fallback: {student.fullname} {student.last_name}")
-        
-    return student
 
 # Create your views here.
 def select_profile_view(request: HttpRequest):

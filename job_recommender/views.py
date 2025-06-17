@@ -26,7 +26,7 @@ def landing_page(request):
 
 @login_required
 def career_form(request):
-    from .views_utils import get_current_student
+    from utils.user_utils import get_current_student
     
     # Get current student profile if exists
     student = get_current_student(request)
@@ -99,7 +99,7 @@ def career_form(request):
 # View for the recommendation results page
 @login_required
 def recommendation_results(request):
-    from .views_utils import get_current_student
+    from utils.user_utils import get_current_student
     
     # Get the current user's student profile
     student = get_current_student(request)

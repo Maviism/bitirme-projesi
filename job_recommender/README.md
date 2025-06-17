@@ -27,7 +27,7 @@ job_recommender/
 ├── models.py          # Model database (Student, Job, Alumni, dll.)
 ├── recommender.py     # Engine sistem rekomendasi hybrid
 ├── views.py           # View handlers untuk web dan API
-├── views_utils.py     # Utility functions untuk views
+├── views.py           # Views for the job recommender app (uses utils.user_utils)
 ├── urls.py            # URL routing
 ├── admin.py           # Django admin configuration
 └── templates/         # Template HTML untuk UI
