@@ -245,6 +245,14 @@
 </div>
 
 <div class="container py-4">
+  <div class="row mb-4 justify-content-end">
+    <div class="col-md-3 mb-3">
+      <a href="{% url 'recommendation_results' %}" class="btn btn-custom btn-outline-primary w-100">
+        <i class="fas fa-chevron-left me-2"></i>İş Önerilerine Dön
+      </a>
+    </div>
+  </div>
+
   <div class="row">
     <div class="col-md-4">
       <div class="form-card mb-4">
@@ -280,49 +288,16 @@
             <div id="status" class="status disconnected">Mülakat başlamaya hazır</div>
           </div>
 
-          {% if interview_session %}
           <hr>
           <div class="d-grid mt-3">
-            <a href="{% url 'interview:index' %}" class="btn btn-custom btn-outline-secondary">
-              <i class="fas fa-arrow-left me-2"></i>Mülakat Listesine Dön
+            <a href="{% url 'recommendation_results' %}" class="btn btn-custom btn-outline-secondary">
+              <i class="fas fa-arrow-left me-2"></i>İş Önerilerine Dön
             </a>
           </div>
-          {% endif %}
         </div>
       </div>
 
-      <div class="form-card mb-4 d-none" id="feedbackSection">
-        <div class="form-section-header">
-          <div class="form-section-icon">
-            <i class="fas fa-comment-dots"></i>
-          </div>
-          <h3 class="h5 mb-0">Geri Bildirim Ver</h3>
-        </div>
-        <div class="card-body">
-          <form id="feedbackForm" method="post" action="{% url 'interview:save_feedback' interview_session.id %}">
-            {% csrf_token %}
-            <div class="mb-3">
-              <label for="rating" class="form-label">Bu mülakat ne kadar faydalıydı?</label>
-              <select class="form-select" id="rating" name="rating" required>
-                <option value="5">Mükemmel</option>
-                <option value="4">Çok İyi</option>
-                <option value="3" selected>İyi</option>
-                <option value="2">Orta</option>
-                <option value="1">Zayıf</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="feedback" class="form-label">Yorumlar:</label>
-              <textarea class="form-control" id="feedback" name="feedback" rows="3" placeholder="Bu mülakat deneyimi hakkındaki düşüncelerinizi paylaşın..."></textarea>
-            </div>
-            <div class="d-grid">
-              <button type="submit" class="btn btn-custom btn-primary">
-                <i class="fas fa-paper-plane me-2"></i>Geri Bildirimi Gönder
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
+      <!-- Feedback section removed as per requirements -->
     </div>
 
     <div class="col-md-8">
@@ -405,7 +380,6 @@
   const statusDiv = document.getElementById('status');
   const recordingIndicator = document.getElementById('recordingIndicator');
   const aiSpeakingIndicator = document.getElementById('aiSpeakingIndicator');
-  const feedbackSection = document.getElementById('feedbackSection');
   const frequencyBarsContainer = document.getElementById('frequencyBars');
 
   // Initialize audio visualizer
@@ -683,7 +657,6 @@
             console.log('AI stopped listening');
           } else if (data.type === 'interview_complete') {
             stopConnection();
-            feedbackSection.classList.remove('d-none');
             updateStatus("Mülakat tamamlandı", "connected");
           }
         } catch (error) {
@@ -873,33 +846,7 @@
     cleanup();
   });
 
-  // Submit feedback form via AJAX
-  document.getElementById('feedbackForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    
-    fetch(this.action, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-Requested-With': 'XMLHttpRequest'
-      }
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.status === 'success') {
-        alert('Geri bildiriminiz için teşekkürler!');
-        feedbackSection.classList.add('d-none');
-      } else {
-        alert('Geri bildirim kaydetme hatası: ' + data.message);
-      }
-    })
-    .catch(error => {
-      console.error('Error:', error);
-      alert('Geri bildirim kaydetme hatası. Lütfen tekrar deneyin.');
-    });
-  });
+  // Feedback functionality removed as per requirements
 
   console.log('Mülakat odası hazır');
   

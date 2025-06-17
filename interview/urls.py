@@ -5,9 +5,7 @@ from . import views
 app_name = 'interview'
 
 urlpatterns = [
-    path("", views.index, name="index"),
-    path("prepare/", views.prepare_interview, name="prepare_interview"),
-    path("feedback/<int:interview_id>/", views.save_feedback, name="save_feedback"),
-    path("transcript/<int:interview_id>/", views.interview_transcript, name="transcript"),
-    path("<str:room_name>/", views.room, name="room"),
+    path("interview/direct/", views.direct_interview, name="direct_interview"),
+    path("interview/prepare/", views.prepare_interview, name="prepare_interview"),
+    path("interview/<str:room_name>/", views.room, name="room"),
 ]

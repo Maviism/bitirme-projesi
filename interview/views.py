@@ -7,22 +7,9 @@ from django.contrib.auth.decorators import login_required
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 from .models import InterviewSession
-from job_recommender.models import Job, Student
+from job_recommender.models import Job, Student, JobRecommendation
 
 # Create your views here.
-def index(request):
-    # Get all interview sessions for the current user if authenticated
-    interview_sessions = None
-    if request.user.is_authenticated:
-        try:
-            student = Student.objects.get(user=request.user)
-            interview_sessions = InterviewSession.objects.filter(student=student).order_by('-created_at')
-        except Student.DoesNotExist:
-            interview_sessions = []
-    
-    return render(request, "interview/index.html", {
-        "interview_sessions": interview_sessions
-    })
 
 def room(request, room_name):
     # Try to get the interview session for this room
@@ -42,7 +29,7 @@ def prepare_interview(request):
     Create an interview session from a resume
     """
     if request.method != 'POST' and request.method != 'GET':
-        return redirect('interview:index')
+        return redirect('recommendation_results')
     
     # Get data from the form or query parameters
     if request.method == 'POST':
@@ -75,6 +62,43 @@ def prepare_interview(request):
         room_name=room_name,
         resume_content=resume_content,
         cover_letter=cover_letter
+    )
+    
+    # Redirect to the room
+    return redirect('interview:room', room_name=room_name)
+
+@login_required
+@require_POST
+def direct_interview(request):
+    """
+    Create an interview session directly from job ID and send user to interview room
+    """
+    # Get job_id from the form submission
+    job_id = request.POST.get('job_id')
+    if not job_id:
+        return redirect('recommendation_results')
+        
+    # Get the job and student
+    job = get_object_or_404(Job, pk=job_id)
+    student = get_object_or_404(Student, user=request.user)
+    
+    # Security check: Verify that this job is in the student's recommendations
+    job_rec = JobRecommendation.objects.filter(student=student, job=job).first()
+    
+    if not job_rec:
+        # This job wasn't recommended to this student
+        return redirect('recommendation_results')
+    
+    # Create a unique room name
+    room_name = f"interview_{uuid.uuid4().hex[:8]}"
+    
+    # Create the interview session with minimal info
+    interview_session = InterviewSession.objects.create(
+        student=student,
+        job=job,
+        room_name=room_name,
+        resume_content="",
+        cover_letter=""
     )
     
     # Redirect to the room
@@ -126,44 +150,4 @@ def save_feedback(request, interview_id):
             'message': str(e)
         }, status=400)
 
-@login_required
-def interview_transcript(request, interview_id):
-    """
-    Display the transcript of a completed interview
-    """
-    # Get the interview session
-    interview_session = get_object_or_404(InterviewSession, id=interview_id)
-    
-    # Check if the user has permission to view this interview
-    if request.user.is_staff or (hasattr(request.user, 'student') and 
-                               interview_session.student == request.user.student):
-        # Process transcript data
-        transcript_data = []
-        if interview_session.transcript:
-            try:
-                transcript_data = json.loads(interview_session.transcript)
-            except Exception as e:
-                print(f"Error parsing transcript data: {e}")
-                transcript_data = []
-        
-        # Process feedback data
-        feedback_data = None
-        if interview_session.feedback:
-            try:
-                feedback_data = json.loads(interview_session.feedback)
-                # If it's a list, use the most recent feedback
-                if isinstance(feedback_data, list) and len(feedback_data) > 0:
-                    feedback_data = feedback_data[-1]
-            except Exception as e:
-                print(f"Error parsing feedback data: {e}")
-                feedback_data = None
-                
-        # Render the template
-        return render(request, "interview/transcript.html", {
-            "interview_session": interview_session,
-            "transcript_data": transcript_data,
-            "feedback": feedback_data
-        })
-    else:
-        # User doesn't have permission
-        return redirect('interview:index')
+# interview_transcript function removed as it's no longer needed

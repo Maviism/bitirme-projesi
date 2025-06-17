@@ -128,7 +128,8 @@ def recommendation_results(request):
         
         context = {
             'has_recommendations': len(formatted_recommendations) > 0,
-            'job_recommendations': formatted_recommendations
+            'job_recommendations': formatted_recommendations,
+            'student': student
         }
         logger.info(f"Found {len(formatted_recommendations)} recommendations for user {request.user.username}")
         
