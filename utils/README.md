@@ -18,9 +18,10 @@ python manage.py test_llm --provider openai
 
 ```python
 from utils.llm_utils import get_llm_instance
+from resume_generator.utils import generate_resume_content
 
 llm = get_llm_instance()
-resume = llm.generate_resume_content(user_data, job_description)
+resume = generate_resume_content(llm, user_data, job_description)
 ```
 
 **AJAX Endpoint:**
@@ -50,10 +51,12 @@ fetch('/job_recommender/ai/analyze/', {
 
 ```python
 # Improve text
-improved = llm.improve_resume_section(content, section_type, context)
+from resume_generator.utils import improve_resume_section
+improved = improve_resume_section(llm, content, section_type, context)
 
 # Generate cover letter
-letter = llm.generate_cover_letter(user_data, job_data)
+from resume_generator.utils import generate_cover_letter_content
+letter = generate_cover_letter_content(llm, user_data, job_data)
 
 # Get recommendations
 recs = llm.generate_job_recommendations(profile, jobs)

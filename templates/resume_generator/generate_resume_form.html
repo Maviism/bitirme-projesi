@@ -71,6 +71,40 @@
       padding: 1rem;
     }
   }
+  
+  /* Cover letter styling */
+  #coverLetterContent {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    line-height: 1.8;
+    text-align: justify;
+    hyphens: auto;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    position: relative;
+    transition: all 0.3s ease;
+  }
+  
+  #coverLetterResult {
+    transition: transform 0.3s ease, opacity 0.5s ease;
+  }
+  
+  #coverLetterResult:not(.d-none) {
+    animation: fadeInAndSlide 0.7s ease-out forwards;
+  }
+  
+  @keyframes fadeInAndSlide {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  .btn-custom {
+    transition: all 0.2s ease;
+  }
+  
+  .btn-custom:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
 </style>
 {% endblock %}
 
@@ -153,42 +187,6 @@
       </div>
     </div>
     
-    <!-- AI Progress and Results -->
-    <div id="aiProgress" class="d-none">
-      <div class="py-3 my-3 text-center">
-        <div class="spinner-grow text-primary mb-3" role="status">
-          <span class="visually-hidden">Yükleniyor...</span>
-        </div>
-        <div class="progress">
-          <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
-          </div>
-        </div>
-        <div id="aiStatus" class="text-center mt-3">AI başlatılıyor...</div>
-      </div>
-    </div>
-
-    <!-- Cover Letter Display -->
-    <div id="coverLetterResult" class="d-none">
-      <hr>
-      <div class="d-flex align-items-center mb-3">
-        <div class="fs-5 me-2">
-          <i class="fas fa-envelope-open-text text-success"></i>
-        </div>
-        <h4 class="mb-0">Oluşturulan Ön Yazı</h4>
-      </div>
-      <div class="border p-4 bg-light rounded shadow-sm">
-        <div id="coverLetterContent"></div>
-      </div>
-      <div class="d-flex gap-2 mt-3">
-        <button type="button" class="btn btn-custom btn-outline-primary" onclick="copyCoverLetter()">
-          <i class="fas fa-copy me-2"></i> Panoya Kopyala
-        </button>
-        <button type="button" class="btn btn-custom btn-outline-secondary" onclick="downloadCoverLetter()">
-          <i class="fas fa-download me-2"></i> Metin Olarak İndir
-        </button>
-      </div>
-    </div>
-
     <div class="mb-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
@@ -403,6 +401,51 @@
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Cover Letter Display Section -->
+    <div id="coverLetterResult" class="d-none mb-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light border-0 py-3">
+          <div class="d-flex align-items-center">
+            <div class="fs-4 me-3 text-success">
+              <i class="fas fa-envelope-open-text"></i>
+            </div>
+            <div>
+              <h4 class="mb-0 fw-bold">Oluşturulan Ön Yazı</h4>
+              <p class="text-muted mb-0 small">{{ job_company }} şirketinde {{ job_title }} pozisyonu için hazırlanan kişiselleştirilmiş yazı</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-4">
+          <div id="coverLetterContent" class="bg-white p-4 border rounded shadow-sm lh-lg"></div>
+          <div class="d-flex flex-wrap gap-2 mt-4">
+            <button type="button" class="btn btn-custom btn-outline-primary" onclick="copyCoverLetter()">
+              <i class="fas fa-copy me-2"></i> Panoya Kopyala
+            </button>
+            <button type="button" class="btn btn-custom btn-outline-secondary" onclick="downloadCoverLetter()">
+              <i class="fas fa-download me-2"></i> Metin Olarak İndir
+            </button>
+            <button type="button" class="btn btn-custom btn-outline-success ms-auto" onclick="improveCoverLetter()">
+              <i class="fas fa-magic me-2"></i> İyileştir
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Progress and Results -->
+    <div id="aiProgress" class="d-none">
+      <div class="py-3 my-3 text-center">
+        <div class="spinner-grow text-primary mb-3" role="status">
+          <span class="visually-hidden">Yükleniyor...</span>
+        </div>
+        <div class="progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
+          </div>
+        </div>
+        <div id="aiStatus" class="text-center mt-3">AI başlatılıyor...</div>
       </div>
     </div>
 
@@ -742,8 +785,16 @@
   // Generate Cover Letter
   async function generateCoverLetter() {
     try {
+      console.log('Starting cover letter generation...');
+      
+      // First, smoothly scroll to where the cover letter will appear
+      const actionSection = document.querySelector('button[onclick="generateCoverLetter()"]').closest('.card');
+      if (actionSection) {
+        actionSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      
       showAIProgress('Kişiselleştirilmiş ön yazı oluşturuluyor...');
-      updateAIProgress(40, 'İş gereksinimleri analiz ediliyor...');
+      updateAIProgress(30, 'Profil bilgileriniz analiz ediliyor...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
@@ -752,31 +803,65 @@
       formData.append('job_company', document.querySelector('[name=job_company]').value);
       formData.append('job_description', document.querySelector('[name=job_description]').value);
 
+      updateAIProgress(50, 'İş gereksinimleri ve deneyimleriniz eşleştiriliyor...');
+      
+      // Small delay for better UX feedback
+      await new Promise(resolve => setTimeout(resolve, 800));
+      
       updateAIProgress(70, 'Ön yazı hazırlanıyor...');
 
+      console.log('Sending request to server...');
       const response = await fetch('{% url "resume_generator:ai_cover_letter" %}', {
         method: 'POST',
         body: formData
       });
 
+      console.log('Response received, processing...');
       const data = await response.json();
 
       if (data.success && data.cover_letter) {
+        console.log('Cover letter generated successfully');
         updateAIProgress(100, 'Ön yazı oluşturuldu!');
 
-        // Display the cover letter
-        document.getElementById('coverLetterContent').innerHTML = data.cover_letter.replace(/\n/g, '<br>');
-        document.getElementById('coverLetterResult').classList.remove('d-none');
-        
         // Store the cover letter in hidden fields for form submission
         document.getElementById('hidden_cover_letter').value = data.cover_letter;
         document.getElementById('has_generated_cover_letter').value = 'true';
 
-        setTimeout(() => hideAIProgress(), 1000);
+        // Make sure cover letter container exists
+        const coverLetterResult = document.getElementById('coverLetterResult');
+        const coverLetterContent = document.getElementById('coverLetterContent');
+        
+        if (!coverLetterResult) {
+          console.error('Cover letter result container not found!');
+          throw new Error('Ön yazı gösterme alanı bulunamadı');
+        }
+        
+        if (!coverLetterContent) {
+          console.error('Cover letter content container not found!');
+          throw new Error('Ön yazı içerik alanı bulunamadı');
+        }
+        
+        // Hide the progress indicator
+        setTimeout(() => {
+          hideAIProgress();
+          
+          // Display the cover letter with formatting
+          coverLetterContent.innerHTML = data.cover_letter.replace(/\n/g, '<br>');
+          coverLetterResult.classList.remove('d-none');
+          
+          console.log('Cover letter displayed, scrolling to it...');
+          
+          // Smoothly scroll to the newly displayed cover letter
+          setTimeout(() => {
+            coverLetterResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 100);
+        }, 800);
       } else {
+        console.error('Server returned error or no cover letter data');
         throw new Error(data.error || 'Ön yazı oluşturulamadı');
       }
     } catch (error) {
+      console.error('Error generating cover letter:', error);
       hideAIProgress();
       alert('Ön yazı oluşturma hatası: ' + error.message);
     }
@@ -798,19 +883,63 @@
     const blob = new Blob([content], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
-
-    const jobTitle = document.querySelector('[name=job_title]').value || 'İş';
-    const jobCompany = document.querySelector('[name=job_company]').value || 'Şirket';
-    const studentName = document.getElementById('student_last_name').value || 'Öğrenci';
-
+    a.style.display = 'none';
     a.href = url;
-    a.download = `on_yazi_${studentName}_${jobCompany}_${jobTitle}.txt`;
+    a.download = 'onyazi.txt';
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
   }
 
+  // Improve Cover Letter with AI
+  async function improveCoverLetter() {
+    try {
+      const currentCoverLetter = document.getElementById('coverLetterContent').innerText;
+      
+      if (!currentCoverLetter.trim()) {
+        throw new Error('İyileştirilecek ön yazı bulunamadı');
+      }
+      
+      showAIProgress('Ön yazınız geliştiriliyor...');
+      updateAIProgress(40, 'İçerik analiz ediliyor...');
+
+      const formData = new FormData();
+      formData.append('csrfmiddlewaretoken', getCSRFToken());
+      formData.append('student_id', document.querySelector('[name=student_id]').value);
+      formData.append('job_title', document.querySelector('[name=job_title]').value);
+      formData.append('job_company', document.querySelector('[name=job_company]').value);
+      formData.append('job_description', document.querySelector('[name=job_description]').value);
+      formData.append('current_cover_letter', currentCoverLetter);
+      
+      updateAIProgress(70, 'Ön yazı geliştiriliyor...');
+
+      const response = await fetch('{% url "resume_generator:ai_improve_cover_letter" %}', {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.improved_cover_letter) {
+        updateAIProgress(100, 'Ön yazı geliştirildi!');
+
+        // Display the improved cover letter
+        document.getElementById('coverLetterContent').innerHTML = data.improved_cover_letter.replace(/\n/g, '<br>');
+        
+        // Update the hidden cover letter field for form submission
+        document.getElementById('hidden_cover_letter').value = data.improved_cover_letter;
+
+        setTimeout(() => hideAIProgress(), 1000);
+      } else {
+        throw new Error(data.error || 'Ön yazı geliştirilemedi');
+      }
+    } catch (error) {
+      hideAIProgress();
+      alert('Ön yazı geliştirme hatası: ' + error.message);
+    }
+  }
+  
   // Listen for messages from preview window
   window.addEventListener('message', function(event) {
     if (event.data === 'previewLoaded') {

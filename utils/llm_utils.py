@@ -166,127 +166,7 @@ class LLMUtils:
         else:
             raise ValueError(f"Unsupported provider: {provider}")
     
-    def generate_resume_content(self, user_data: Dict, job_description: str = "") -> Dict:
-        """
-        Generate resume content based on user data and optional job description
-        
-        Args:
-            user_data: Dictionary containing user information
-            job_description: Optional job description for tailoring
-            
-        Returns:
-            Dictionary with generated resume sections
-        """
-        prompt = f"""
-        Aşağıdaki kullanıcı verilerine dayanarak profesyonel bir özgeçmiş içeriği oluşturun. Türkçe doğal dil kullanın ve iş dünyasında kabul görmüş terimler kullanın.
-
-        Kullanıcı Bilgileri:
-        {json.dumps(user_data, indent=2)}
-
-        {f"Hedeflenen İş Pozisyonu ve Açıklama: {job_description}" if job_description else ""}
-
-        Aşağıdaki bölümleri içeren kapsamlı bir özgeçmiş oluşturun:
-
-        1. Profesyonel Özet (2-3 cümle): 
-           - Kişinin güçlü yönlerini vurgulayan
-           - Kariyer hedeflerini belirten  
-           - İş pozisyonuna uygun yetenekleri öne çıkaran
-
-        2. Yetenekler:
-           - Teknik beceriler
-           - Yazılım ve araçlar
-           - Kişisel özellikler
-           - Dil becerileri (varsa)
-
-        3. Deneyim:
-           - Şirket adı ve pozisyon
-           - Görev süreleri
-           - Başarılar ve sorumluluklar (sayısal verilerle desteklenen)
-           - Kullanılan teknolojiler
-
-        4. Eğitim:
-           - Üniversite ve fakülte
-           - Bölüm ve GNO
-           - Mezuniyet tarihi
-           - Akademik başarılar
-
-        5. Projeler (varsa):
-           - Proje adı ve açıklaması
-           - Kullanılan teknolojiler
-           - Elde edilen sonuçlar
-
-        6. Sertifikalar ve Kurslar (varsa):
-           - Alınan sertifikalar
-           - Tamamlanan kurslar
-           - Eğitim platformları
-
-        İçerik şu kriterleri karşılamalı:
-        - Türkçe iş dünyası terminolojisini kullanın
-        - ATS (Applicant Tracking System) dostu olsun
-        - Özgün ve kişiselleştirilmiş olsun
-        - Ölçülebilir başarılar içersin
-        - Profesyonel ve etkili bir dil kullanın
-        - İş pozisyonuna özel anahtar kelimeler içersin
-        """
-        
-        schema = {
-            "professional_summary": "string",
-            "skills": {
-                "technical_skills": ["string"],
-                "soft_skills": ["string"],
-                "languages": ["string"],
-                "tools_and_software": ["string"]
-            },
-            "experience": [
-                {
-                    "company": "string",
-                    "position": "string",
-                    "duration": "string",
-                    "location": "string",
-                    "description": "string",
-                    "achievements": ["string"],
-                    "technologies_used": ["string"]
-                }
-            ],
-            "education": [
-                {
-                    "institution": "string",
-                    "degree": "string",
-                    "field_of_study": "string",
-                    "graduation_year": "string",
-                    "gpa": "string",
-                    "honors": ["string"],
-                    "relevant_coursework": ["string"]
-                }
-            ],
-            "projects": [
-                {
-                    "name": "string",
-                    "description": "string",
-                    "technologies": ["string"],
-                    "link": "string",
-                    "achievements": ["string"]
-                }
-            ],
-            "certifications": [
-                {
-                    "name": "string",
-                    "issuer": "string",
-                    "date": "string",
-                    "credential_id": "string"
-                }
-            ],
-            "volunteer_work": [
-                {
-                    "organization": "string",
-                    "role": "string",
-                    "duration": "string",
-                    "description": "string"
-                }
-            ]
-        }
-        
-        return self.provider.generate_json(prompt, schema)
+    # Resume content generation moved to resume_generator/utils.py
     
     def analyze_job_compatibility(self, user_profile: Dict, job_data: Dict) -> Dict:
         """
@@ -362,99 +242,9 @@ class LLMUtils:
         # This is a simplified implementation - you might want to use structured JSON here too
         return {"recommendations": response}
     
-    def improve_resume_section(self, section_content: str, section_type: str, job_context: str = "") -> str:
-        """
-        Improve a specific resume section
-        
-        Args:
-            section_content: Current content of the section
-            section_type: Type of section (summary, experience, skills, etc.)
-            job_context: Optional job context for tailoring
-            
-        Returns:
-            Improved section content
-        """
-        prompt = f"""
-        Aşağıdaki özgeçmiş bölümünü geliştirin ve daha etkili hale getirin:
-
-        Bölüm Türü: {section_type}
-        Mevcut İçerik:
-        {section_content}
-
-        {f"İş Pozisyonu Bağlamı: {job_context}" if job_context else ""}
-
-        Bölümü şu açılardan geliştirin:
-
-        1. Profesyonellik: İş dünyasına uygun Türkçe terminoloji kullanın
-        2. Etki: Güçlü eylem fiilleri ve ölçülebilir başarılar ekleyin  
-        3. ATS Uyumluluğu: Anahtar kelimeler ve sektör terimleri kullanın
-        4. Özgünlük: Standart ifadelerden kaçının, kişiselleştirilmiş içerik oluşturun
-        5. Okuma Kolaylığı: Net ve anlaşılır ifadeler kullanın
-
-        Bölüm türüne özel geliştirmeler:
-        - Özet: Kişinin güçlü yönlerini, kariyer hedeflerini ve değer önerisini vurgulayın
-        - Deneyim: Başarıları sayısal verilerle destekleyin, sorumlulukları net açıklayın
-        - Beceriler: Teknik ve kişisel becerileri kategorize edin, yeterlilik seviyelerini belirtin
-        - Eğitim: Akademik başarıları, önemli projeleri ve dersleri vurgulayın
-        - Projeler: Projenin etkisini, kullanılan teknolojileri ve sonuçları detaylı açıklayın
-
-        Sadece geliştirilen içeriği döndürün, ek açıklama yapmayın.
-        """
-        
-        return self.provider.generate_text(prompt)
+    # Cover letter generation moved to resume_generator/utils.py
     
-    def generate_cover_letter(self, user_data: Dict, job_data: Dict) -> str:
-        """
-        Generate a personalized cover letter
-        
-        Args:
-            user_data: User's background and experience
-            job_data: Job description and company information
-            
-        Returns:
-            Generated cover letter text
-        """
-        prompt = f"""
-        Aşağıdaki bilgilere dayanarak profesyonel ve kişiselleştirilmiş bir İnsan Kaynakları ön yazısı (cover letter) oluşturun:
-
-        Başvuran Bilgileri:
-        {json.dumps(user_data, indent=2)}
-
-        İş ve Şirket Bilgileri:
-        {json.dumps(job_data, indent=2)}
-
-        Ön yazı şu özellikleri taşımalı:
-
-        1. Profesyonel Format:
-           - Tarih ve adres bilgileri
-           - Uygun hitap şekli
-           - Profesyonel kapanış
-
-        2. İçerik Yapısı:
-           - Giriş Paragrafı: Hangi pozisyona başvurduğunu belirt, ilgi çekici bir açılış yap
-           - Gelişme Paragrafları: 
-             * İlgili deneyim ve becerilerini vurgula
-             * Şirkete ve pozisyona uygunluğunu göster
-             * Somut başarılar ve örnekler ver
-             * Şirket hakkında bilgi sahibi olduğunu göster
-           - Sonuç Paragrafı: Görüşme talebi ve teşekkür
-
-        3. Dil ve Üslup:
-           - Türkçe iş dünyası terminolojisi kullan
-           - Özgüvenli ama mütevazı bir ton
-           - Kişiselleştirilmiş ve özgün ifadeler
-           - Standart kalıplardan kaçın
-
-        4. Özelleştirme:
-           - Şirketin değerleri ve kültürüne uygun ifadeler
-           - Pozisyonun gereksinimlerine odaklanma
-           - Başvuranın güçlü yönlerini öne çıkarma
-           - Şirkete sağlayacağı katma değeri vurgulama
-
-        Yaklaşık 3-4 paragraf uzunluğunda, samimi ama profesyonel bir ön yazı oluşturun.
-        """
-        
-        return self.provider.generate_text(prompt)
+    # Cover letter improvement moved to resume_generator/utils.py
     
     def analyze_interview_response(self, question: str, response: str, job_position: str) -> Dict:
         """
@@ -970,14 +760,17 @@ def get_llm_instance(provider: str = None) -> LLMUtils:
         
         # Create a simple fallback provider that doesn't make API calls
         class FallbackProvider:
-            def generate_resume_content(self, user_data, job_description=""):
-                return {
-                    "summary": f"Recent graduate from {user_data.get('personal_info', {}).get('program', 'University')} with skills in problem-solving and communication.",
-                    "skills": ["Communication", "Problem Solving", "Adaptability"] + user_data.get('skills', [])[:3],
-                }
+            # Fallback implementation for text generation
+            def generate_text(self, prompt, **kwargs):
+                return "The AI service is currently unavailable. Please try again later."
                 
-            def improve_resume_section(self, section_content, section_type, job_context=""):
-                return section_content
+            # Fallback implementation for JSON generation
+            def generate_json(self, prompt, schema=None, **kwargs):
+                if schema:
+                    return {key: "Not available" for key in schema.keys()}
+                return {"error": "LLM service unavailable"}
+                
+            # Fallback implementations moved to specific app utilities
                 
             def generate_cover_letter(self, user_data, job_data):
                 name = user_data.get('name', 'Candidate')

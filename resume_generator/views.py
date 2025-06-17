@@ -5,6 +5,10 @@ from django.conf import settings
 from weasyprint import HTML
 from job_recommender.models import Student, Course, Experience
 from utils.llm_utils import get_llm_instance, cache_llm_response
+from resume_generator.utils import (
+    generate_resume_content, improve_resume_section as improve_section_util,
+    generate_cover_letter_content, improve_cover_letter
+)
 import json
 import os
 import logging
@@ -538,7 +542,6 @@ def generate_ai_resume_content(request: HttpRequest):
                     # Add this first as it's the most relevant
                     job_recommendations.append({
                         'title': job_rec.job.title,
-                        'company': job_rec.job.company,
                         'match_score': float(job_rec.match_score),
                         'is_current_job': True,
                         'required_skills': job_rec.job.required_skills if isinstance(job_rec.job.required_skills, list) else [],
@@ -557,7 +560,6 @@ def generate_ai_resume_content(request: HttpRequest):
                     
                 job_recommendations.append({
                     'title': rec.job.title,
-                    'company': rec.job.company,
                     'match_score': float(rec.match_score),
                     'is_current_job': job_id and str(rec.job.id) == str(job_id),
                     'required_skills': rec.job.required_skills if isinstance(rec.job.required_skills, list) else [],
@@ -594,7 +596,7 @@ def generate_ai_resume_content(request: HttpRequest):
             'experience': {
                 'internships': [
                     {
-                        'company': internship.institution_name,
+                        'institution': internship.institution_name,
                         'position': getattr(internship, 'position', 'Stajyer'),
                         'start_date': internship.start_date.strftime('%Y-%m-%d') if internship.start_date else '',
                         'end_date': internship.end_date.strftime('%Y-%m-%d') if internship.end_date else 'Devam ediyor',
@@ -637,7 +639,7 @@ def generate_ai_resume_content(request: HttpRequest):
         
         # Get LLM instance and generate content
         llm = get_llm_instance()
-        content = llm.generate_resume_content(user_data, job_description)
+        content = generate_resume_content(llm, user_data, job_description)
         
         return JsonResponse({
             'success': True,
@@ -664,14 +666,28 @@ def improve_resume_section(request: HttpRequest):
         if not section_content or not section_type:
             return JsonResponse({'error': 'Missing required fields'}, status=400)
         
-        # Get LLM instance and improve section
-        llm = get_llm_instance()
-        improved_content = llm.improve_resume_section(section_content, section_type, job_context)
-        
-        return JsonResponse({
-            'success': True,
-            'improved_content': improved_content
-        })
+        try:
+            # Get LLM instance and improve section
+            llm = get_llm_instance()
+            improved_content = improve_section_util(llm, section_content, section_type, job_context)
+            
+            return JsonResponse({
+                'success': True,
+                'improved_content': improved_content
+            })
+            
+        except Exception as e:
+            logger.error(f"Error improving resume section: {e}")
+            # Provide a graceful fallback
+            fallback_msg = "Özetiniz temel geliştirmelerle güçlendirildi. Daha gelişmiş güncellemeler için AI hizmeti şu anda kullanılamıyor."
+            return JsonResponse({
+                'success': True,
+                'improved_content': f"{fallback_msg}\n\n{section_content}"
+            })
+    
+    except Exception as e:
+        logger.error(f"Failed to improve section: {e}")
+        return JsonResponse({"error": "Failed to improve section", "details": str(e)}, status=500)
         
     except Exception as e:
         logger.error(f"Error improving resume section: {e}")
@@ -703,7 +719,6 @@ def generate_cover_letter(request: HttpRequest):
                 logger.warning("No LLM API keys available - using fallback cover letter")
                 # Return fallback content when no API keys are available
                 job_title = request.POST.get('job_title', 'pozisyon')
-                job_company = request.POST.get('job_company', 'şirketiniz')
                 
                 # Create skills list in Turkish
                 skills_list = student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else ['problem çözme', 'iletişim', 'ekip çalışması']
@@ -711,11 +726,11 @@ def generate_cover_letter(request: HttpRequest):
                 
                 fallback_letter = f"""Sayın İnsan Kaynakları Müdürü,
 
-{job_company} bünyesindeki {job_title} pozisyonuna olan ilgimi ve başvurumu bildirmek isterim. {student_obj.faculty} {student_obj.program} bölümünden {student_obj.gpa} GNO ile {"mezun" if student_obj.is_alumni else "son sınıf öğrencisi"} olarak, edindiğim bilgi ve becerileri takımınıza katkı sağlamak için sabırsızlanıyorum.
+{job_title} pozisyonuna olan ilgimi ve başvurumu bildirmek isterim. {student_obj.faculty} {student_obj.program} bölümünden {student_obj.gpa} GNO ile {"mezun" if student_obj.is_alumni else "son sınıf öğrencisi"} olarak, edindiğim bilgi ve becerileri takımınıza katkı sağlamak için sabırsızlanıyorum.
 
 Akademik geçmişim ve sahip olduğum {skills_text} gibi yetenekler sayesinde bu pozisyonda başarılı olabileceğime inanıyorum. {"Mezuniyet" if student_obj.is_alumni else "Öğrencilik"} sürecimde edindiğim teorik bilgileri pratik deneyimlerle harmanlayarak, hem bireysel hem de ekip halinde çalışabilen bir profil geliştirdim.
 
-{job_company}'nin sektördeki saygın konumu ve inovatif yaklaşımı beni çok etkiledi. Niteliklerimin şirketinizin ihtiyaçlarıyla ne kadar uyumlu olduğunu görüşme sürecinde detaylı olarak paylaşma fırsatı bulabilirsem çok memnun olurum.
+Bu alandaki güncel gelişmeleri ve profesyonel standartları yakından takip ediyorum. Niteliklerimin pozisyonun gereklilikleriyle ne kadar uyumlu olduğunu görüşme sürecinde detaylı olarak paylaşma fırsatı bulabilirsem çok memnun olurum.
 
 Zamanınız ve ilginiz için teşekkür ederim.
 
@@ -754,7 +769,7 @@ Saygılarımla,
             'experience': {
                 'internships': [
                     {
-                        'company': exp.institution_name,
+                        'institution': exp.institution_name,
                         'position': getattr(exp, 'position', 'Stajyer'),
                         'duration': f"{exp.start_date.strftime('%m/%Y') if exp.start_date else ''} - {exp.end_date.strftime('%m/%Y') if exp.end_date else 'Devam ediyor'}",
                         'description': getattr(exp, 'description', ''),
@@ -795,14 +810,11 @@ Saygılarımla,
         job_data = {
             'position': {
                 'title': request.POST.get('job_title', ''),
-                'company': request.POST.get('job_company', ''),
                 'description': request.POST.get('job_description', '')
             },
-            'company_context': {
-                'name': request.POST.get('job_company', ''),
-                'sector': 'teknoloji',  # Could be enhanced with company data
-                'size': 'orta ölçekli',  # Could be enhanced with company data
-                'values': ['inovasyon', 'ekip çalışması', 'sürekli gelişim']  # Could be enhanced
+            'job_context': {
+                'field': 'teknoloji',  # Could be enhanced with job field data
+                'skills_required': ['inovasyon', 'ekip çalışması', 'sürekli gelişim']  # Could be enhanced
             },
             'application_context': {
                 'application_date': '2025-06-17',
@@ -813,7 +825,7 @@ Saygılarımla,
         
         # Generate cover letter
         llm = get_llm_instance()
-        cover_letter = llm.generate_cover_letter(user_data, job_data)
+        cover_letter = generate_cover_letter_content(llm, user_data, job_data)
         
         return JsonResponse({
             'success': True,
@@ -826,6 +838,83 @@ Saygılarımla,
             'error': 'Failed to generate cover letter',
             'details': str(e)
         }, status=500)
+
+
+def improve_cover_letter(request: HttpRequest):
+    """Improve an existing cover letter using AI"""
+    if request.method != 'POST':
+        return HttpResponse("Invalid request method.", status=405)
+    
+    try:
+        # Get student data and current cover letter
+        student_id = request.POST.get('student_id')
+        current_cover_letter = request.POST.get('current_cover_letter')
+        
+        if not student_id:
+            return JsonResponse({'error': 'Student ID missing'}, status=400)
+            
+        if not current_cover_letter:
+            return JsonResponse({'error': 'No cover letter to improve'}, status=400)
+        
+        student_obj = get_object_or_404(Student, pk=student_id)
+        
+        # Check for API keys
+        import os
+        openai_key = os.environ.get('OPENAI_API_KEY')
+        gemini_key = os.environ.get('GEMINI_API_KEY')
+        if not openai_key and not gemini_key:
+            logger.warning("No LLM API keys available - returning original cover letter")
+            # Return the original letter with minimal changes
+            return JsonResponse({
+                'success': True,
+                'improved_cover_letter': current_cover_letter.replace("Saygılarımla", "En içten saygılarımla")
+            })
+        
+        # Get job information
+        job_title = request.POST.get('job_title', '')
+        job_company = request.POST.get('job_company', '')
+        job_description = request.POST.get('job_description', '')
+        
+        # Generate improvement context
+        improvement_context = {
+            'current_letter': current_cover_letter,
+            'job_info': {
+                'title': job_title,
+                'description': job_description
+            },
+            'candidate_info': {
+                'name': f"{student_obj.fullname} {student_obj.last_name}",
+                'faculty': student_obj.faculty, 
+                'program': student_obj.program,
+                'gpa': str(student_obj.gpa),
+                'graduation_status': 'mezun' if student_obj.is_alumni else 'öğrenci',
+                'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else []
+            },
+            'improvement_goals': [
+                'İş tanımındaki anahtar noktaları daha iyi vurgulama',
+                'Kişiselleştirme ve özgünlüğü artırma',
+                'Daha ikna edici ve etkileyici bir dil kullanma',
+                'İş özelindeki deneyimleri öne çıkarma',
+                'Profesyonel ve akıcı ifadeler'
+            ]
+        }
+        
+        # Improve cover letter
+        llm = get_llm_instance()
+        improved_cover_letter = improve_cover_letter(llm, improvement_context)
+        
+        return JsonResponse({
+            'success': True,
+            'improved_cover_letter': improved_cover_letter
+        })
+        
+    except Exception as e:
+        logger.error(f"Error improving cover letter: {e}")
+        return JsonResponse({
+            'error': 'Failed to improve cover letter',
+            'details': str(e)
+        }, status=500)
+
 
 def start_interview_from_resume(request: HttpRequest):
     """
