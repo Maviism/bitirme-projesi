@@ -98,12 +98,12 @@
     <div class="mb-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h4 class="card-title mb-3"><i class="fas fa-briefcase text-primary me-2"></i>Target Role Details</h4>
+          <h4 class="card-title mb-3"><i class="fas fa-briefcase text-primary me-2"></i>Hedef Rol Detayları</h4>
           
           <div class="alert alert-info d-flex align-items-center mb-4" role="alert">
             <i class="fas fa-info-circle me-3 fs-4"></i>
             <div>
-              <strong>Target Position:</strong> Your resume will be tailored for this specific role.
+              <strong>Hedef Pozisyon:</strong> Özgeçmişiniz bu belirli rol için özelleştirilecektir.
             </div>
           </div>
           
@@ -118,32 +118,32 @@
             <div class="card-body">
               <div class="d-flex align-items-center mb-3">
                 <i class="fas fa-chart-line text-success me-2 fs-4"></i>
-                <h6 class="mb-0 fw-bold">Skills Match Analysis</h6>
+                <h6 class="mb-0 fw-bold">Beceri Eşleşme Analizi</h6>
               </div>
               <div class="row">
                 <div class="col-md-7">
                   {% if job_recommendations.current_job_rec %}
                   <div class="mb-2">
                     <span class="badge bg-primary rounded-pill">
-                      <i class="fas fa-percentage me-1"></i> {{ job_recommendations.current_job_rec.match_score|floatformat:0 }}% Match
+                      <i class="fas fa-percentage me-1"></i> %{{ job_recommendations.current_job_rec.match_score|floatformat:0 }} Eşleşme
                     </span>
                     <span class="badge bg-info text-dark rounded-pill ms-1">
                       <i class="fas fa-{{ job_recommendations.current_job_rec.source|default:"layer-group" }}-circle me-1"></i>
-                      {{ job_recommendations.current_job_rec.get_source_display|default:"Match" }}
+                      {{ job_recommendations.current_job_rec.get_source_display|default:"Eşleşme" }}
                     </span>
                   </div>
-                  <small class="text-muted">Resume will be optimized for your skills profile</small>
+                  <small class="text-muted">Özgeçmiş beceri profiliniz için optimize edilecektir</small>
                   {% else %}
                   <div class="mb-2">
                     <span class="badge bg-secondary rounded-pill">
-                      <i class="fas fa-info-circle me-1"></i> Match Data Unavailable
+                      <i class="fas fa-info-circle me-1"></i> Eşleşme Verisi Mevcut Değil
                     </span>
                   </div>
-                  <small class="text-muted">No specific match data found for this role</small>
+                  <small class="text-muted">Bu rol için belirli eşleşme verisi bulunamadı</small>
                   {% endif %}
                 </div>
                 <div class="col-md-5">
-                  <div class="small text-muted text-end">AI optimization enhances your qualifications</div>
+                  <div class="small text-muted text-end">AI optimizasyonu niteliklerinizi geliştirir</div>
                 </div>
               </div>
             </div>
@@ -157,13 +157,13 @@
     <div id="aiProgress" class="d-none">
       <div class="py-3 my-3 text-center">
         <div class="spinner-grow text-primary mb-3" role="status">
-          <span class="visually-hidden">Loading...</span>
+          <span class="visually-hidden">Yükleniyor...</span>
         </div>
         <div class="progress">
           <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%">
           </div>
         </div>
-        <div id="aiStatus" class="text-center mt-3">Initializing AI...</div>
+        <div id="aiStatus" class="text-center mt-3">AI başlatılıyor...</div>
       </div>
     </div>
 
@@ -174,17 +174,17 @@
         <div class="fs-5 me-2">
           <i class="fas fa-envelope-open-text text-success"></i>
         </div>
-        <h4 class="mb-0">Generated Cover Letter</h4>
+        <h4 class="mb-0">Oluşturulan Ön Yazı</h4>
       </div>
       <div class="border p-4 bg-light rounded shadow-sm">
         <div id="coverLetterContent"></div>
       </div>
       <div class="d-flex gap-2 mt-3">
         <button type="button" class="btn btn-custom btn-outline-primary" onclick="copyCoverLetter()">
-          <i class="fas fa-copy me-2"></i> Copy to Clipboard
+          <i class="fas fa-copy me-2"></i> Panoya Kopyala
         </button>
         <button type="button" class="btn btn-custom btn-outline-secondary" onclick="downloadCoverLetter()">
-          <i class="fas fa-download me-2"></i> Download as Text
+          <i class="fas fa-download me-2"></i> Metin Olarak İndir
         </button>
       </div>
     </div>
@@ -192,20 +192,20 @@
     <div class="mb-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h4 class="card-title mb-3"><i class="fas fa-user text-primary me-2"></i>Personal Information</h4>
+          <h4 class="card-title mb-3"><i class="fas fa-user text-primary me-2"></i>Kişisel Bilgiler</h4>
         <div class="row">
           <div class="col-md-6 mb-3">
             <div class="form-floating">
               <input type="text" class="form-control" id="student_fullname" name="student_fullname"
-                value="{{ student.fullname }}" placeholder="Your full name">
-              <label for="student_fullname"><i class="fas fa-user me-2"></i>Full Name</label>
+                value="{{ student.fullname }}" placeholder="Tam adınız">
+              <label for="student_fullname"><i class="fas fa-user me-2"></i>Ad Soyad</label>
             </div>
           </div>
           <div class="col-md-6 mb-3">
             <div class="form-floating">
               <input type="text" class="form-control" id="student_last_name" name="student_last_name"
-                value="{{ student.last_name }}" placeholder="Your last name">
-              <label for="student_last_name"><i class="fas fa-id-card me-2"></i>Last Name (for filename)</label>
+                value="{{ student.last_name }}" placeholder="Soyadınız">
+              <label for="student_last_name"><i class="fas fa-id-card me-2"></i>Soyad (dosya adı için)</label>
             </div>
           </div>
         </div>
@@ -213,23 +213,23 @@
           <div class="col-md-6 mb-3">
             <div class="form-floating">
               <input type="email" class="form-control" id="student_email" name="student_email"
-                value="{{ student.email }}" placeholder="your@email.com">
-              <label for="student_email"><i class="fas fa-envelope me-2"></i>Email</label>
+                value="{{ student.email }}" placeholder="email@adresiniz.com">
+              <label for="student_email"><i class="fas fa-envelope me-2"></i>E-posta</label>
             </div>
           </div>
           <div class="col-md-6 mb-3">
             <div class="form-floating">
               <input type="tel" class="form-control" id="student_phone" name="student_phone" value="{{ student.phone }}"
-                placeholder="Your phone number">
-              <label for="student_phone"><i class="fas fa-phone me-2"></i>Phone</label>
+                placeholder="Telefon numaranız">
+              <label for="student_phone"><i class="fas fa-phone me-2"></i>Telefon</label>
             </div>
           </div>
         </div>
         <div class="mb-3">
           <div class="form-floating">
             <input type="url" class="form-control" id="student_linkedin" name="student_linkedin"
-              value="{{ student.linkedin_profile }}" placeholder="https://linkedin.com/in/yourprofile">
-            <label for="student_linkedin"><i class="fab fa-linkedin me-2"></i>LinkedIn Profile URL</label>
+              value="{{ student.linkedin_profile }}" placeholder="https://linkedin.com/in/profiliniz">
+            <label for="student_linkedin"><i class="fab fa-linkedin me-2"></i>LinkedIn Profil Bağlantısı</label>
           </div>
         </div>
         <hr>
@@ -237,13 +237,13 @@
           <div class="fs-5 me-2">
             <i class="fas fa-graduation-cap text-primary"></i>
           </div>
-          <h4 class="mb-0">Academic Information</h4>
+          <h4 class="mb-0">Akademik Bilgiler</h4>
         </div>
         <div class="row">
           <div class="col-md-4 mb-3">
             <div class="card h-100 bg-light border-0">
               <div class="card-body">
-                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-university me-2"></i>Faculty</h6>
+                <h6 class="card-subtitle mb-2 text-muted"><i class="fas fa-university me-2"></i>Fakülte</h6>
                 <p class="card-text fw-bold">{{ student.faculty }}</p>
               </div>
             </div>
@@ -271,13 +271,13 @@
             <div class="fs-5 me-2">
               <i class="fas fa-user-tie text-primary"></i>
             </div>
-            <h5 class="mb-0">Professional Summary/Objective</h5>
+            <h5 class="mb-0">Profesyonel Özet/Hedef</h5>
           </div>
           <textarea class="form-control" id="student_summary" name="student_summary"
             rows="3">{{ student.summary }}</textarea>
           <div class="d-flex justify-content-end mt-2">
             <button type="button" class="btn btn-outline-secondary btn-sm" onclick="improveSummary()">
-              <i class="fas fa-magic me-1"></i> Generate/Update with AI
+              <i class="fas fa-magic me-1"></i> AI ile Oluştur/Güncelle
             </button>
           </div>
         </div>
@@ -287,22 +287,20 @@
             <div class="fs-5 me-2">
               <i class="fas fa-code text-primary"></i>
             </div>
-            <h5 class="mb-0">Skills</h5>
+            <h5 class="mb-0">Beceriler</h5>
           </div>
           <div class="alert alert-light border-start border-4 mb-3">
             <i class="fas fa-lightbulb text-warning me-2"></i>
-            Add skills that are relevant to the position. Highlight technical and soft skills that match job
-            requirements.
+            Pozisyonla ilgili becerileri ekleyin. İş gereksinimlerine uyan teknik ve sosyal becerileri vurgulayın.
           </div>
           <div class="d-flex gap-2 mb-2">
             <button type="button" class="btn btn-custom btn-primary btn-sm" onclick="generateAISkills()">
-              <i class="fas fa-magic me-2"></i> Suggest AI Skills
+              <i class="fas fa-magic me-2"></i> AI Beceri Önerisi
             </button>
           </div>
           <textarea class="form-control" id="student_skills" name="student_skills" rows="3"
-            placeholder="e.g., Python, SQL, Project Management, Communication">{{ student.skills }}</textarea>
-          <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> AI can suggest relevant
-            skills based on your background and the target job.</small>
+            placeholder="örn: Python, SQL, Proje Yönetimi, İletişim">{{ student.skills }}</textarea>
+          <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> AI geçmişinize ve hedef işe dayalı olarak ilgili becerileri önerebilir.</small>
         </div>
 
         <hr>
@@ -310,7 +308,7 @@
           <div class="fs-5 me-2">
             <i class="fas fa-briefcase text-primary"></i>
           </div>
-          <h4 class="mb-0">Experience</h4>
+          <h4 class="mb-0">Deneyim</h4>
         </div>
 
         <ul class="nav nav-pills mb-4" id="experienceTabs" role="tablist">
@@ -318,14 +316,14 @@
             <button class="nav-link active" id="internship-tab" data-bs-toggle="pill"
               data-bs-target="#internship-tab-content" type="button" role="tab" aria-controls="internship-tab-content"
               aria-selected="true">
-              <i class="fas fa-laptop-code me-2"></i>Internships
+              <i class="fas fa-laptop-code me-2"></i>Stajlar
             </button>
           </li>
           <li class="nav-item" role="presentation">
             <button class="nav-link" id="organization-tab" data-bs-toggle="pill"
               data-bs-target="#organization-tab-content" type="button" role="tab"
               aria-controls="organization-tab-content" aria-selected="false">
-              <i class="fas fa-users me-2"></i>Organizations
+              <i class="fas fa-users me-2"></i>Organizasyonlar
             </button>
           </li>
         </ul>
@@ -343,7 +341,7 @@
                     <h6 class="card-subtitle text-muted">{{ internship.institution_name }}</h6>
                   </div>
                   <span class="badge bg-light text-dark">{{ internship.start_date }} - {{
-                    internship.end_date|default:"Present" }}</span>
+                    internship.end_date|default:"Devam Ediyor" }}</span>
                 </div>
                 <p class="card-text mt-2">{{ internship.description }}</p>
               </div>
@@ -351,7 +349,7 @@
             {% empty %}
             <div class="alert alert-light">
               <i class="fas fa-info-circle me-2"></i>
-              No internships on record.
+              Kayıtlı staj bulunmuyor.
             </div>
             {% endfor %}
           </div>
@@ -366,7 +364,7 @@
                     <h5 class="card-title mb-1">{{ org.position }}</h5>
                     <h6 class="card-subtitle text-muted">{{ org.name }}</h6>
                   </div>
-                  <span class="badge bg-light text-dark">{{ org.start_date }} - {{ org.end_date|default:"Present"
+                  <span class="badge bg-light text-dark">{{ org.start_date }} - {{ org.end_date|default:"Devam Ediyor"
                     }}</span>
                 </div>
                 <p class="card-text mt-2">{{ org.description }}</p>
@@ -375,7 +373,7 @@
             {% empty %}
             <div class="alert alert-light">
               <i class="fas fa-info-circle me-2"></i>
-              No organizational experience on record.
+              Kayıtlı organizasyon deneyimi bulunmuyor.
             </div>
             {% endfor %}
           </div>
@@ -386,21 +384,21 @@
     <div class="mb-4">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h4 class="card-title mb-3"><i class="fas fa-sliders-h text-primary me-2"></i>Resume Format</h4>
+          <h4 class="card-title mb-3"><i class="fas fa-sliders-h text-primary me-2"></i>Özgeçmiş Formatı</h4>
           <div class="row">
             <div class="col-md-8">
               <div class="mb-3">
                 <select class="form-select form-control-lg" id="resume_template_style" name="resume_template_style">
-                  <option value="ats" selected>ATS Friendly (Recommended)</option>
-                  <option value="modern">Modern Design</option>
+                  <option value="ats" selected>ATS Uyumlu (Önerilen)</option>
+                  <option value="modern">Modern Tasarım</option>
                 </select>
-                <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> ATS friendly templates
-                  are optimized for applicant tracking systems used by employers.</small>
+                <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> ATS uyumlu şablonlar
+                  işverenler tarafından kullanılan başvuru takip sistemleri için optimize edilmiştir.</small>
               </div>
             </div>
             <div class="col-md-4 d-flex align-items-center">
               <button type="button" class="btn btn-outline-secondary w-100" onclick="generateCoverLetter()">
-                <i class="fas fa-envelope me-2"></i> Generate Cover Letter
+                <i class="fas fa-envelope me-2"></i> Ön Yazı Oluştur
               </button>
             </div>
           </div>
@@ -411,16 +409,16 @@
     <div class="mb-5">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h4 class="card-title mb-3"><i class="fas fa-file-alt text-primary me-2"></i>Resume Actions</h4>
+          <h4 class="card-title mb-3"><i class="fas fa-file-alt text-primary me-2"></i>Özgeçmiş İşlemleri</h4>
           
           <div class="d-flex flex-column flex-md-row gap-3">
             <button type="submit" class="btn btn-info btn-lg flex-grow-1"
               formaction="{% url 'resume_generator:preview_resume' %}" formmethod="POST" id="previewButton">
-              <i class="fas fa-eye me-2"></i> Preview Resume
+              <i class="fas fa-eye me-2"></i> Özgeçmişi Önizle
             </button>
             <button type="submit" class="btn btn-success btn-lg flex-grow-1"
               formaction="{% url 'resume_generator:download_resume' %}" formmethod="POST" id="downloadButton">
-              <i class="fas fa-download me-2"></i> Generate & Download
+              <i class="fas fa-download me-2"></i> Oluştur ve İndir
             </button>
           </div>
         </div>
@@ -428,12 +426,12 @@
       
       <div class="card border-0 shadow-sm mt-4">
         <div class="card-body p-4">
-          <h4 class="card-title"><i class="fas fa-graduation-cap text-purple me-2"></i>Interview Practice</h4>
-          <p class="text-muted mb-3">Our AI-powered interview simulator will help you prepare for questions related to this job.</p>
+          <h4 class="card-title"><i class="fas fa-graduation-cap text-purple me-2"></i>Mülakat Pratiği</h4>
+          <p class="text-muted mb-3">AI destekli mülakat simülatörümüz bu işle ilgili sorulara hazırlanmanıza yardımcı olacak.</p>
           <div class="text-center">
             <button type="submit" class="btn btn-purple btn-lg"
               formaction="{% url 'resume_generator:start_interview' %}" formmethod="POST" id="interviewButton">
-              <i class="fas fa-comments me-2"></i> Prepare for Interview
+              <i class="fas fa-comments me-2"></i> Mülakat İçin Hazırlan
             </button>
           </div>
         </div>
@@ -444,10 +442,10 @@
     <div class="mb-5">
       <div class="card border-0 shadow-sm">
         <div class="card-body p-4">
-          <h4 class="card-title mb-3"><i class="fas fa-briefcase text-primary me-2"></i>Other Job Matches</h4>
+          <h4 class="card-title mb-3"><i class="fas fa-briefcase text-primary me-2"></i>Diğer İş Eşleşmeleri</h4>
           <div class="alert alert-light border-start border-4 mb-4">
             <i class="fas fa-lightbulb text-warning me-2"></i>
-            Consider creating tailored resumes for these other job matches as well to increase your chances.
+            Şansınızı artırmak için bu diğer iş eşleşmeleri için de özelleştirilmiş özgeçmişler oluşturmayı düşünün.
           </div>
         
           <div class="row">
@@ -467,11 +465,11 @@
                     <div class="d-grid gap-2">
                       <a href="{% url 'resume_generator:generate_resume' %}?job_id={{ rec.job.id }}&title={{ rec.job.title|urlencode }}&company={{ rec.job.company|urlencode }}&description={{ rec.job.description|truncatechars:200|urlencode }}" 
                         class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-file-alt me-2"></i>Create Resume for This Job
+                        <i class="fas fa-file-alt me-2"></i>Bu İş İçin Özgeçmiş Oluştur
                       </a>
                       <a href="{% url 'interview:prepare_interview' %}?job_id={{ rec.job.id }}&student_id={{ student.id }}" 
                         class="btn btn-sm btn-outline-purple">
-                        <i class="fas fa-comments me-2"></i>Practice Interview
+                        <i class="fas fa-comments me-2"></i>Mülakat Pratiği Yap
                       </a>
                     </div>
                   </div>
@@ -498,7 +496,7 @@
   }
 
   // Show/hide AI progress indicator
-  function showAIProgress(message = 'Processing with AI...') {
+  function showAIProgress(message = 'AI ile işleniyor...') {
     const progressDiv = document.getElementById('aiProgress');
     const statusDiv = document.getElementById('aiStatus');
     const progressBar = progressDiv.querySelector('.progress-bar');
@@ -536,7 +534,7 @@
       const isGenerating = !currentSummary.trim();
       
       // If no summary exists, we'll generate one; otherwise, we'll improve the existing one
-      showAIProgress(isGenerating ? 'Creating your professional summary...' : 'Updating your professional summary...');
+      showAIProgress(isGenerating ? 'Profesyonel özetiniz oluşturuluyor...' : 'Profesyonel özetiniz güncelleniyor...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
@@ -551,7 +549,7 @@
         formData.append('job_id', jobId);
       }
 
-      updateAIProgress(40, isGenerating ? 'Analyzing profile and job...' : 'Enhancing your summary...');
+      updateAIProgress(40, isGenerating ? 'Profil ve iş analiz ediliyor...' : 'Özetiniz geliştiriliyor...');
       
       let response, data;
       
@@ -572,10 +570,10 @@
         
         if (data.success && data.content && data.content.summary) {
           document.getElementById('student_summary').value = data.content.summary;
-          updateAIProgress(100, 'Professional summary created!');
+          updateAIProgress(100, 'Profesyonel özet oluşturuldu!');
           setTimeout(() => hideAIProgress(), 2000);
         } else {
-          throw new Error(data.error || 'Failed to generate summary');
+          throw new Error(data.error || 'Özet oluşturulamadı');
         }
       } else {
         // Improve existing summary
@@ -597,10 +595,10 @@
         
         if (data.success && data.improved_content) {
           document.getElementById('student_summary').value = data.improved_content;
-          updateAIProgress(100, 'Professional summary updated!');
+          updateAIProgress(100, 'Profesyonel özet güncellendi!');
           setTimeout(() => hideAIProgress(), 2000);
         } else {
-          throw new Error(data.error || 'Failed to update summary');
+          throw new Error(data.error || 'Özet güncellenemedi');
         }
       }
     } catch (error) {
@@ -616,35 +614,35 @@
           // Generate a fallback summary if none exists
           const program = "{{student.program}}";
           const faculty = "{{student.faculty}}";
-          const title = document.querySelector('[name=job_title]').value || 'professional position';
+          const title = document.querySelector('[name=job_title]').value || 'profesyonel pozisyon';
           
           // Build a more detailed fallback summary without mentioning the company
           const gpa = "{{student.gpa}}";
-          const topSkills = 'problem-solving, communication, and teamwork';
+          const topSkills = 'problem çözme, iletişim ve takım çalışması';
           
-          let fallbackSummary = `Recent graduate with a ${gpa ? gpa + ' GPA and ' : ''}strong background in ${program} from ${faculty}. `;
-          fallbackSummary += `Seeking to leverage academic knowledge and professional skills in ${topSkills} to excel in a ${title} role. `;
-          fallbackSummary += `Dedicated to delivering high-quality results through analytical thinking, effective communication, and continuous professional development. `;
-          fallbackSummary += `Eager to contribute fresh perspectives and innovative solutions to help achieve business objectives.`;
+          let fallbackSummary = `${gpa ? gpa + ' GPA\'ya sahip ' : ''}${faculty} ${program} mezunu. `;
+          fallbackSummary += `${topSkills} alanlarındaki akademik bilgi ve profesyonel becerilerimi ${title} rolünde kullanmayı hedefliyorum. `;
+          fallbackSummary += `Analitik düşünce, etkili iletişim ve sürekli mesleki gelişim yoluyla yüksek kaliteli sonuçlar sunmaya odaklanıyorum. `;
+          fallbackSummary += `Yeni bakış açıları ve yenilikçi çözümler sunarak iş hedeflerine ulaşmaya katkı sağlamaya istekliyim.`;
           
           document.getElementById('student_summary').value = fallbackSummary;
-          alert('Generated a basic professional summary due to service limitations. Feel free to edit it to better match your profile.');
+          alert('Hizmet sınırlamaları nedeniyle temel bir profesyonel özet oluşturuldu. Profilinize daha iyi uyacak şekilde düzenlemekten çekinmeyin.');
         } else {
           // Enhance existing summary without mentioning company
-          const jobTitle = document.querySelector('[name=job_title]').value || 'professional position';
+          const jobTitle = document.querySelector('[name=job_title]').value || 'profesyonel pozisyon';
           
           // Simple enhancement that focuses on the job
           let enhancedSummary = currentSummary;
           
           if (!currentSummary.includes(jobTitle)) {
-            enhancedSummary += ` Particularly interested in applying these skills in a ${jobTitle} role.`;
+            enhancedSummary += ` Bu becerileri özellikle ${jobTitle} rolünde uygulamakla ilgileniyorum.`;
           }
           
           document.getElementById('student_summary').value = enhancedSummary;
-          alert('Enhanced your summary with basic improvements. The AI service is currently unavailable for more advanced updates.');
+          alert('Özetiniz temel geliştirmelerle güçlendirildi. Daha gelişmiş güncellemeler için AI hizmeti şu anda kullanılamıyor.');
         }
       } catch (fallbackError) {
-        alert('Error with professional summary. Please try manually editing your summary.');
+        alert('Profesyonel özet ile ilgili hata oluştu. Lütfen özetinizi manuel olarak düzenlemeyi deneyin.');
       }
     }
   }
@@ -652,8 +650,8 @@
   // Generate AI Skills
   async function generateAISkills() {
     try {
-      showAIProgress('Generating relevant skills...');
-      updateAIProgress(50, 'Analyzing job requirements...');
+      showAIProgress('İlgili beceriler oluşturuluyor...');
+      updateAIProgress(50, 'İş gereksinimleri analiz ediliyor...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
@@ -674,7 +672,7 @@
         body: formData
       });
 
-      updateAIProgress(80, 'Processing skills...');
+      updateAIProgress(80, 'Beceriler işleniyor...');
       const data = await response.json();
 
       if (data.success && data.content.skills) {
@@ -684,14 +682,14 @@
           
         document.getElementById('student_skills').value = skills;
         
-        updateAIProgress(100, 'Skills generated successfully!');
+        updateAIProgress(100, 'Beceriler başarıyla oluşturuldu!');
         setTimeout(() => hideAIProgress(), 2000);
       } else {
-        throw new Error(data.error || 'Failed to generate skills');
+        throw new Error(data.error || 'Beceri oluşturulamadı');
       }
     } catch (error) {
       hideAIProgress();
-      alert('Error generating AI skills: ' + error.message);
+      alert('AI beceri oluşturma hatası: ' + error.message);
     }
   }
 
@@ -699,8 +697,8 @@
   // This function is kept for internal use even though its button was removed
   async function generateFullAIResume() {
     try {
-      showAIProgress('Generating resume content...');
-      updateAIProgress(30, 'Analyzing your profile...');
+      showAIProgress('Özgeçmiş içeriği oluşturuluyor...');
+      updateAIProgress(30, 'Profiliniz analiz ediliyor...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
@@ -709,7 +707,7 @@
       formData.append('job_title', document.querySelector('[name=job_title]').value);
       formData.append('job_company', document.querySelector('[name=job_company]').value);
 
-      updateAIProgress(60, 'Generating content...');
+      updateAIProgress(60, 'İçerik oluşturuluyor...');
 
       const response = await fetch('{% url "resume_generator:ai_generate_content" %}', {
         method: 'POST',
@@ -719,7 +717,7 @@
       const data = await response.json();
 
       if (data.success && data.content) {
-        updateAIProgress(90, 'Updating form with generated content...');
+        updateAIProgress(90, 'Form oluşturulan içerikle güncelleniyor...');
 
         // Update form fields with generated content
         if (data.content.summary) {
@@ -730,22 +728,22 @@
           document.getElementById('student_skills').value = skills;
         }
 
-        updateAIProgress(100, 'Content generated successfully!');
+        updateAIProgress(100, 'İçerik başarıyla oluşturuldu!');
         setTimeout(() => hideAIProgress(), 2000);
       } else {
-        throw new Error(data.error || 'Failed to generate resume content');
+        throw new Error(data.error || 'Özgeçmiş içeriği oluşturulamadı');
       }
     } catch (error) {
       hideAIProgress();
-      alert('Error generating resume content: ' + error.message);
+      alert('Özgeçmiş içeriği oluşturma hatası: ' + error.message);
     }
   }
 
   // Generate Cover Letter
   async function generateCoverLetter() {
     try {
-      showAIProgress('Generating personalized cover letter...');
-      updateAIProgress(40, 'Analyzing job requirements...');
+      showAIProgress('Kişiselleştirilmiş ön yazı oluşturuluyor...');
+      updateAIProgress(40, 'İş gereksinimleri analiz ediliyor...');
 
       const formData = new FormData();
       formData.append('csrfmiddlewaretoken', getCSRFToken());
@@ -754,7 +752,7 @@
       formData.append('job_company', document.querySelector('[name=job_company]').value);
       formData.append('job_description', document.querySelector('[name=job_description]').value);
 
-      updateAIProgress(70, 'Crafting cover letter...');
+      updateAIProgress(70, 'Ön yazı hazırlanıyor...');
 
       const response = await fetch('{% url "resume_generator:ai_cover_letter" %}', {
         method: 'POST',
@@ -764,7 +762,7 @@
       const data = await response.json();
 
       if (data.success && data.cover_letter) {
-        updateAIProgress(100, 'Cover letter generated!');
+        updateAIProgress(100, 'Ön yazı oluşturuldu!');
 
         // Display the cover letter
         document.getElementById('coverLetterContent').innerHTML = data.cover_letter.replace(/\n/g, '<br>');
@@ -776,11 +774,11 @@
 
         setTimeout(() => hideAIProgress(), 1000);
       } else {
-        throw new Error(data.error || 'Failed to generate cover letter');
+        throw new Error(data.error || 'Ön yazı oluşturulamadı');
       }
     } catch (error) {
       hideAIProgress();
-      alert('Error generating cover letter: ' + error.message);
+      alert('Ön yazı oluşturma hatası: ' + error.message);
     }
   }
 
@@ -788,9 +786,9 @@
   function copyCoverLetter() {
     const content = document.getElementById('coverLetterContent').textContent;
     navigator.clipboard.writeText(content).then(() => {
-      alert('Cover letter copied to clipboard!');
+      alert('Ön yazı panoya kopyalandı!');
     }).catch(err => {
-      alert('Failed to copy to clipboard');
+      alert('Panoya kopyalanamadı');
     });
   }
 
@@ -801,12 +799,12 @@
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
 
-    const jobTitle = document.querySelector('[name=job_title]').value || 'Job';
-    const jobCompany = document.querySelector('[name=job_company]').value || 'Company';
-    const studentName = document.getElementById('student_last_name').value || 'Student';
+    const jobTitle = document.querySelector('[name=job_title]').value || 'İş';
+    const jobCompany = document.querySelector('[name=job_company]').value || 'Şirket';
+    const studentName = document.getElementById('student_last_name').value || 'Öğrenci';
 
     a.href = url;
-    a.download = `cover_letter_${studentName}_${jobCompany}_${jobTitle}.txt`;
+    a.download = `on_yazi_${studentName}_${jobCompany}_${jobTitle}.txt`;
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
@@ -819,14 +817,14 @@
       // Reset the preview button
       const previewButton = document.getElementById('previewButton');
       if (previewButton.disabled) {
-        previewButton.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+        previewButton.innerHTML = '<i class="fas fa-eye me-2"></i> Özgeçmişi Önizle';
         previewButton.disabled = false;
       }
     } else if (event.data === 'previewFailed') {
       // Reset the preview button if preview failed
       const previewButton = document.getElementById('previewButton');
       if (previewButton.disabled) {
-        previewButton.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+        previewButton.innerHTML = '<i class="fas fa-eye me-2"></i> Özgeçmişi Önizle';
         previewButton.disabled = false;
       }
     }
@@ -861,22 +859,22 @@
         const jobCompany = document.querySelector('[name=job_company]').value || '';
         
         // Create a comprehensive professional summary without mentioning the company
-        let generatedSummary = `Recent graduate with ${gpa ? 'a ' + gpa + ' GPA and ' : ''}strong background in ${program} from ${faculty}.`;
+        let generatedSummary = `${gpa ? gpa + ' GPA\'ya sahip ' : ''}${faculty} ${program} mezunu.`;
         
         if (jobTitle) {
-          generatedSummary += ` Seeking to leverage academic knowledge and professional skills to excel in a ${jobTitle} role.`;
+          generatedSummary += ` Akademik bilgi ve profesyonel becerilerimi ${jobTitle} rolünde kullanarak başarılı olmayı hedefliyorum.`;
         } else {
-          generatedSummary += ` Equipped with strong academic foundation and practical skills to contribute effectively in a professional environment.`;
+          generatedSummary += ` Güçlü akademik temelle donatılmış ve profesyonel ortamda etkili katkı sağlayacak pratik becerilerle donanmış.`;
         }
         
-        generatedSummary += ` Demonstrates excellent analytical thinking, effective communication, and a commitment to continuous learning and growth. Ready to bring fresh perspectives and innovative solutions to help achieve organizational objectives.`;
+        generatedSummary += ` Mükemmel analitik düşünce, etkili iletişim ve sürekli öğrenme ve gelişim taahhüdü sergilerim. Organizasyonel hedeflere ulaşmaya yardımcı olmak için yeni bakış açıları ve yenilikçi çözümler sunmaya hazırım.`;
         
         // Set the generated summary
         summaryElem.value = generatedSummary;
         
-        console.log('Auto-generated comprehensive professional summary');
+        console.log('Kapsamlı profesyonel özet otomatik oluşturuldu');
       } catch (error) {
-        console.error('Error auto-generating summary:', error);
+        console.error('Özet otomatik oluşturma hatası:', error);
       }
     }
 
@@ -899,15 +897,15 @@
       const formData = new FormData(form);
       
       // Update button state
-      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating Preview...';
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Önizleme Oluşturuluyor...';
       this.disabled = true;
       
       // Use a timeout to detect if the fetch is taking too long
       const timeoutId = setTimeout(() => {
         if (this.disabled) {
-          this.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+          this.innerHTML = '<i class="fas fa-eye me-2"></i> Özgeçmişi Önizle';
           this.disabled = false;
-          alert('Preview is taking longer than expected. Please try again.');
+          alert('Önizleme beklenenden uzun sürüyor. Lütfen tekrar deneyin.');
         }
       }, 15000); // 15 seconds timeout
       
@@ -926,22 +924,22 @@
             if (previewWindow) {
               previewWindow.document.write(html);
               previewWindow.document.close();
-              this.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+              this.innerHTML = '<i class="fas fa-eye me-2"></i> Özgeçmişi Önizle';
               this.disabled = false;
             } else {
-              throw new Error('Could not open preview window. Please check your popup blocker settings.');
+              throw new Error('Önizleme penceresi açılamadı. Lütfen popup engelleyici ayarlarınızı kontrol edin.');
             }
           });
         } else {
           return response.text().then(errorText => {
-            throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}...`);
+            throw new Error(`Sunucu hatası: ${response.status} - ${errorText.substring(0, 100)}...`);
           });
         }
       })
       .catch(error => {
-        this.innerHTML = '<i class="fas fa-eye me-2"></i> Preview Resume';
+        this.innerHTML = '<i class="fas fa-eye me-2"></i> Özgeçmişi Önizle';
         this.disabled = false;
-        alert('Error generating resume preview: ' + error.message);
+        alert('Özgeçmiş önizlemesi oluşturma hatası: ' + error.message);
       });
     });
 
@@ -949,22 +947,22 @@
       // Prevent default form submission
       e.preventDefault();
       
-      console.log('Download button clicked - preparing to generate PDF with fetch');
+      console.log('İndir butonu tıklandı - fetch ile PDF oluşturmaya hazırlanıyor');
       
       // Collect the form data
       const formData = new FormData(form);
       
       // Prepare UI for PDF generation
       
-      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating PDF...';
+      this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> PDF Oluşturuluyor...';
       this.disabled = true;
       
       // Use a timeout for the fetch call
       const timeoutId = setTimeout(() => {
         if (this.disabled) {
-          this.innerHTML = '<i class="fas fa-download me-2"></i> Generate and Download Resume';
+          this.innerHTML = '<i class="fas fa-download me-2"></i> Oluştur ve İndir';
           this.disabled = false;
-          alert('PDF generation is taking longer than expected. Please try again.');
+          alert('PDF oluşturma beklenenden uzun sürüyor. Lütfen tekrar deneyin.');
         }
       }, 15000); // 15 seconds timeout
       
@@ -980,7 +978,7 @@
           // For PDF download, we need to trigger a download
           return response.blob().then(blob => {
             // Create filename from the Content-Disposition header if available
-            let filename = 'resume.pdf';
+            let filename = 'ozgecmis.pdf';
             const disposition = response.headers.get('Content-Disposition');
             if (disposition) {
               const filenameMatch = disposition.match(/filename="(.+)"/);
@@ -1001,7 +999,7 @@
             document.body.removeChild(a);
             
             // Reset button
-            this.innerHTML = '<i class="fas fa-download me-2"></i> Generate and Download Resume';
+            this.innerHTML = '<i class="fas fa-download me-2"></i> Oluştur ve İndir';
             this.disabled = false;
           });
         } else {
@@ -1011,9 +1009,9 @@
         }
       })
       .catch(error => {
-        this.innerHTML = '<i class="fas fa-download me-2"></i> Generate and Download Resume';
+        this.innerHTML = '<i class="fas fa-download me-2"></i> Oluştur ve İndir';
         this.disabled = false;
-        alert('Error generating PDF: ' + error.message);
+        alert('PDF oluşturma hatası: ' + error.message);
       });
     });
     
@@ -1030,15 +1028,15 @@
         const formData = new FormData(form);
         
         // Update button state
-        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Preparing Interview...';
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mülakat Hazırlanıyor...';
         this.disabled = true;
         
         // Use a timeout to detect if the fetch is taking too long
         const timeoutId = setTimeout(() => {
           if (this.disabled) {
-            this.innerHTML = '<i class="fas fa-comments me-2"></i> Prepare for Interview';
+            this.innerHTML = '<i class="fas fa-comments me-2"></i> Mülakat İçin Hazırlan';
             this.disabled = false;
-            alert('Interview preparation is taking longer than expected. Please try again.');
+            alert('Mülakat hazırlığı beklenenden uzun sürüyor. Lütfen tekrar deneyin.');
           }
         }, 15000); // 15 seconds timeout
         
@@ -1054,16 +1052,15 @@
             // For redirects, we follow the redirect
             window.location.href = response.url;
           } else {
-            return response.text().then(errorText => {
-              throw new Error(`Server error: ${response.status} - ${errorText.substring(0, 100)}...`);
-            });
-          }
-        })
-        .catch(error => {
-          this.innerHTML = '<i class="fas fa-comments me-2"></i> Prepare for Interview';
-          this.disabled = false;
-          alert('Error preparing interview: ' + error.message);
-        });
+            return response.text().then(errorText => {            throw new Error(`Sunucu hatası: ${response.status} - ${errorText.substring(0, 100)}...`);
+          });
+        }
+      })
+      .catch(error => {
+        this.innerHTML = '<i class="fas fa-comments me-2"></i> Mülakat İçin Hazırlan';
+        this.disabled = false;
+        alert('Mülakat hazırlama hatası: ' + error.message);
+      });
       });
     }
   });

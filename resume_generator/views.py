@@ -12,6 +12,18 @@ import logging
 # Standard logger configuration
 logger = logging.getLogger(__name__)
 
+# Helper method for calculating duration in months
+def _calculate_duration_months(start_date, end_date):
+    """Calculate duration between two dates in months"""
+    if not start_date:
+        return 0
+    
+    from datetime import date
+    end = end_date or date.today()
+    
+    months = (end.year - start_date.year) * 12 + (end.month - start_date.month)
+    return max(months, 1)  # Minimum 1 month
+
 # Function to get the student related to the current user
 def get_current_student(request: HttpRequest):
     # Check if the user is authenticated
@@ -556,35 +568,67 @@ def generate_ai_resume_content(request: HttpRequest):
         except Exception as e:
             logger.warning(f"Error fetching job recommendations: {e}")
         
-        # Prepare user data for LLM
+        # Prepare enhanced user data for LLM with comprehensive information
         user_data = {
             'personal_info': {
                 'name': f"{student_obj.fullname} {student_obj.last_name}",
+                'email': getattr(student_obj, 'email', ''),
+                'phone': getattr(student_obj, 'phone', ''),
+                'linkedin': getattr(student_obj, 'linkedin_profile', ''),
+                'student_id': student_obj.student_id,
+                'birth_date': student_obj.birth_date.strftime('%Y-%m-%d') if student_obj.birth_date else '',
+                'is_alumni': student_obj.is_alumni,
                 'faculty': student_obj.faculty,
                 'program': student_obj.program,
                 'gpa': str(student_obj.gpa)
             },
-            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills],
+            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else [],
             'courses': [
                 {
+                    'code': course.code,
                     'name': course.name,
-                    'grade': getattr(course, 'grade', 'N/A')
-                } for course in Course.objects.filter(student=student_obj)
+                    'grade': getattr(course, 'grade', 'N/A'),
+                    'success_level': 'yüksek' if course.grade in ['AA', 'BA'] else 'orta' if course.grade in ['BB', 'CB'] else 'düşük' if course.grade not in ['--', 'N/A'] else 'belirsiz'
+                } for course in Course.objects.filter(student=student_obj).order_by('-grade')
             ],
-            'internships': [
-                {
-                    'company': internship.institution_name,
-                    'position': getattr(internship, 'position', 'Intern'),
-                    'duration': f"{internship.start_date} to {internship.end_date or 'Present'}",
-                    'description': getattr(internship, 'description', '')
-                } for internship in Experience.objects.filter(student=student_obj, experience_type='internship')
-            ],
-            'organizations': [
-                {
-                    'name': org.institution_name,
-                    'role': getattr(org, 'position', 'Member')
-                } for org in Experience.objects.filter(student=student_obj, experience_type='organization')
-            ],
+            'experience': {
+                'internships': [
+                    {
+                        'company': internship.institution_name,
+                        'position': getattr(internship, 'position', 'Stajyer'),
+                        'start_date': internship.start_date.strftime('%Y-%m-%d') if internship.start_date else '',
+                        'end_date': internship.end_date.strftime('%Y-%m-%d') if internship.end_date else 'Devam ediyor',
+                        'duration': f"{internship.start_date} - {internship.end_date or 'Devam ediyor'}",
+                        'description': getattr(internship, 'description', ''),
+                        'is_current': not internship.end_date
+                    } for internship in Experience.objects.filter(student=student_obj, experience_type='internship').order_by('-start_date')
+                ],
+                'organizations': [
+                    {
+                        'name': org.institution_name,
+                        'role': getattr(org, 'position', 'Üye'),
+                        'start_date': org.start_date.strftime('%Y-%m-%d') if org.start_date else '',
+                        'end_date': org.end_date.strftime('%Y-%m-%d') if org.end_date else 'Devam ediyor',
+                        'duration': f"{org.start_date} - {org.end_date or 'Devam ediyor'}",
+                        'description': getattr(org, 'description', ''),
+                        'is_current': not org.end_date
+                    } for org in Experience.objects.filter(student=student_obj, experience_type='organization').order_by('-start_date')
+                ]
+            },
+            'academic_performance': {
+                'total_courses': Course.objects.filter(student=student_obj).count(),
+                'high_grades_count': Course.objects.filter(student=student_obj, grade__in=['AA', 'BA']).count(),
+                'gpa_level': 'yüksek' if float(student_obj.gpa) >= 3.0 else 'orta' if float(student_obj.gpa) >= 2.5 else 'düşük',
+                'graduation_status': 'mezun' if student_obj.is_alumni else 'öğrenci'
+            },
+            'career_context': {
+                'has_internship_experience': Experience.objects.filter(student=student_obj, experience_type='internship').exists(),
+                'has_organization_experience': Experience.objects.filter(student=student_obj, experience_type='organization').exists(),
+                'total_experiences': Experience.objects.filter(student=student_obj).count(),
+                'has_leadership_experience': any(['başkan' in exp.position.lower() or 'lider' in exp.position.lower() 
+                                                 for exp in Experience.objects.filter(student=student_obj) 
+                                                 if hasattr(exp, 'position') and exp.position])
+            },
             'job_recommendations': job_recommendations  # Add job recommendations
         }
         
@@ -658,18 +702,24 @@ def generate_cover_letter(request: HttpRequest):
             if not openai_key and not gemini_key:
                 logger.warning("No LLM API keys available - using fallback cover letter")
                 # Return fallback content when no API keys are available
-                job_title = request.POST.get('job_title', 'the position')
-                job_company = request.POST.get('job_company', 'your company')
+                job_title = request.POST.get('job_title', 'pozisyon')
+                job_company = request.POST.get('job_company', 'şirketiniz')
                 
-                fallback_letter = f"""Dear Hiring Manager,
+                # Create skills list in Turkish
+                skills_list = student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else ['problem çözme', 'iletişim', 'ekip çalışması']
+                skills_text = ', '.join(skills_list[:3]) if len(skills_list) >= 3 else ', '.join(skills_list + ['analitik düşünce', 'hızlı öğrenme'][:3-len(skills_list)])
+                
+                fallback_letter = f"""Sayın İnsan Kaynakları Müdürü,
 
-I am writing to express my strong interest in the {job_title} position at {job_company}. As a recent graduate from {student_obj.program} at {student_obj.faculty} with a GPA of {student_obj.gpa}, I am eager to contribute my skills and knowledge to your team.
+{job_company} bünyesindeki {job_title} pozisyonuna olan ilgimi ve başvurumu bildirmek isterim. {student_obj.faculty} {student_obj.program} bölümünden {student_obj.gpa} GNO ile {"mezun" if student_obj.is_alumni else "son sınıf öğrencisi"} olarak, edindiğim bilgi ve becerileri takımınıza katkı sağlamak için sabırsızlanıyorum.
 
-My academic background has equipped me with the necessary skills for this role, including {', '.join(student_obj.skills[:3] if isinstance(student_obj.skills, list) else ['problem-solving', 'communication', 'teamwork'])}.
+Akademik geçmişim ve sahip olduğum {skills_text} gibi yetenekler sayesinde bu pozisyonda başarılı olabileceğime inanıyorum. {"Mezuniyet" if student_obj.is_alumni else "Öğrencilik"} sürecimde edindiğim teorik bilgileri pratik deneyimlerle harmanlayarak, hem bireysel hem de ekip halinde çalışabilen bir profil geliştirdim.
 
-I am particularly impressed by {job_company}'s reputation in the industry and would welcome the opportunity to discuss how my qualifications align with your needs. Thank you for considering my application.
+{job_company}'nin sektördeki saygın konumu ve inovatif yaklaşımı beni çok etkiledi. Niteliklerimin şirketinizin ihtiyaçlarıyla ne kadar uyumlu olduğunu görüşme sürecinde detaylı olarak paylaşma fırsatı bulabilirsem çok memnun olurum.
 
-Sincerely,
+Zamanınız ve ilginiz için teşekkür ederim.
+
+Saygılarımla,
 {student_obj.fullname} {student_obj.last_name}"""
 
                 return JsonResponse({
@@ -679,26 +729,86 @@ Sincerely,
         except Exception as e:
             logger.warning(f"Error checking LLM API keys: {e}")
         
-        # Prepare user data
+        # Prepare comprehensive user data for cover letter generation
         user_data = {
-            'name': f"{student_obj.fullname} {student_obj.last_name}",
-            'faculty': student_obj.faculty,
-            'program': student_obj.program,
-            'gpa': str(student_obj.gpa),
-            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills],
-            'experience': [
-                {
-                    'company': exp.institution_name,
-                    'position': getattr(exp, 'position', 'Intern')
-                } for exp in Experience.objects.filter(student=student_obj, experience_type='internship')
-            ]
+            'personal_info': {
+                'name': f"{student_obj.fullname} {student_obj.last_name}",
+                'email': getattr(student_obj, 'email', ''),
+                'phone': getattr(student_obj, 'phone', ''),
+                'linkedin': getattr(student_obj, 'linkedin_profile', ''),
+                'faculty': student_obj.faculty,
+                'program': student_obj.program,
+                'gpa': str(student_obj.gpa),
+                'graduation_status': 'mezun' if student_obj.is_alumni else 'öğrenci'
+            },
+            'skills': student_obj.skills if isinstance(student_obj.skills, list) else [student_obj.skills] if student_obj.skills else [],
+            'education': {
+                'degree': f"{student_obj.program} - {student_obj.faculty}",
+                'gpa': str(student_obj.gpa),
+                'academic_achievements': [
+                    f"GNO: {student_obj.gpa}",
+                    f"Toplam {Course.objects.filter(student=student_obj).count()} ders tamamlandı",
+                    f"{Course.objects.filter(student=student_obj, grade__in=['AA', 'BA']).count()} yüksek not"
+                ]
+            },
+            'experience': {
+                'internships': [
+                    {
+                        'company': exp.institution_name,
+                        'position': getattr(exp, 'position', 'Stajyer'),
+                        'duration': f"{exp.start_date.strftime('%m/%Y') if exp.start_date else ''} - {exp.end_date.strftime('%m/%Y') if exp.end_date else 'Devam ediyor'}",
+                        'description': getattr(exp, 'description', ''),
+                        'key_achievements': [
+                            'Pratik deneyim kazandım',
+                            'Ekip çalışması becerilerimi geliştirdim',
+                            'Sektörel bilgi edindim'
+                        ]
+                    } for exp in Experience.objects.filter(student=student_obj, experience_type='internship').order_by('-start_date')
+                ],
+                'organizations': [
+                    {
+                        'name': org.institution_name,
+                        'role': getattr(org, 'position', 'Üye'),
+                        'duration': f"{org.start_date.strftime('%m/%Y') if org.start_date else ''} - {org.end_date.strftime('%m/%Y') if org.end_date else 'Devam ediyor'}",
+                        'description': getattr(org, 'description', ''),
+                        'leadership_skills': 'başkan' in getattr(org, 'position', '').lower() or 'lider' in getattr(org, 'position', '').lower()
+                    } for org in Experience.objects.filter(student=student_obj, experience_type='organization').order_by('-start_date')
+                ]
+            },
+            'strengths': {
+                'academic_performance': 'yüksek' if float(student_obj.gpa) >= 3.0 else 'orta',
+                'practical_experience': Experience.objects.filter(student=student_obj, experience_type='internship').exists(),
+                'leadership_experience': any(['başkan' in exp.position.lower() or 'lider' in exp.position.lower() 
+                                             for exp in Experience.objects.filter(student=student_obj) 
+                                             if hasattr(exp, 'position') and exp.position]),
+                'diverse_background': Experience.objects.filter(student=student_obj).count() > 2,
+                'technical_skills': len(student_obj.skills) if isinstance(student_obj.skills, list) else 1 if student_obj.skills else 0
+            },
+            'career_motivation': {
+                'field_alignment': f"{student_obj.program} alanında kariyer hedefi",
+                'growth_mindset': 'Sürekli öğrenme ve gelişim odaklı',
+                'value_proposition': 'Akademik bilgi ve pratik deneyimi harmanlayan yaklaşım'
+            }
         }
         
-        # Get job data
+        # Get comprehensive job data
         job_data = {
-            'title': request.POST.get('job_title', ''),
-            'company': request.POST.get('job_company', ''),
-            'description': request.POST.get('job_description', '')
+            'position': {
+                'title': request.POST.get('job_title', ''),
+                'company': request.POST.get('job_company', ''),
+                'description': request.POST.get('job_description', '')
+            },
+            'company_context': {
+                'name': request.POST.get('job_company', ''),
+                'sector': 'teknoloji',  # Could be enhanced with company data
+                'size': 'orta ölçekli',  # Could be enhanced with company data
+                'values': ['inovasyon', 'ekip çalışması', 'sürekli gelişim']  # Could be enhanced
+            },
+            'application_context': {
+                'application_date': '2025-06-17',
+                'source': 'kariyer portalı',
+                'motivation': 'kariyer gelişimi ve deneyim kazanımı'
+            }
         }
         
         # Generate cover letter

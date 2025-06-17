@@ -178,46 +178,110 @@ class LLMUtils:
             Dictionary with generated resume sections
         """
         prompt = f"""
-        Generate professional resume content based on the following user data:
-        
-        User Information:
+        Aşağıdaki kullanıcı verilerine dayanarak profesyonel bir özgeçmiş içeriği oluşturun. Türkçe doğal dil kullanın ve iş dünyasında kabul görmüş terimler kullanın.
+
+        Kullanıcı Bilgileri:
         {json.dumps(user_data, indent=2)}
-        
-        {f"Job Description to tailor for: {job_description}" if job_description else ""}
-        
-        Generate a comprehensive resume with the following sections:
-        - Professional Summary (2-3 sentences)
-        - Skills (list of relevant skills)
-        - Experience (if any work experience provided)
-        - Education
-        - Projects (if any projects provided)
-        
-        Make the content professional, concise, and ATS-friendly.
+
+        {f"Hedeflenen İş Pozisyonu ve Açıklama: {job_description}" if job_description else ""}
+
+        Aşağıdaki bölümleri içeren kapsamlı bir özgeçmiş oluşturun:
+
+        1. Profesyonel Özet (2-3 cümle): 
+           - Kişinin güçlü yönlerini vurgulayan
+           - Kariyer hedeflerini belirten  
+           - İş pozisyonuna uygun yetenekleri öne çıkaran
+
+        2. Yetenekler:
+           - Teknik beceriler
+           - Yazılım ve araçlar
+           - Kişisel özellikler
+           - Dil becerileri (varsa)
+
+        3. Deneyim:
+           - Şirket adı ve pozisyon
+           - Görev süreleri
+           - Başarılar ve sorumluluklar (sayısal verilerle desteklenen)
+           - Kullanılan teknolojiler
+
+        4. Eğitim:
+           - Üniversite ve fakülte
+           - Bölüm ve GNO
+           - Mezuniyet tarihi
+           - Akademik başarılar
+
+        5. Projeler (varsa):
+           - Proje adı ve açıklaması
+           - Kullanılan teknolojiler
+           - Elde edilen sonuçlar
+
+        6. Sertifikalar ve Kurslar (varsa):
+           - Alınan sertifikalar
+           - Tamamlanan kurslar
+           - Eğitim platformları
+
+        İçerik şu kriterleri karşılamalı:
+        - Türkçe iş dünyası terminolojisini kullanın
+        - ATS (Applicant Tracking System) dostu olsun
+        - Özgün ve kişiselleştirilmiş olsun
+        - Ölçülebilir başarılar içersin
+        - Profesyonel ve etkili bir dil kullanın
+        - İş pozisyonuna özel anahtar kelimeler içersin
         """
         
         schema = {
             "professional_summary": "string",
-            "skills": ["string"],
+            "skills": {
+                "technical_skills": ["string"],
+                "soft_skills": ["string"],
+                "languages": ["string"],
+                "tools_and_software": ["string"]
+            },
             "experience": [
                 {
                     "company": "string",
                     "position": "string",
                     "duration": "string",
-                    "description": "string"
+                    "location": "string",
+                    "description": "string",
+                    "achievements": ["string"],
+                    "technologies_used": ["string"]
                 }
             ],
             "education": [
                 {
                     "institution": "string",
                     "degree": "string",
-                    "graduation_year": "string"
+                    "field_of_study": "string",
+                    "graduation_year": "string",
+                    "gpa": "string",
+                    "honors": ["string"],
+                    "relevant_coursework": ["string"]
                 }
             ],
             "projects": [
                 {
                     "name": "string",
                     "description": "string",
-                    "technologies": ["string"]
+                    "technologies": ["string"],
+                    "link": "string",
+                    "achievements": ["string"]
+                }
+            ],
+            "certifications": [
+                {
+                    "name": "string",
+                    "issuer": "string",
+                    "date": "string",
+                    "credential_id": "string"
+                }
+            ],
+            "volunteer_work": [
+                {
+                    "organization": "string",
+                    "role": "string",
+                    "duration": "string",
+                    "description": "string"
                 }
             ]
         }
@@ -311,20 +375,30 @@ class LLMUtils:
             Improved section content
         """
         prompt = f"""
-        Improve this {section_type} section of a resume:
-        
-        Current content:
+        Aşağıdaki özgeçmiş bölümünü geliştirin ve daha etkili hale getirin:
+
+        Bölüm Türü: {section_type}
+        Mevcut İçerik:
         {section_content}
-        
-        {f"Job context: {job_context}" if job_context else ""}
-        
-        Make it more:
-        - Professional and compelling
-        - ATS-friendly
-        - Quantified (where possible)
-        - Action-oriented
-        
-        Return only the improved content.
+
+        {f"İş Pozisyonu Bağlamı: {job_context}" if job_context else ""}
+
+        Bölümü şu açılardan geliştirin:
+
+        1. Profesyonellik: İş dünyasına uygun Türkçe terminoloji kullanın
+        2. Etki: Güçlü eylem fiilleri ve ölçülebilir başarılar ekleyin  
+        3. ATS Uyumluluğu: Anahtar kelimeler ve sektör terimleri kullanın
+        4. Özgünlük: Standart ifadelerden kaçının, kişiselleştirilmiş içerik oluşturun
+        5. Okuma Kolaylığı: Net ve anlaşılır ifadeler kullanın
+
+        Bölüm türüne özel geliştirmeler:
+        - Özet: Kişinin güçlü yönlerini, kariyer hedeflerini ve değer önerisini vurgulayın
+        - Deneyim: Başarıları sayısal verilerle destekleyin, sorumlulukları net açıklayın
+        - Beceriler: Teknik ve kişisel becerileri kategorize edin, yeterlilik seviyelerini belirtin
+        - Eğitim: Akademik başarıları, önemli projeleri ve dersleri vurgulayın
+        - Projeler: Projenin etkisini, kullanılan teknolojileri ve sonuçları detaylı açıklayın
+
+        Sadece geliştirilen içeriği döndürün, ek açıklama yapmayın.
         """
         
         return self.provider.generate_text(prompt)
@@ -341,23 +415,203 @@ class LLMUtils:
             Generated cover letter text
         """
         prompt = f"""
-        Write a professional cover letter based on:
-        
-        User Background:
+        Aşağıdaki bilgilere dayanarak profesyonel ve kişiselleştirilmiş bir İnsan Kaynakları ön yazısı (cover letter) oluşturun:
+
+        Başvuran Bilgileri:
         {json.dumps(user_data, indent=2)}
-        
-        Job Information:
+
+        İş ve Şirket Bilgileri:
         {json.dumps(job_data, indent=2)}
-        
-        The cover letter should be:
-        - Professional and engaging
-        - Tailored to the specific job
-        - Highlight relevant experience and skills
-        - Show enthusiasm for the role
-        - Be approximately 3-4 paragraphs
+
+        Ön yazı şu özellikleri taşımalı:
+
+        1. Profesyonel Format:
+           - Tarih ve adres bilgileri
+           - Uygun hitap şekli
+           - Profesyonel kapanış
+
+        2. İçerik Yapısı:
+           - Giriş Paragrafı: Hangi pozisyona başvurduğunu belirt, ilgi çekici bir açılış yap
+           - Gelişme Paragrafları: 
+             * İlgili deneyim ve becerilerini vurgula
+             * Şirkete ve pozisyona uygunluğunu göster
+             * Somut başarılar ve örnekler ver
+             * Şirket hakkında bilgi sahibi olduğunu göster
+           - Sonuç Paragrafı: Görüşme talebi ve teşekkür
+
+        3. Dil ve Üslup:
+           - Türkçe iş dünyası terminolojisi kullan
+           - Özgüvenli ama mütevazı bir ton
+           - Kişiselleştirilmiş ve özgün ifadeler
+           - Standart kalıplardan kaçın
+
+        4. Özelleştirme:
+           - Şirketin değerleri ve kültürüne uygun ifadeler
+           - Pozisyonun gereksinimlerine odaklanma
+           - Başvuranın güçlü yönlerini öne çıkarma
+           - Şirkete sağlayacağı katma değeri vurgulama
+
+        Yaklaşık 3-4 paragraf uzunluğunda, samimi ama profesyonel bir ön yazı oluşturun.
         """
         
         return self.provider.generate_text(prompt)
+    
+    def analyze_interview_response(self, question: str, response: str, job_position: str) -> Dict:
+        """
+        Analyze an interview response and provide detailed feedback
+        """
+        try:
+            provider = get_llm_provider()
+            
+            prompt = f"""
+            Analyze this interview response and provide detailed feedback.
+            
+            Job Position: {job_position}
+            Question: {question}
+            Candidate Response: {response}
+            
+            Analyze the response for:
+            1. Content Quality (0-10): Relevance, depth, and accuracy of the response
+            2. Communication Clarity (0-10): How clear and well-structured the response is
+            3. Technical Accuracy (0-10): Technical correctness (if applicable)
+            4. Confidence Level (0-10): How confident the candidate sounds
+            5. Overall Score (0-10): Overall quality of the response
+            
+            Also provide:
+            - Strengths: What the candidate did well
+            - Areas for Improvement: Specific areas to work on
+            - Suggestions: Actionable advice for improvement
+            - Key Missing Elements: Important points not addressed
+            
+            Return a JSON object with the analysis.
+            """
+            
+            schema = {
+                "type": "object",
+                "properties": {
+                    "content_quality": {"type": "number", "minimum": 0, "maximum": 10},
+                    "communication_clarity": {"type": "number", "minimum": 0, "maximum": 10},
+                    "technical_accuracy": {"type": "number", "minimum": 0, "maximum": 10},
+                    "confidence_level": {"type": "number", "minimum": 0, "maximum": 10},
+                    "overall_score": {"type": "number", "minimum": 0, "maximum": 10},
+                    "strengths": {"type": "array", "items": {"type": "string"}},
+                    "areas_for_improvement": {"type": "array", "items": {"type": "string"}},
+                    "suggestions": {"type": "array", "items": {"type": "string"}},
+                    "key_missing_elements": {"type": "array", "items": {"type": "string"}}
+                },
+                "required": ["content_quality", "communication_clarity", "technical_accuracy", 
+                            "confidence_level", "overall_score", "strengths", "areas_for_improvement", 
+                            "suggestions", "key_missing_elements"]
+            }
+            
+            analysis = provider.generate_json(prompt, schema)
+            
+            # Validate scores are in range
+            for score_key in ["content_quality", "communication_clarity", "technical_accuracy", 
+                             "confidence_level", "overall_score"]:
+                if score_key in analysis:
+                    analysis[score_key] = max(0, min(10, analysis[score_key]))
+            
+            return analysis
+            
+        except Exception as e:
+            logger.error(f"Error analyzing interview response: {str(e)}")
+            return _get_fallback_analysis(response)
+
+    def analyze_profile_for_interview_prep(self, user_data: Dict, job_context: Dict = None) -> Dict:
+        """
+        Analyze user profile to provide interview preparation recommendations
+        
+        Args:
+            user_data: Comprehensive user information
+            job_context: Optional job context for tailored advice
+            
+        Returns:
+            Dictionary with interview preparation recommendations
+        """
+        prompt = f"""
+        Aşağıdaki kullanıcı profiline dayanarak mülakata hazırlık önerileri ve potansiyel güçlü/zayıf yönleri analiz edin:
+
+        Kullanıcı Profili:
+        {json.dumps(user_data, indent=2)}
+
+        {f"Hedeflenen İş Pozisyonu: {json.dumps(job_context, indent=2)}" if job_context else ""}
+
+        Analiz ve öneriler şu konuları kapsamalı:
+
+        1. Mülakat Güçlü Yönleri:
+           - Vurgulanması gereken akademik başarılar
+           - Öne çıkarılacak deneyimler ve projeler
+           - Etkili sunulabilecek kişisel özellikler
+           - Hikaye formatında anlatılabilecek başarılar
+
+        2. Geliştirilmesi Gereken Alanlar:
+           - Potansiyel zayıf noktalar ve bunları güçlü yönlere çevirme
+           - Eksik deneyimler için alternatif örnekler
+           - Güven eksikliği yaratabilecek durumlar
+           - Hazırlanması gereken savunma stratejileri
+
+        3. Mülakat Senaryoları:
+           - Beklenen soru türleri ve cevap stratejileri
+           - Davranışsal sorular için STAR metodu örnekleri
+           - Teknik sorular için hazırlık alanları
+           - Durum analizi soruları için yaklaşımlar
+
+        4. Sunum Stratejisi:
+           - Özgeçmiş sunumu için ana hatlar
+           - Değer önerisi (value proposition) formülasyonu
+           - Güçlü açılış ve kapanış ifadeleri
+           - Beden dili ve iletişim tavsiyeleri
+
+        5. Soru Sorma Becerileri:
+           - İşverene sorulması gereken akıllı sorular
+           - Şirket ve pozisyon hakkında araştırma alanları
+           - Kariyer gelişimi ile ilgili sorular
+           - Şirket kültürü ve değerleri hakkında sorular
+
+        Türkçe, uygulanabilir ve motivasyonel tavsiyelerde bulunun.
+        """
+        
+        schema = {
+            "interview_strengths": {
+                "academic_highlights": ["string"],
+                "experience_stories": ["string"],
+                "personal_qualities": ["string"],
+                "success_examples": ["string"]
+            },
+            "improvement_areas": {
+                "potential_weaknesses": ["string"],
+                "defense_strategies": ["string"],
+                "confidence_boosters": ["string"],
+                "preparation_focus": ["string"]
+            },
+            "question_scenarios": {
+                "behavioral_questions": [
+                    {
+                        "question": "string",
+                        "approach": "string",
+                        "example_response": "string"
+                    }
+                ],
+                "technical_questions": ["string"],
+                "situational_questions": ["string"]
+            },
+            "presentation_strategy": {
+                "elevator_pitch": "string",
+                "key_messages": ["string"],
+                "opening_statement": "string",
+                "closing_statement": "string"
+            },
+            "smart_questions": {
+                "about_role": ["string"],
+                "about_company": ["string"],
+                "about_growth": ["string"],
+                "about_culture": ["string"]
+            },
+            "preparation_checklist": ["string"]
+        }
+        
+        return self.provider.generate_json(prompt, schema)
 
 
 # Decorator for caching LLM responses (optional)
