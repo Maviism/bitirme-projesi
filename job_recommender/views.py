@@ -6,14 +6,15 @@ from datetime import datetime
 from django.db import transaction
 from django.contrib.auth.decorators import login_required
 import logging
+from utils.user_utils import get_current_student
+
 
 # Import our recommender system
 from .recommender import HybridRecommender
 # Import our models
 from .models import Student, Course, Experience, Job, JobRecommendation
 # Import LLM utils
-from utils.llm_utils import get_llm_instance, cache_llm_response
-import logging
+from utils.llm_utils import get_llm_instance
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,7 @@ def landing_page(request):
     return render(request, 'common/landing_page.html')
 
 @login_required
-def career_form(request):
-    from utils.user_utils import get_current_student
-    
+def career_form(request):    
     # Get current student profile if exists
     student = get_current_student(request)
     context = {}
@@ -68,8 +67,6 @@ def career_form(request):
                 'end_date': internship.end_date.strftime('%Y-%m-%d') if internship.end_date else '',
                 'description': internship.description
             })
-        print(f"[DEBUG] Formatted internships: {formatted_internships}")
-        print(f"[DEBUG] Formatted organizations: {formatted_organizations}")
         # Pass student data to template
         context = {
             'student': {
@@ -99,8 +96,6 @@ def career_form(request):
 # View for the recommendation results page
 @login_required
 def recommendation_results(request):
-    from utils.user_utils import get_current_student
-    
     # Get the current user's student profile
     student = get_current_student(request)
     
@@ -429,289 +424,9 @@ def submit_application(request):
         return JsonResponse({"error": str(e)}, status=400)
 
 
-@cache_llm_response("job_compatibility")
-@login_required
-def analyze_job_compatibility(request):
-    """Analyze compatibility between student profile and specific job using AI"""
-    if request.method != 'POST':
-        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
-    
-    try:
-        # Get student ID and job ID from request
-        student_id = request.POST.get('student_id')
-        job_id = request.POST.get('job_id')
-        
-        if not student_id or not job_id:
-            return JsonResponse({"error": "Student ID and Job ID are required"}, status=400)
-        
-        # Get student and job objects
-        try:
-            student = Student.objects.get(pk=student_id)
-            job = Job.objects.get(pk=job_id)
-        except (Student.DoesNotExist, Job.DoesNotExist):
-            return JsonResponse({"error": "Student or Job not found"}, status=404)
-        
-        # Prepare user profile data
-        user_profile = {
-            'personal_info': {
-                'name': f"{student.fullname} {student.last_name}",
-                'faculty': student.faculty,
-                'program': student.program,
-                'gpa': str(student.gpa)
-            },
-            'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
-            'courses': [
-                {
-                    'name': course.course_name,
-                    'grade': getattr(course, 'grade', 'N/A')
-                } for course in Course.objects.filter(student=student)
-            ],
-            'experience': [
-                {
-                    'company': exp.institution_name,
-                    'position': getattr(exp, 'position', 'Intern'),
-                    'duration': getattr(exp, 'duration', 'N/A')
-                } for exp in Experience.objects.filter(student=student, experience_type='internship')
-            ],
-            'organizations': [
-                {
-                    'name': exp.institution_name,
-                    'role': getattr(exp, 'position', 'Member')
-                } for exp in Experience.objects.filter(student=student, experience_type='organization')
-            ]
-        }
-        
-        # Prepare job data
-        job_data = {
-            'title': job.title,
-            'company': job.company,
-            'description': job.description,
-            'required_majors': job.required_majors if hasattr(job, 'required_majors') else [],
-            'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
-        }
-        
-        # Get LLM instance and analyze compatibility
-        llm = get_llm_instance()
-        compatibility_analysis = llm.analyze_job_compatibility(user_profile, job_data)
-        
-        return JsonResponse({
-            'success': True,
-            'analysis': compatibility_analysis
-        })
-        
-    except Exception as e:
-        logger.error(f"Error analyzing job compatibility: {e}")
-        return JsonResponse({
-            'error': 'Failed to analyze job compatibility',
-            'details': str(e)
-        }, status=500)
 
 
-@login_required
-def get_ai_job_recommendations(request):
-    """Get AI-powered job recommendations for a student"""
-    if request.method != 'POST':
-        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
-    
-    try:
-        student_id = request.POST.get('student_id')
-        if not student_id:
-            return JsonResponse({"error": "Student ID is required"}, status=400)
-        
-        try:
-            student = Student.objects.get(pk=student_id)
-        except Student.DoesNotExist:
-            return JsonResponse({"error": "Student not found"}, status=404)
-        
-        # Prepare user profile
-        user_profile = {
-            'personal_info': {
-                'name': f"{student.fullname} {student.last_name}",
-                'faculty': student.faculty,
-                'program': student.program,
-                'gpa': str(student.gpa)
-            },
-            'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
-            'experience_level': 'entry' if not Experience.objects.filter(student=student, experience_type='internship').exists() else 'experienced',
-            'preferences': {
-                'industry': request.POST.get('preferred_industry', ''),
-                'location': request.POST.get('preferred_location', ''),
-                'salary_range': request.POST.get('preferred_salary', '')
-            }
-        }
-        
-        # Get available jobs (limit to active/recent jobs)
-        available_jobs = []
-        for job in Job.objects.all()[:20]:  # Limit to 20 jobs for performance
-            available_jobs.append({
-                'id': job.id,
-                'title': job.title,
-                'company': job.company,
-                'description': job.description[:500],  # Truncate description
-                'required_majors': job.required_majors if hasattr(job, 'required_majors') else [],
-                'required_skills': job.required_skills if hasattr(job, 'required_skills') else []
-            })
-        
-        # Get LLM instance and generate recommendations
-        llm = get_llm_instance()
-        ai_recommendations = llm.generate_job_recommendations(user_profile, available_jobs)
-        
-        return JsonResponse({
-            'success': True,
-            'recommendations': ai_recommendations
-        })
-        
-    except Exception as e:
-        logger.error(f"Error getting AI job recommendations: {e}")
-        return JsonResponse({
-            'error': 'Failed to get AI recommendations',
-            'details': str(e)
-        }, status=500)
 
 
-@login_required
-def get_career_advice(request):
-    """Get personalized career advice using AI"""
-    if request.method != 'POST':
-        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
-    
-    try:
-        student_id = request.POST.get('student_id')
-        career_goal = request.POST.get('career_goal', '')
-        
-        if not student_id:
-            return JsonResponse({"error": "Student ID is required"}, status=400)
-        
-        try:
-            student = Student.objects.get(pk=student_id)
-        except Student.DoesNotExist:
-            return JsonResponse({"error": "Student not found"}, status=404)
-        
-        # Prepare user data for career advice
-        user_data = {
-            'name': f"{student.fullname} {student.last_name}",
-            'faculty': student.faculty,
-            'program': student.program,
-            'gpa': str(student.gpa),
-            'skills': student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else [],
-            'courses': [course.course_name for course in Course.objects.filter(student=student)],
-            'experience': [
-                {
-                    'company': exp.institution_name,
-                    'position': getattr(exp, 'position', 'Intern')
-                } for exp in Experience.objects.filter(student=student, experience_type='internship')
-            ],
-            'career_goal': career_goal
-        }
-        
-        # Generate career advice prompt
-        prompt = f"""
-        Provide personalized career advice for this student:
-        
-        Student Profile:
-        {json.dumps(user_data, indent=2)}
-        
-        Please provide advice on:
-        1. Skills to develop
-        2. Career paths to consider
-        3. Next steps to take
-        4. Industry insights
-        5. Professional development recommendations
-        
-        Make the advice specific, actionable, and encouraging.
-        """
-        
-        llm = get_llm_instance()
-        career_advice = llm.provider.generate_text(prompt)
-        
-        return JsonResponse({
-            'success': True,
-            'advice': career_advice
-        })
-        
-    except Exception as e:
-        logger.error(f"Error generating career advice: {e}")
-        return JsonResponse({
-            'error': 'Failed to generate career advice',
-            'details': str(e)
-        }, status=500)
-
-
-@login_required
-def get_skill_gap_analysis(request):
-    """Analyze skill gaps for specific job or career path"""
-    if request.method != 'POST':
-        return JsonResponse({"error": "Only POST method is allowed"}, status=405)
-    
-    try:
-        student_id = request.POST.get('student_id')
-        target_job_id = request.POST.get('job_id')
-        target_role = request.POST.get('target_role', '')
-        
-        if not student_id:
-            return JsonResponse({"error": "Student ID is required"}, status=400)
-        
-        try:
-            student = Student.objects.get(pk=student_id)
-        except Student.DoesNotExist:
-            return JsonResponse({"error": "Student not found"}, status=404)
-        
-        # Prepare current skills
-        current_skills = student.skills if isinstance(student.skills, list) else [student.skills] if student.skills else []
-        current_experience = [
-            exp.institution_name for exp in Experience.objects.filter(student=student, experience_type='internship')
-        ]
-        
-        # Get target job requirements
-        target_requirements = {}
-        if target_job_id:
-            try:
-                job = Job.objects.get(pk=target_job_id)
-                target_requirements = {
-                    'title': job.title,
-                    'company': job.company,
-                    'required_skills': job.required_skills if hasattr(job, 'required_skills') else [],
-                    'description': job.description
-                }
-            except Job.DoesNotExist:
-                pass
-        
-        # Generate skill gap analysis
-        prompt = f"""
-        Analyze the skill gap for this student:
-        
-        Current Profile:
-        - Name: {student.fullname} {student.last_name}
-        - Program: {student.program}
-        - Current Skills: {current_skills}
-        - Experience: {current_experience}
-        
-        Target Position:
-        {json.dumps(target_requirements, indent=2) if target_requirements else f"Role: {target_role}"}
-        
-        Provide a detailed skill gap analysis including:
-        1. Skills the student already has that match
-        2. Missing skills that need to be developed
-        3. Recommended learning resources or courses
-        4. Timeline for skill development
-        5. Alternative skills that could compensate
-        
-        Format the response as a structured analysis.
-        """
-        
-        llm = get_llm_instance()
-        gap_analysis = llm.provider.generate_text(prompt)
-        
-        return JsonResponse({
-            'success': True,
-            'analysis': gap_analysis
-        })
-        
-    except Exception as e:
-        logger.error(f"Error analyzing skill gap: {e}")
-        return JsonResponse({
-            'error': 'Failed to analyze skill gap',
-            'details': str(e)
-        }, status=500)
 
 
