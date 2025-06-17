@@ -6,9 +6,9 @@ from django.contrib.auth.forms import AuthenticationForm
 from .forms import CustomUserCreationForm
 
 def register(request):
-    # Redirect to home if user is already authenticated
+    # Redirect to landing page if user is already authenticated
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('landing_page')
         
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
@@ -25,14 +25,10 @@ def register(request):
 def profile(request):
     return render(request, 'accounts/profile.html')
 
-@login_required
-def home(request):
-    return render(request, 'common/home.html')
-
 def login_view(request):
-    # Redirect to home if user is already authenticated
+    # Redirect to landing page if user is already authenticated
     if request.user.is_authenticated:
-        return redirect('home')
+        return redirect('landing_page')
         
     if request.method == 'POST':
         form = AuthenticationForm(request, data=request.POST)
@@ -43,8 +39,8 @@ def login_view(request):
             if user is not None:
                 login(request, user)
                 messages.success(request, f'Welcome back, {username}!')
-                # Redirect to next parameter if available or home
-                next_page = request.GET.get('next', 'home')
+                # Redirect to next parameter if available or landing page
+                next_page = request.GET.get('next', 'landing_page')
                 return redirect(next_page)
             else:
                 messages.error(request, 'Invalid username or password.')
