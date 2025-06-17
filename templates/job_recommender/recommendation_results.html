@@ -174,10 +174,13 @@
                     </div>
                   </div>
                   <div class="card-footer px-3 pb-2">
-                    <a href="{% url 'resume_generator:generate_resume' %}?job_id={{ job.id }}&title={{ job.title|urlencode }}&company={{ job.company|urlencode }}&description={{ job.description|urlencode }}" 
-                       class="btn btn-custom btn-primary w-100">
-                      <i class="fas fa-file-alt me-2"></i>Özgeçmiş Oluştur
-                    </a>
+                    <form action="{% url 'resume_generator:generate_resume_for_job' %}" method="post" class="generate-resume-form">
+                      {% csrf_token %}
+                      <input type="hidden" name="job_id" value="{{ job.id }}">
+                      <button type="submit" class="btn btn-custom btn-primary w-100">
+                        <i class="fas fa-file-alt me-2"></i>Özgeçmiş Oluştur
+                      </button>
+                    </form>
                   </div>
                 </div>
               </div>
@@ -236,13 +239,14 @@
         }, 100 * index);
       });
       
-      // Add event listeners to any "Generate Resume" buttons
-      const generateButtons = document.querySelectorAll('.card-footer a');
-      generateButtons.forEach(button => {
-        button.addEventListener('click', function() {
+      // Add event listeners to the resume generation forms
+      const generateForms = document.querySelectorAll('.generate-resume-form');
+      generateForms.forEach(form => {
+        form.addEventListener('submit', function(event) {
+          const button = form.querySelector('button');
           button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Oluşturuluyor...';
           button.classList.add('disabled');
-          // The href is already set in the template, so the click will navigate appropriately
+          // The form will handle the submission
         });
       });
     }

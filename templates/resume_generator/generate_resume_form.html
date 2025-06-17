@@ -506,10 +506,14 @@
                   </div>
                   <div class="card-footer bg-transparent">
                     <div class="d-grid gap-2">
-                      <a href="{% url 'resume_generator:generate_resume' %}?job_id={{ rec.job.id }}&title={{ rec.job.title|urlencode }}&company={{ rec.job.company|urlencode }}&description={{ rec.job.description|truncatechars:200|urlencode }}" 
+                      <form action="{% url 'resume_generator:generate_resume_for_job' %}" method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="job_id" value="{{ rec.job.id }}">
+                        <button type="submit" 
                         class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-file-alt me-2"></i>Bu İş İçin Özgeçmiş Oluştur
-                      </a>
+                      </button>
+                      </form>
                       <a href="{% url 'interview:prepare_interview' %}?job_id={{ rec.job.id }}&student_id={{ student.id }}" 
                         class="btn btn-sm btn-outline-purple">
                         <i class="fas fa-comments me-2"></i>Mülakat Pratiği Yap

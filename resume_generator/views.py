@@ -44,8 +44,8 @@ def select_profile_view(request: HttpRequest):
             # Store the selected profile ID in session
             request.session['active_student_id'] = profile_id
             
-            # Redirect to the resume generator
-            return redirect('resume_generator:generate_resume')
+            # Redirect to the resume generator job selection page
+            return redirect('resume_generator:generate_resume_for_job')
     
     # Get all profiles linked to this user
     student_profiles = Student.objects.filter(user=request.user).order_by('-updated_at')
@@ -56,7 +56,7 @@ def select_profile_view(request: HttpRequest):
     # If there's only one profile, set it as active and redirect
     if student_profiles.count() == 1:
         request.session['active_student_id'] = str(student_profiles.first().id)
-        return redirect('resume_generator:generate_resume')
+        return redirect('resume_generator:generate_resume_for_job')
         
     context = {
         'profiles': student_profiles,
@@ -65,105 +65,7 @@ def select_profile_view(request: HttpRequest):
     
     return render(request, 'resume_generator/select_profile.html', context)
 
-def generate_resume_view(request: HttpRequest):
-    job_id = request.GET.get('job_id')
-    job_title = request.GET.get('title')
-    job_company = request.GET.get('company')
-    job_description = request.GET.get('description')
 
-    student = get_current_student(request)
-    if not student:
-        # Handle case where student is not found (e.g., redirect to login or show error)
-        return HttpResponse("Student profile not found. Please log in.", status=404)
-
-    # Fetch related data for the student
-    courses = Course.objects.filter(student=student)
-    internships = Experience.objects.filter(student=student, experience_type='internship')
-    organizations = Experience.objects.filter(student=student, experience_type='organization')
-    
-    # Get job recommendations for this student if available
-    job_recommendations = None
-    if job_id:
-        try:
-            from job_recommender.models import JobRecommendation, Job
-            
-            # Debug information
-            logger.info(f"Fetching recommendations for student ID: {student.id}, job ID: {job_id}")
-            
-            # Get all recommendations for this student
-            recommendations = JobRecommendation.objects.filter(
-                student=student
-            ).select_related('job').order_by('-match_score')[:5]  # Get top 5
-            
-            logger.info(f"Found {recommendations.count()} recommendations for student")
-            
-            # Find the current job in recommendations if it exists
-            current_job_rec = None
-            for rec in recommendations:
-                logger.info(f"Checking recommendation job ID: {rec.job.id} ({type(rec.job.id)}) vs requested job ID: {job_id} ({type(job_id)})")
-                if str(rec.job.id) == str(job_id):
-                    current_job_rec = rec
-                    logger.info(f"Match found! Job: {rec.job.title} with score: {rec.match_score}")
-                    break
-            
-            # If we didn't find the current job in recommendations, try to fetch it directly
-            if not current_job_rec:
-                logger.info(f"Current job not found in recommendations, trying direct fetch")
-                try:
-                    # Try to find a recommendation for this specific job
-                    direct_rec = JobRecommendation.objects.filter(
-                        student=student,
-                        job__id=job_id
-                    ).first()
-                    
-                    if direct_rec:
-                        logger.info(f"Direct job recommendation found with score: {direct_rec.match_score}")
-                        current_job_rec = direct_rec
-                    else:
-                        # If there's no recommendation, create the job object for reference
-                        job_obj = Job.objects.get(id=job_id)
-                        logger.info(f"Found job: {job_obj.title} at {job_obj.company}")
-                except Exception as job_error:
-                    logger.error(f"Error looking up job directly: {job_error}")
-            
-            job_recommendations = {
-                'recommendations': recommendations,
-                'current_job_rec': current_job_rec
-            }
-        except Exception as e:
-            logger.error(f"Error fetching job recommendations: {e}")
-            # Don't let this block the resume generation
-
-    # Prepare student data for the form
-    # Add fields that might not be directly on the Student model but are useful for a resume
-    student_form_data = {
-        'id': student.id,
-        'fullname': student.fullname,
-        'last_name': student.last_name,
-        'email': getattr(student, 'email', 'your_email@example.com'), # Assuming an email field
-        'phone': getattr(student, 'phone', '555-1234'), # Assuming a phone field
-        'linkedin_profile': getattr(student, 'linkedin_profile', ''), # Assuming a linkedin field
-        'faculty': student.faculty,
-        'program': student.program,
-        'gpa': str(student.gpa),
-        'skills': ', '.join(student.skills) if isinstance(student.skills, list) else student.skills,
-        'summary': getattr(student, 'summary', ''), # Empty to trigger auto-generation
-        'courses': courses,
-        'internships': internships,
-        'organizations': organizations
-    }
-
-    context = {
-        'job_id': job_id,
-        'job_title': job_title,
-        'job_company': job_company,
-        'job_description': job_description,
-        'student': student_form_data,
-        'job_recommendations': job_recommendations,  # Add recommendations to context
-    }
-    # Assuming you have a template named 'generate_resume_form.html' 
-    # or similar in your resume_generator templates directory.
-    return render(request, 'resume_generator/generate_resume_form.html', context)
 
 def download_resume_view(request: HttpRequest):
     if request.method != 'POST':
@@ -943,3 +845,160 @@ PROFESSIONAL SUMMARY:
         </html>
         """
         return HttpResponse(error_message, status=500)
+
+def generate_resume_for_job_view(request: HttpRequest):
+    """
+    Generate a resume tailored for a specific job.
+    Handles three scenarios:
+    1. GET request without parameters - show job selection UI
+    2. POST request with job_id - generate resume for specific job
+    3. POST request with job details - generate resume for custom job
+    
+    Args:
+        request: The HTTP request object
+    """
+    # Handle GET requests - redirect to recommendation results
+    if request.method == 'GET':
+        # This is a direct access without a specific job
+        # Redirect to recommendation results page where the user can select a job
+        return redirect('recommendation_results')
+    
+    # For POST requests, check if it's a custom job or job_id
+    has_custom_job = 'job_title' in request.POST and 'company' in request.POST
+        
+    # If not custom and no job_id provided, return error
+    if not has_custom_job and 'job_id' not in request.POST:
+        return HttpResponse("Invalid request. Either job ID or job details must be provided.", status=400)
+    
+    # Get job ID from POST data or process custom job
+    job_id = None
+    job_title = None
+    job_company = None
+    job_description = None
+    
+    if has_custom_job:
+        # This is a custom job submission
+        job_title = request.POST.get('job_title')
+        job_company = request.POST.get('company')
+        job_description = request.POST.get('job_description', '')
+        logger.info(f"Custom job submission: {job_title} at {job_company}")
+    else:
+        # This is a job_id based submission
+        try:
+            job_id = int(request.POST.get('job_id'))
+        except (TypeError, ValueError):
+            return HttpResponse("Invalid job ID format.", status=400)
+    # Get current student
+    student = get_current_student(request)
+    if not student:
+        # Handle case where student is not found
+        return HttpResponse("Student profile not found. Please log in.", status=404)
+
+    # Fetch job details from the database
+    try:
+        from job_recommender.models import Job, JobRecommendation
+
+        # Get the job object
+        job = get_object_or_404(Job, id=job_id)
+        
+            # Get job details
+        job_title = job.title
+        job_company = job.company
+        job_description = job.description
+        
+        # Verify that this job is either public or recommended to the student
+        # to prevent access to unauthorized jobs
+        has_access = False
+        try:
+            # Check if this job has been recommended to the student
+            recommendation = JobRecommendation.objects.filter(
+                student=student,
+                job=job
+            ).exists()
+            
+            if recommendation:
+                has_access = True
+            else:
+                # Check if this is a public job (you might need to add a 'is_public' field to your Job model)
+                # For now, assume all jobs are accessible
+                has_access = True
+                
+            if not has_access:
+                logger.warning(f"User {request.user.username} attempted to access unauthorized job {job_id}")
+                return HttpResponse("You don't have access to this job.", status=403)
+                
+        except Exception as e:
+            logger.error(f"Error checking job access: {e}")
+            # Continue for now, but with a warning
+
+        # Fetch related data for the student
+        courses = Course.objects.filter(student=student)
+        internships = Experience.objects.filter(student=student, experience_type='internship')
+        organizations = Experience.objects.filter(student=student, experience_type='organization')
+        
+        # Get job recommendations for this student
+        job_recommendations = None
+        try:
+            # Get all recommendations for this student
+            recommendations = JobRecommendation.objects.filter(
+                student=student
+            ).select_related('job').order_by('-match_score')[:5]  # Get top 5
+            
+            # Find the current job in recommendations if it exists
+            current_job_rec = None
+            for rec in recommendations:
+                if rec.job.id == job_id:
+                    current_job_rec = rec
+                    break
+            
+            # If we didn't find the current job in recommendations, try to fetch it directly
+            if not current_job_rec:
+                # Try to find a recommendation for this specific job
+                direct_rec = JobRecommendation.objects.filter(
+                    student=student,
+                    job__id=job_id
+                ).first()
+                
+                if direct_rec:
+                    current_job_rec = direct_rec
+            
+            job_recommendations = {
+                'recommendations': recommendations,
+                'current_job_rec': current_job_rec
+            }
+        except Exception as e:
+            logger.error(f"Error fetching job recommendations: {e}")
+            # Don't let this block the resume generation
+
+        # Prepare student data for the form
+        student_form_data = {
+            'id': student.id,
+            'fullname': student.fullname,
+            'last_name': student.last_name,
+            'email': getattr(student, 'email', 'your_email@example.com'),
+            'phone': getattr(student, 'phone', '555-1234'),
+            'linkedin_profile': getattr(student, 'linkedin_profile', ''),
+            'faculty': student.faculty,
+            'program': student.program,
+            'gpa': str(student.gpa),
+            'skills': ', '.join(student.skills) if isinstance(student.skills, list) else student.skills,
+            'summary': getattr(student, 'summary', ''),
+            'courses': courses,
+            'internships': internships,
+            'organizations': organizations
+        }
+
+        context = {
+            'job_id': job_id,
+            'job_title': job_title,
+            'job_company': job_company,
+            'job_description': job_description,
+            'student': student_form_data,
+            'job_recommendations': job_recommendations,
+        }
+        
+        return render(request, 'resume_generator/generate_resume_form.html', context)
+        
+    except Exception as e:
+        logger.error(f"Error retrieving job details: {e}")
+        return HttpResponse(f"Error loading job data: {e}", status=500)

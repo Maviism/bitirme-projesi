@@ -5,7 +5,7 @@ app_name = 'resume_generator'
 
 urlpatterns = [
     path('profiles/', views.select_profile_view, name='select_profile'),
-    path('generate/', views.generate_resume_view, name='generate_resume'),
+    path('generate/job/', views.generate_resume_for_job_view, name='generate_resume_for_job'),
     path('download/', views.download_resume_view, name='download_resume'),
     path('preview/', views.preview_resume_view, name='preview_resume'),
     # AI-powered endpoints

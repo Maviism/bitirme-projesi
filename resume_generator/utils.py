@@ -134,7 +134,6 @@ def generate_resume_content(llm_utils: LLMUtils, user_data: Dict, job_descriptio
     
     return llm_utils.provider.generate_json(prompt, schema)
 
-
 def improve_resume_section(llm_utils: LLMUtils, section_content: str, section_type: str, job_context: str = "") -> str:
     """
     Improve a specific resume section
