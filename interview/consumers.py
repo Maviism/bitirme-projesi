@@ -332,13 +332,106 @@ class AgentConsumer(AsyncWebsocketConsumer):
             options.agent.think.provider.model = "gpt-4o-mini"
             # Customize prompt for interview context if in interview path
             if hasattr(self, 'interview_room') and self.interview_room:
-                options.agent.think.prompt = (
-                    "You are an experienced job interviewer conducting a professional interview. "
-                    "Ask relevant questions about the candidate's experience, skills, and fit for the position. "
-                    "Your responses should be clear, professional, and conversational. "
-                    "Evaluate the candidate's responses and provide constructive feedback."
-                )
-                options.agent.greeting = "Hello, I'm your interviewer today. We'll be discussing your qualifications and experience. Could you start by introducing yourself and telling me about your background?"
+                # Get interview session data from the database
+                from interview.models import InterviewSession
+                try:
+                    interview_session = InterviewSession.objects.get(room_name=self.interview_room)
+                    
+                    # Get student and job details
+                    student = interview_session.student
+                    job = interview_session.job
+                    
+                    # Create a customized prompt based on the student and job details
+                    student_context = (
+                        f"Student name: {student.fullname} {student.last_name}. "
+                        f"Program: {student.program}, Faculty: {student.faculty}, GPA: {student.gpa}. "
+                    )
+                    
+                    if student.skills:
+                        student_context += f"Skills: {', '.join(student.skills)}. "
+                    
+                    # Get student's experiences (internships and organizations)
+                    experiences = []
+                    try:
+                        for exp in student.experiences.all():
+                            exp_info = f"{exp.position} at {exp.institution_name} ({exp.get_experience_type_display()})"
+                            experiences.append(exp_info)
+                        
+                        if experiences:
+                            student_context += f"Experience: {'; '.join(experiences)}. "
+                    except Exception as e:
+                        logger.error(f"Error loading student experiences: {e}")
+                    
+                    job_context = ""
+                    if job:
+                        job_context = (
+                            f"Job position: {job.title}. "
+                            f"Job description: {job.description}. "
+                        )
+                        if job.required_skills:
+                            job_context += f"Required skills: {', '.join(job.required_skills)}. "
+                        if job.required_majors:
+                            job_context += f"Required majors: {', '.join(job.required_majors)}. "
+                    
+                    # Include resume and cover letter if available
+                    resume_context = ""
+                    if interview_session.resume_content:
+                        try:
+                            resume_context = f"Resume content: {interview_session.resume_content[:500]}... "
+                        except Exception as e:
+                            logger.error(f"Error processing resume content: {e}")
+                        
+                    cover_letter_context = ""
+                    if interview_session.cover_letter:
+                        try:
+                            cover_letter_context = f"Cover letter: {interview_session.cover_letter[:300]}... "
+                        except Exception as e:
+                            logger.error(f"Error processing cover letter: {e}")
+                    
+                    options.agent.think.prompt = (
+                        "You are an experienced job interviewer conducting a professional interview. "
+                        f"Here is information about the candidate: {student_context} "
+                        f"{resume_context}"
+                        f"{cover_letter_context}"
+                        f"{job_context} "
+                        "Based on this information, ask relevant questions about the candidate's experience, "
+                        "skills, and fit for the position. Pay special attention to how their background "
+                        "aligns with the job requirements. Your responses should be clear, professional, "
+                        "and conversational. Evaluate the candidate's responses and provide constructive feedback. "
+                        "IMPORTANT: If the candidate is not taking the interview seriously or repeatedly gives non-serious "
+                        "responses, stop asking interview questions and say 'I notice that you may not be ready for this "
+                        "interview today. I recommend we end this session and you can return when you're prepared to "
+                        "discuss your professional qualifications. Please close this window to end the interview.' "
+                        "If the candidate asks questions that are completely unrelated to the job or their qualifications, "
+                        "give them one warning by saying 'Let's focus on your qualifications for this position,' and if they "
+                        "continue with unrelated topics, suggest ending the session as described above. Only answer questions "
+                        "directly related to the job interview process or their professional qualifications."
+                    )
+                    
+                    # Personalized greeting
+                    options.agent.greeting = f"Hello {student.fullname}, I'm your interviewer today. We'll be discussing your qualifications and experience for the {job.title if job else 'position'} role. Could you start by introducing yourself and telling me about your background?"
+                    
+                    # Log the interview context was successfully set
+                    logger.info(f"Interview context set for session {self.interview_room} - Student: {student.fullname}, Job: {job.title if job else 'General'}")
+                    
+                except InterviewSession.DoesNotExist:
+                    logger.warning(f"No interview session found for room {self.interview_room}, using generic prompts")
+                    # Fallback to generic prompt if interview session not found
+                    options.agent.think.prompt = (
+                        "You are an experienced job interviewer conducting a professional interview. "
+                        "Ask relevant questions about the candidate's experience, skills, and fit for the position. "
+                        "Your responses should be clear, professional, and conversational. "
+                        "Evaluate the candidate's responses and provide constructive feedback. "
+                        "IMPORTANT: If the candidate is not taking the interview seriously or repeatedly gives non-serious "
+                        "responses, stop asking interview questions and say 'I notice that you may not be ready for this "
+                        "interview today. I recommend we end this session and you can return when you're prepared to "
+                        "discuss your professional qualifications. Please close this window to end the interview.' "
+                        "If the candidate asks questions that are completely unrelated to the job or their qualifications, "
+                        "give them one warning by saying 'Let's focus on your qualifications for this position,' and if they "
+                        "continue with unrelated topics, suggest ending the session as described above. Only answer questions "
+                        "directly related to the job interview process or their professional qualifications."
+                    )
+                    options.agent.greeting = "Hello, I'm your interviewer today. We'll be discussing your qualifications and experience. Could you start by introducing yourself and telling me about your background?"
             else:
                 options.agent.think.prompt = (
                     "You are a helpful voice assistant created by Deepgram. "
