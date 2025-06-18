@@ -1,35 +1,323 @@
 student_id,code,name,grade
-S001,BLM1101,Physics,AA
-S001,BLM1102,Mathematics,BA
-S001,BLM1121,Linear Algebra,BB
-S001,BLM1123,Introduction to Programming,AA
-S002,BLM1101,Physics,BA
-S002,BLM1102,Mathematics,BB
-S002,BLM1121,Linear Algebra,CB
-S002,BLM1123,Introduction to Programming,BA
-S003,BLM1101,Physics,BB
-S003,BLM1102,Mathematics,CB
-S003,BLM1121,Linear Algebra,BB
-S003,BLM1123,Introduction to Programming,AA
-S004,BLM1101,Physics,AA
-S004,BLM1102,Mathematics,AA
-S004,BLM1121,Linear Algebra,AA
-S004,BLM1123,Introduction to Programming,AA
+S001,BLM4221,Bitirme Projesi 2,FD
+S001,BLM3121,İşletim Sistemleri,FF
+S001,BLM2222,Mikroişlemciler,CC
+S001,MAT1101,Matematik,BB
+S001,BLM2123,Nesne Yönelimli Programlama,BB
+S001,BLM3223,Web Programlama,CC
+S001,BLM4224,Görüntü İşleme,FF
+S001,BLM2223,Veritabanı Sistemleri,BB
+S001,BLM2122,Sayısal Sistemler,FD
+S001,BLM3224,Yapay Zeka,AA
+S001,FIZ1101,Fizik 1,CC
+S001,BLM1122,Ayrık Matematik,CB
+S001,BLM2124,Elektronik 1,BA
+S001,BLM4122,Bilgisayar Grafikleri,DD
+S001,BLM3122,Bilgisayar Ağları,DC
+S001,BLM2121,Veri Yapıları,CB
+S001,BLM1121,Lineer Cebir,FD
+S001,BLM2221,Algoritmalar,FF
+S001,BLM3221,Gömülü Sistemler,FD
+S002,BLM2224,Sinyaller ve Sistemler,BB
+S002,BIM1123,Programlamaya Giriş,FF
+S002,BLM1121,Lineer Cebir,FD
+S002,BLM3123,Yazılım Mühendisliği,CC
+S002,BLM2122,Sayısal Sistemler,CB
+S002,BLM3224,Yapay Zeka,DC
+S002,BLM3223,Web Programlama,AA
+S002,BLM4122,Bilgisayar Grafikleri,DC
+S002,FIZ1101,Fizik 1,DD
+S002,MAT1102,Matematik 2,AA
+S002,BLM2121,Veri Yapıları,AA
+S002,BIM1124,Bilgisayar Mühendisliğine Giriş,CC
+S002,BLM2223,Veritabanı Sistemleri,BA
+S002,BLM3122,Bilgisayar Ağları,BB
+S002,BLM2221,Algoritmalar,FF
+S003,BLM4222,Makine Öğrenmesi,BA
+S003,MAT1102,Matematik 2,FD
+S003,BLM2122,Sayısal Sistemler,CB
+S003,BLM2224,Sinyaller ve Sistemler,BA
+S003,BLM3224,Yapay Zeka,BB
+S003,BLM2124,Elektronik 1,FF
+S003,BLM3222,Bilgisayar Mimarisi,BA
+S003,BLM3122,Bilgisayar Ağları,BB
+S003,BLM1122,Ayrık Matematik,DC
+S003,BLM3221,Gömülü Sistemler,FD
+S003,BLM4121,Bitirme Projesi 1,DC
+S003,BLM2221,Algoritmalar,FD
+S003,BLM1121,Lineer Cebir,FF
+S003,BLM4221,Bitirme Projesi 2,BA
+S003,BLM4223,Dağıtık Sistemler,FF
+S003,BLM2223,Veritabanı Sistemleri,FF
+S003,BLM3223,Web Programlama,DC
+S004,BLM4222,Makine Öğrenmesi,FD
+S004,FIZ1102,Fizik 2,BB
+S004,BLM2221,Algoritmalar,CB
+S004,FIZ1101,Fizik 1,BA
+S004,BLM2223,Veritabanı Sistemleri,FF
+S004,BLM3121,İşletim Sistemleri,BA
+S004,BLM1121,Lineer Cebir,DD
+S004,BLM3221,Gömülü Sistemler,CB
+S004,BLM3124,Biçimsel Diller ve Otomata,FF
+S004,BLM4223,Dağıtık Sistemler,CB
+S004,BLM3123,Yazılım Mühendisliği,BB
+S004,BLM3224,Yapay Zeka,CB
+S004,BLM4121,Bitirme Projesi 1,AA
+S004,BLM4124,Mobil Uygulama Geliştirme,BA
+S004,BIM1124,Bilgisayar Mühendisliğine Giriş,DC
+S004,BLM3222,Bilgisayar Mimarisi,AA
+S004,BLM2124,Elektronik 1,BB
+S004,BLM3223,Web Programlama,AA
+S004,BIM1123,Programlamaya Giriş,BA
+S005,EEE1104,Electromagnetics,AA
+S005,EEE3102,Digital Signal Processing,DD
+S005,EEE3101,Communications,FF
+S005,EEE4102,Optical Communications,FD
+S005,EEE2102,Microprocessors,AA
+S005,EEE2101,Electronics 1,BA
+S005,EEE4104,Antennas,DC
+S005,EEE4101,Wireless Communications,AA
+S005,EEE4103,Robotics,AA
+S005,EEE3103,Power Electronics,FF
+S005,EEE2103,Power Systems,FD
+S005,EEE1103,Signals and Systems,DD
+S005,EEE2104,Control Systems,CC
 S005,EEE1101,Circuit Theory,BA
-S005,EEE1102,Digital Design,AA
-S005,EEE1103,Signals and Systems,BB
-S006,EEE1101,Circuit Theory,CB
-S006,EEE1102,Digital Design,BA
-S006,EEE1103,Signals and Systems,BB
-S007,ME1101,Mechanics,AA
-S007,ME1102,Thermodynamics,BA
-S007,ME1103,Materials Science,BB
-S008,ME1101,Mechanics,BB
-S008,ME1102,Thermodynamics,CB
-S008,ME1103,Materials Science,BA
-S009,CE1101,Structural Analysis,BB
-S009,CE1102,Fluid Mechanics,CB
-S009,CE1103,Environmental Engineering,BA
-S010,CE1101,Structural Analysis,AA
-S010,CE1102,Fluid Mechanics,BA
-S010,CE1103,Environmental Engineering,AA
+S005,EEE3104,VLSI Design,CC
+S005,EEE1102,Digital Design,CB
+S006,EEE3104,VLSI Design,BB
+S006,EEE2102,Microprocessors,CC
+S006,EEE2103,Power Systems,CC
+S006,EEE2104,Control Systems,BA
+S006,EEE3102,Digital Signal Processing,AA
+S006,EEE2101,Electronics 1,FF
+S006,EEE4103,Robotics,FD
+S006,EEE4102,Optical Communications,BB
+S006,EEE1101,Circuit Theory,AA
+S006,EEE4101,Wireless Communications,FF
+S006,EEE3101,Communications,BB
+S006,EEE1104,Electromagnetics,FD
+S006,EEE4104,Antennas,BA
+S006,EEE1103,Signals and Systems,CB
+S006,EEE3103,Power Electronics,FF
+S006,EEE1102,Digital Design,DD
+S010,BLM3223,Web Programlama,DD
+S010,MAT1102,Matematik 2,CB
+S010,BLM3222,Bilgisayar Mimarisi,FF
+S010,BLM3224,Yapay Zeka,DC
+S010,BLM3221,Gömülü Sistemler,FF
+S010,BLM2122,Sayısal Sistemler,BA
+S010,BIM1124,Bilgisayar Mühendisliğine Giriş,CB
+S010,BLM1122,Ayrık Matematik,BB
+S010,FIZ1102,Fizik 2,DC
+S010,BLM2224,Sinyaller ve Sistemler,BA
+S010,BLM4222,Makine Öğrenmesi,CB
+S010,BLM2123,Nesne Yönelimli Programlama,CB
+S010,BLM4224,Görüntü İşleme,DD
+S010,BLM3122,Bilgisayar Ağları,DD
+S010,BLM2221,Algoritmalar,AA
+S010,BLM2222,Mikroişlemciler,BA
+S010,BLM3121,İşletim Sistemleri,AA
+S011,BLM3222,Bilgisayar Mimarisi,CC
+S011,BLM4124,Mobil Uygulama Geliştirme,AA
+S011,BLM1122,Ayrık Matematik,DC
+S011,BLM1121,Lineer Cebir,CC
+S011,FIZ1102,Fizik 2,DC
+S011,BLM3123,Yazılım Mühendisliği,FD
+S011,BLM2123,Nesne Yönelimli Programlama,AA
+S011,BLM4121,Bitirme Projesi 1,AA
+S011,BLM2124,Elektronik 1,BB
+S011,BLM4123,Ağ Güvenliği,BA
+S011,BLM3121,İşletim Sistemleri,AA
+S011,BLM4224,Görüntü İşleme,DD
+S011,BLM3122,Bilgisayar Ağları,FD
+S011,BLM2122,Sayısal Sistemler,FF
+S011,BLM4222,Makine Öğrenmesi,DD
+S011,BLM2222,Mikroişlemciler,AA
+S011,BIM1123,Programlamaya Giriş,CB
+S012,BLM2222,Mikroişlemciler,BA
+S012,BLM1122,Ayrık Matematik,AA
+S012,BLM4221,Bitirme Projesi 2,FF
+S012,BLM3221,Gömülü Sistemler,DD
+S012,MAT1101,Matematik,DD
+S012,BLM2121,Veri Yapıları,CB
+S012,BLM3122,Bilgisayar Ağları,CC
+S012,BLM3224,Yapay Zeka,CC
+S012,BLM4223,Dağıtık Sistemler,FD
+S012,BLM2223,Veritabanı Sistemleri,DC
+S012,BLM4121,Bitirme Projesi 1,CB
+S012,BIM1124,Bilgisayar Mühendisliğine Giriş,DD
+S012,BLM3124,Biçimsel Diller ve Otomata,DC
+S012,BLM4224,Görüntü İşleme,BA
+S012,BLM4123,Ağ Güvenliği,CB
+S013,BLM1121,Lineer Cebir,DD
+S013,BLM4221,Bitirme Projesi 2,DD
+S013,BLM4224,Görüntü İşleme,CC
+S013,BLM3122,Bilgisayar Ağları,BB
+S013,BLM4124,Mobil Uygulama Geliştirme,FF
+S013,BLM2221,Algoritmalar,FD
+S013,BLM2222,Mikroişlemciler,CC
+S013,BLM3223,Web Programlama,BB
+S013,BLM4223,Dağıtık Sistemler,CC
+S013,BLM3221,Gömülü Sistemler,AA
+S013,BLM2123,Nesne Yönelimli Programlama,FF
+S013,FIZ1101,Fizik 1,AA
+S013,BLM4123,Ağ Güvenliği,DD
+S013,BLM1122,Ayrık Matematik,CC
+S013,BLM2121,Veri Yapıları,BB
+S013,BLM4122,Bilgisayar Grafikleri,BB
+S013,BLM2124,Elektronik 1,CC
+S013,BLM3121,İşletim Sistemleri,FD
+S014,MAT1101,Matematik,FF
+S014,BLM4123,Ağ Güvenliği,CC
+S014,BIM1123,Programlamaya Giriş,BA
+S014,BLM2121,Veri Yapıları,BA
+S014,BLM2222,Mikroişlemciler,DD
+S014,BLM3222,Bilgisayar Mimarisi,AA
+S014,FIZ1101,Fizik 1,DC
+S014,BLM3121,İşletim Sistemleri,AA
+S014,BLM3224,Yapay Zeka,CB
+S014,BIM1124,Bilgisayar Mühendisliğine Giriş,BA
+S014,BLM3122,Bilgisayar Ağları,BB
+S014,BLM3223,Web Programlama,DC
+S014,BLM4222,Makine Öğrenmesi,FD
+S014,BLM3221,Gömülü Sistemler,BB
+S014,BLM2122,Sayısal Sistemler,DD
+S014,BLM3123,Yazılım Mühendisliği,FD
+S015,BLM3123,Yazılım Mühendisliği,CC
+S015,BLM2224,Sinyaller ve Sistemler,BB
+S015,BLM4222,Makine Öğrenmesi,CC
+S015,BIM1124,Bilgisayar Mühendisliğine Giriş,BB
+S015,BLM3223,Web Programlama,CB
+S015,BLM3224,Yapay Zeka,BA
+S015,FIZ1101,Fizik 1,BB
+S015,BLM2122,Sayısal Sistemler,DC
+S015,BLM4123,Ağ Güvenliği,FF
+S015,MAT1102,Matematik 2,BA
+S015,BIM1123,Programlamaya Giriş,CC
+S015,BLM3222,Bilgisayar Mimarisi,CB
+S015,MAT1101,Matematik,BA
+S015,BLM3221,Gömülü Sistemler,BB
+S015,BLM3122,Bilgisayar Ağları,BA
+S015,BLM4121,Bitirme Projesi 1,DC
+S015,BLM4122,Bilgisayar Grafikleri,DC
+S015,BLM4124,Mobil Uygulama Geliştirme,BB
+S015,BLM2221,Algoritmalar,FF
+S015,BLM2223,Veritabanı Sistemleri,FD
+S016,BLM4124,Mobil Uygulama Geliştirme,FF
+S016,BLM4221,Bitirme Projesi 2,AA
+S016,BLM1122,Ayrık Matematik,BA
+S016,BLM4223,Dağıtık Sistemler,BA
+S016,BLM4122,Bilgisayar Grafikleri,DD
+S016,BLM3221,Gömülü Sistemler,AA
+S016,MAT1101,Matematik,CC
+S016,BLM4123,Ağ Güvenliği,BB
+S016,BLM2123,Nesne Yönelimli Programlama,CC
+S016,BLM3224,Yapay Zeka,CB
+S016,FIZ1101,Fizik 1,BB
+S016,BLM2124,Elektronik 1,CB
+S016,BLM1121,Lineer Cebir,FF
+S016,MAT1102,Matematik 2,CB
+S016,BIM1124,Bilgisayar Mühendisliğine Giriş,BA
+S016,BIM1123,Programlamaya Giriş,CB
+S016,BLM3124,Biçimsel Diller ve Otomata,BA
+S016,BLM2221,Algoritmalar,CC
+S017,BLM2121,Veri Yapıları,BA
+S017,BLM2221,Algoritmalar,CC
+S017,BLM3223,Web Programlama,CC
+S017,BLM2124,Elektronik 1,CB
+S017,BLM4124,Mobil Uygulama Geliştirme,CB
+S017,BLM4223,Dağıtık Sistemler,FF
+S017,BLM4222,Makine Öğrenmesi,DC
+S017,BLM3221,Gömülü Sistemler,DC
+S017,FIZ1102,Fizik 2,FD
+S017,BLM3224,Yapay Zeka,BA
+S017,BLM4122,Bilgisayar Grafikleri,DC
+S017,BLM2123,Nesne Yönelimli Programlama,FD
+S017,BIM1124,Bilgisayar Mühendisliğine Giriş,DD
+S017,BLM1122,Ayrık Matematik,FD
+S017,BLM4224,Görüntü İşleme,CC
+S017,BLM4221,Bitirme Projesi 2,CB
+S018,BLM3224,Yapay Zeka,CC
+S018,BLM2224,Sinyaller ve Sistemler,CC
+S018,FIZ1101,Fizik 1,BB
+S018,BLM3222,Bilgisayar Mimarisi,BA
+S018,BLM4223,Dağıtık Sistemler,BB
+S018,BLM4222,Makine Öğrenmesi,FD
+S018,BLM4122,Bilgisayar Grafikleri,DD
+S018,BLM3121,İşletim Sistemleri,FF
+S018,BLM3223,Web Programlama,BB
+S018,BLM2124,Elektronik 1,DD
+S018,BLM2221,Algoritmalar,FF
+S018,MAT1102,Matematik 2,CC
+S018,BLM2222,Mikroişlemciler,FF
+S018,BLM4224,Görüntü İşleme,BB
+S018,BLM2122,Sayısal Sistemler,FD
+S018,BLM3122,Bilgisayar Ağları,DD
+S018,BLM4121,Bitirme Projesi 1,AA
+S018,BLM3123,Yazılım Mühendisliği,DC
+S018,BIM1124,Bilgisayar Mühendisliğine Giriş,AA
+S019,BLM3221,Gömülü Sistemler,CB
+S019,BLM1121,Lineer Cebir,DC
+S019,BIM1124,Bilgisayar Mühendisliğine Giriş,CC
+S019,BLM4224,Görüntü İşleme,DC
+S019,BLM4222,Makine Öğrenmesi,FF
+S019,BLM2224,Sinyaller ve Sistemler,CB
+S019,BLM3121,İşletim Sistemleri,FF
+S019,BLM4123,Ağ Güvenliği,FF
+S019,BLM3224,Yapay Zeka,DD
+S019,BLM2121,Veri Yapıları,BA
+S019,BLM4121,Bitirme Projesi 1,FF
+S019,BLM2122,Sayısal Sistemler,CB
+S019,MAT1102,Matematik 2,FD
+S019,BIM1123,Programlamaya Giriş,DD
+S019,FIZ1101,Fizik 1,CB
+S020,MAT1102,Matematik 2,FF
+S020,BLM2222,Mikroişlemciler,DD
+S020,FIZ1101,Fizik 1,DD
+S020,FIZ1102,Fizik 2,CC
+S020,BLM1121,Lineer Cebir,DC
+S020,BLM2221,Algoritmalar,BA
+S020,BLM4124,Mobil Uygulama Geliştirme,BA
+S020,BLM2121,Veri Yapıları,AA
+S020,BLM4224,Görüntü İşleme,DC
+S020,BLM3122,Bilgisayar Ağları,CB
+S020,BLM3223,Web Programlama,FD
+S020,BLM3221,Gömülü Sistemler,FF
+S020,BLM4221,Bitirme Projesi 2,FD
+S020,BLM4222,Makine Öğrenmesi,AA
+S020,BLM3121,İşletim Sistemleri,DD
+S021,BLM4221,Bitirme Projesi 2,BA
+S021,BLM3121,İşletim Sistemleri,AA
+S021,BLM2222,Mikroişlemciler,BB
+S021,MAT1101,Matematik,CC
+S022,BLM2123,Nesne Yönelimli Programlama,BB
+S022,BLM3223,Web Programlama,CC
+S022,BLM4224,Görüntü İşleme,AA
+S022,BLM2223,Veritabanı Sistemleri,BB
+S023,BLM2122,Sayısal Sistemler,FD
+S023,BLM3224,Yapay Zeka,AA
+S023,FIZ1101,Fizik 1,CC
+S023,BLM1122,Ayrık Matematik,CB
+S024,BLM2124,Elektronik 1,BA
+S024,BLM4122,Bilgisayar Grafikleri,DD
+S024,BLM3122,Bilgisayar Ağları,DC
+S024,BLM2121,Veri Yapıları,CB
+S025,EEE1101,Circuit Theory,BA
+S025,EEE3104,VLSI Design,CC
+S025,EEE1102,Digital Design,CB
+S026,EEE3104,VLSI Design,BB
+S026,EEE2102,Microprocessors,CC
+S026,EEE2103,Power Systems,CC
+S027,MCE1101,Introduction to Mechanical Engineering,AA
+S027,MCE2101,Thermodynamics,BB
+S027,MCE3101,Fluid Mechanics,CC
+S028,MCE2201,Statics and Dynamics,BA
+S028,MCE3201,Heat Transfer,BC
+S028,MCE4101,Machine Design,AA
+S029,CVE1101,Introduction to Civil Engineering,BB
+S029,CVE2101,Structural Analysis,CC
+S029,CVE3101,Geotechnical Engineering,BC
+S030,CVE2201,Transportation Engineering,BA
+S030,CVE3201,Water Resources Engineering,AA
+S030,CVE4101,Construction Management,BB

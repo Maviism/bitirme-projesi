@@ -4,7 +4,8 @@ Job Recommendation System
 This module implements a hybrid job recommendation system that uses pre-generated 
 ML models rather than direct database queries. The system combines:
 
-1. Alumni-based recommendations: Matching students with jobs based on similar academic profiles
+1. Alumni-based recommendations: Using AutoML (FLAML) to automatically find the best model
+   for matching students with jobs based on academic profiles
 2. Job-based recommendations: Using experience and skills to match with suitable job postings
 
 Models are loaded from disk or generated on first use, and contain pre-computed data
@@ -22,8 +23,9 @@ logger = logging.getLogger(__name__)
 # Import the ML model generator
 try:
     from .ml_model.model_generator import MLModelGenerator
+    from .ml_model.automl_recommender import AlumniAutoMLRecommender  # Import AutoML recommender
 except ImportError:
-    logger.error("Failed to import MLModelGenerator. A model needs to be generated before recommendations will work.")
+    logger.error("Failed to import MLModelGenerator or AlumniAutoMLRecommender. A model needs to be generated before recommendations will work.")
 
 # Function to access alumni model data
 def get_alumni_database():
@@ -98,6 +100,30 @@ def get_job_postings_database():
         logger.error(f"Error in job model processing: {e}")
         return []
 
+def get_automl_model():
+    """
+    Load AutoML recommender model from the pre-generated model or return None if not available.
+    """
+    try:
+        if 'MLModelGenerator' not in globals():
+            logger.error("MLModelGenerator not available")
+            return None
+            
+        # Try to load existing model
+        logger.info("Loading AutoML model")
+        automl_model = MLModelGenerator.load_automl_model()
+        
+        if automl_model:
+            logger.info("AutoML model loaded successfully")
+            return automl_model
+        
+        # If no model found, we return None and let the caller decide what to do
+        logger.warning("Could not find AutoML model")
+        return None
+    except Exception as e:
+        logger.error(f"Error loading AutoML model: {e}")
+        return None
+
 class HybridRecommender:
     """
     A hybrid recommender system that combines alumni-based and job-posting-based recommendations.
@@ -120,6 +146,18 @@ class HybridRecommender:
         self.job_weight = job_weight
         self.min_recommendations = min_recommendations
         self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.automl_recommender = None
+        
+        # Try to load pre-trained AutoML model
+        try:
+            self.automl_recommender = get_automl_model()
+            
+            if self.automl_recommender is not None:
+                logger.info("Using pre-trained AutoML model")
+            else:
+                logger.info("No pre-trained AutoML model found - will train on first use")
+        except Exception as e:
+            logger.error(f"Error loading AutoML model: {e}")
     
     def _extract_keywords(self, text):
         """
@@ -133,7 +171,7 @@ class HybridRecommender:
     
     def get_alumni_recommendations(self, student_data, courses, skills=None):
         """
-        Generate job recommendations based on alumni with similar academic profiles.
+        Generate job recommendations based on alumni with similar academic profiles using AutoML.
         
         Parameters:
         -----------
@@ -142,100 +180,81 @@ class HybridRecommender:
         courses : list
             List of courses taken by the student with grades
         skills : list
-            List of student skill preferences
+            List of student skills used for post-filtering recommendations
             
         Returns:
         --------
         list
-            Recommended jobs based on alumni with similar profiles
+            Recommended jobs based on AutoML prediction
         """
         # Get alumni data from database
         alumni_data = get_alumni_database()
         if not alumni_data:
+            logger.warning("No alumni data available for AutoML recommendations")
             return []
             
-        # Extract student features: GPA, program, and course performance
         try:
-            student_gpa = float(student_data.get('gpa', 0))
-        except (ValueError, TypeError):
-            student_gpa = 0.0
-            
-        student_program = student_data.get('program', '')
-        
-        # Create a simple course grade mapping (could be more sophisticated)
-        grade_mapping = {
-            'AA': 4.0, 'BA': 3.5, 'BB': 3.0, 'CB': 2.5, 'CC': 2.0, 'DC': 1.5, 'DD': 1.0, 'FF': 0.0
-        }
-        
-        # Create course vector for student
-        student_courses = {}
-        for course in courses:
-            if isinstance(course, dict) and 'code' in course and 'grade' in course:
-                student_courses[course['code']] = grade_mapping.get(course['grade'], 0)
-        
-        # Calculate similarity with each alumni
-        similarities = []
-        
-        for alumni in alumni_data:
-            try:
-                # Get alumni's courses
-                alumni_course_grades = alumni.get('course_grades', {})
-                
-                # Skip alumni without job information
-                if 'current_job' not in alumni or not isinstance(alumni['current_job'], dict):
-                    continue
-                
-                # Program match bonus
-                program_bonus = 1.5 if alumni.get('student', {}).get('program') == student_program else 1.0
-                
-                # GPA similarity (inverse of difference)
+            # If no AutoML recommender available, initialize it
+            if self.automl_recommender is None:
                 try:
-                    alumni_gpa = float(alumni.get('student', {}).get('gpa', 0))
-                    gpa_similarity = max(0, 1 - abs(student_gpa - alumni_gpa) / 4.0)
-                except (ValueError, TypeError):
-                    gpa_similarity = 0.5  # Default if GPA can't be compared
+                    from .ml_model.automl_recommender import AlumniAutoMLRecommender
+                    logger.info("Initializing new AutoML recommender")
+                    self.automl_recommender = AlumniAutoMLRecommender(time_budget=60)
+                except Exception as e:
+                    logger.error(f"Failed to initialize AutoML recommender: {e}")
+                    return []
                 
-                # Course similarity
-                common_courses = 0
-                grade_diff_sum = 0
-                for code, grade in student_courses.items():
-                    if code in alumni_course_grades:
-                        common_courses += 1
-                        grade_diff_sum += abs(grade - alumni_course_grades[code])
+            # Train the model if not already trained
+            if not self.automl_recommender.is_trained:
+                # Log dataset size for debugging
+                logger.info(f"Training AutoML model on {len(alumni_data)} alumni records")
                 
-                course_similarity = 1.0
-                if common_courses > 0:
-                    avg_grade_diff = grade_diff_sum / common_courses
-                    course_similarity = max(0, 1 - avg_grade_diff / 4.0)
+                # Check if we have enough data to train properly
+                if len(alumni_data) < 5:
+                    logger.warning(f"Very small dataset ({len(alumni_data)} records). "
+                                  f"AutoML may not perform optimally.")
                 
-                # Skills similarity bonus
-                skill_bonus = 1.0
-                if skills and isinstance(skills, list) and len(skills) > 0:
-                    # Get the job's required skills
-                    job_skills = alumni['current_job'].get('required_skills', [])
-                    if job_skills and isinstance(job_skills, list):
-                        # Calculate number of matching skills
-                        matching_skills = len(set(skills) & set(job_skills))
-                        if matching_skills > 0:
-                            # More matching skills = higher bonus
-                            skill_bonus = 1.0 + (matching_skills / max(len(skills), 1)) * 0.5
+                logger.info("Training AutoML model on alumni data")
+                success = self.automl_recommender.train(alumni_data)
+                if not success:
+                    logger.error("AutoML training failed, attempting with longer time budget")
+                    # Try again with a longer time budget as fallback
+                    self.automl_recommender.time_budget = 120
+                    success = self.automl_recommender.train(alumni_data)
+                    if not success:
+                        logger.error("AutoML training failed even with extended time budget")
+                        return []
+                logger.info("AutoML model trained successfully")
+            else:
+                logger.info("Using pre-trained AutoML model for recommendations")
+            
+            # Get job postings database
+            job_postings = get_job_postings_database()
+            
+            # Get recommendations using the trained model
+            recommendations = self.automl_recommender.recommend(student_data, courses)
+            
+            # Apply skill post-filtering if skills provided
+            if skills and isinstance(skills, list) and len(skills) > 0:
+                recommendations = self.automl_recommender.post_filter_by_skills(
+                    recommendations, skills, job_postings)
+                logger.info(f"Applied skill filtering with {len(skills)} skills")
+            
+            # Get job details for the recommendations
+            enriched_recommendations = self.automl_recommender.get_job_details(recommendations, job_postings)
+            
+            if enriched_recommendations:
+                logger.info(f"Generated {len(enriched_recommendations)} AutoML recommendations")
+            else:
+                logger.warning("No AutoML recommendations were generated")
                 
-                # Calculate overall similarity with skill bonus
-                similarity = (0.3 * gpa_similarity + 0.7 * course_similarity) * program_bonus * skill_bonus
-                
-                # Get recommended job for this alumni
-                job = alumni['current_job']
-                similarities.append((similarity, job))
-                    
-            except Exception as e:
-                continue
-        
-        # Sort by similarity (highest first)
-        similarities.sort(reverse=True)
-        
-        # Extract top recommendations (up to 10 to ensure we have enough even with low scores)
-        recommendations = [item[1] for item in similarities[:10]]
-        return recommendations
+            return [rec['job'] for rec in enriched_recommendations]
+            
+        except Exception as e:
+            logger.error(f"Error in AutoML alumni recommendations: {e}")
+            return []
+    
+
     
     def get_job_recommendations(self, student_data, orgs, internships, skills=None):
         """
@@ -404,12 +423,12 @@ class HybridRecommender:
                     combined_scores[job_id] = {
                         'job': job,
                         'score': score * self.alumni_weight,
-                        'sources': ['alumni']
+                        'sources': ['alumni_automl']
                     }
                 else:
                     combined_scores[job_id]['score'] += score * self.alumni_weight
-                    if 'alumni' not in combined_scores[job_id]['sources']:
-                        combined_scores[job_id]['sources'].append('alumni')
+                    if 'alumni_automl' not in combined_scores[job_id]['sources']:
+                        combined_scores[job_id]['sources'].append('alumni_automl')
             except Exception as e:
                 continue
                 

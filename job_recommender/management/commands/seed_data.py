@@ -148,10 +148,9 @@ class Command(BaseCommand):
         self.stdout.write('Generating alumni records...')
         count = 0
         
-        # Get a sample of students to convert to alumni (about 30%)
+        # Convert ALL students to alumni (100% instead of just 30%)
         students = Student.objects.all()
-        alumni_count = max(int(students.count() * 0.3), 1)  # At least 1 alumni
-        alumni_candidates = random.sample(list(students), min(alumni_count, students.count()))
+        alumni_candidates = list(students)
         
         # Get all jobs for alumni employment
         jobs = Job.objects.all()
@@ -160,12 +159,35 @@ class Command(BaseCommand):
             return
         
         for student in alumni_candidates:
+            # Skip if student already has an alumni record
+            if hasattr(student, 'alumni_profile'):
+                self.stdout.write(self.style.WARNING(f"Student {student.student_id} already has an alumni profile, skipping"))
+                continue
+                
             # Generate a graduation date within the last 5 years
             days_ago = random.randint(0, 5*365)  # Up to 5 years ago
             graduation_date = datetime.now().date() - timedelta(days=days_ago)
             
-            # Assign a random job
-            current_job = random.choice(jobs)
+            # Try to find a job that matches the student's program
+            matching_jobs = [job for job in jobs if student.program in job.required_majors]
+            
+            # If no matching jobs, fall back to any job
+            if matching_jobs:
+                # Apply the same 1-4 index limit to matching jobs
+                limited_matching_jobs = matching_jobs[1:5]
+                if limited_matching_jobs:
+                    current_job = random.choice(limited_matching_jobs)
+                else:
+                    current_job = random.choice(matching_jobs) # Fallback to any matching if limited pool is empty
+                self.stdout.write(self.style.SUCCESS(f"Found matching job for {student.program}"))
+            else:
+                # Fallback to a random job from a limited index range (1 to 4)
+                fallback_jobs = jobs[1:5]
+                if fallback_jobs:
+                    current_job = random.choice(fallback_jobs)
+                else:
+                    current_job = random.choice(jobs) # Fallback to any if limited pool is empty
+                self.stdout.write(self.style.WARNING(f"No matching job for {student.program}, using random job"))
             
             # Create the alumni record
             alumni = Alumni.objects.create(
@@ -193,6 +215,21 @@ class Command(BaseCommand):
         students = Student.objects.all()
         jobs = Job.objects.all()
         
+        # Get all alumni records to improve recommendation quality
+        alumni_records = Alumni.objects.select_related('student', 'current_job').all()
+        alumni_job_mapping = {}
+        
+        # Build a map of program -> jobs based on alumni data
+        for alumni in alumni_records:
+            program = alumni.student.program
+            if program not in alumni_job_mapping:
+                alumni_job_mapping[program] = []
+            
+            if alumni.current_job:
+                alumni_job_mapping[program].append(alumni.current_job.id)
+        
+        self.stdout.write(self.style.SUCCESS(f'Found {len(alumni_records)} alumni records for job mapping'))
+        
         for student in students:
             # Find jobs that match the student's program
             for job in jobs:
@@ -213,31 +250,37 @@ class Command(BaseCommand):
                     if job.company in [i.institution_name for i in student.internships.all()]:
                         match_score = max(match_score, 90.0)  # Higher score for company match
                     
-                    # Check alumni connection
-                    alumni_match = False
-                    try:
-                        # Check if there are alumni with the same program working at this job's company
-                        alumni_at_company = Alumni.objects.filter(
-                            current_company=job.company,
-                            student__program=student.program
-                        ).exists()
-                        if alumni_at_company:
-                            match_score = max(match_score, 95.0)  # Highest score for alumni connection
-                            alumni_match = True
-                    except:
-                        pass
+                # Check alumni connection - this is now the primary recommendation source
+                alumni_match = False
+                
+                # Check if this job is commonly held by alumni with the same program
+                if student.program in alumni_job_mapping and job.id in alumni_job_mapping[student.program]:
+                    match_score = max(match_score, 95.0)  # Highest score for alumni connection
+                    alumni_match = True
                     
-                    # Create a recommendation if there's a match
-                    if match_score > 0:
-                        source = 'alumni' if alumni_match else ('hybrid' if match_score > 85.0 else 'job_posting')
-                        JobRecommendation.objects.update_or_create(
-                            student=student,
-                            job=job,
-                            defaults={
-                                'match_score': match_score,
-                                'source': source
-                            }
-                        )
-                        count += 1
+                # Also check if there are alumni with the same program working at this job's company
+                try:
+                    alumni_at_company = Alumni.objects.filter(
+                        current_company=job.company,
+                        student__program=student.program
+                    ).exists()
+                    if alumni_at_company:
+                        match_score = max(match_score, 92.0)  # High score for alumni at same company
+                        alumni_match = True
+                except:
+                    pass
+                    
+                # Create a recommendation if there's a match
+                if match_score > 0:
+                    source = 'alumni' if alumni_match else ('hybrid' if match_score > 85.0 else 'job_posting')
+                    JobRecommendation.objects.update_or_create(
+                        student=student,
+                        job=job,
+                        defaults={
+                            'match_score': match_score,
+                            'source': source
+                        }
+                    )
+                    count += 1
         
         self.stdout.write(self.style.SUCCESS(f'Successfully generated {count} job recommendations'))

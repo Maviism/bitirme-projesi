@@ -88,9 +88,36 @@ except admin.sites.NotRegistered:
 @admin.register(MLModelInfo)
 class MLModelInfoAdmin(admin.ModelAdmin):
     """Admin interface for ML model information"""
-    list_display = ('model_type', 'created_at', 'is_active', 'file_path')
-    list_filter = ('model_type', 'is_active', 'created_at')
-    readonly_fields = ('model_type', 'file_path', 'created_at')
+    list_display = ('model_type', 'created_at', 'is_active', 'algorithm', 'test_score', 'training_time')
+    list_filter = ('model_type', 'is_active', 'created_at', 'algorithm')
+    readonly_fields = ('model_type', 'file_path', 'created_at', 'algorithm', 'metrics', 
+                       'train_score', 'test_score', 'training_time', 'hyperparameters_display')
+    search_fields = ('model_type', 'file_path', 'algorithm')
+    
+    fieldsets = (
+        ('Model Information', {
+            'fields': ('model_type', 'file_path', 'created_at', 'is_active'),
+        }),
+        ('AutoML Details', {
+            'fields': ('algorithm', 'metrics', 'train_score', 'test_score', 'training_time', 'hyperparameters_display'),
+            'classes': ('collapse',),
+            'description': 'Technical details about the AutoML model training'
+        }),
+    )
+    
+    def hyperparameters_display(self, obj):
+        """Format hyperparameters as pretty JSON"""
+        import json
+        if not obj.hyperparameters:
+            return "No hyperparameters recorded"
+            
+        try:
+            hyperparams = json.loads(obj.hyperparameters)
+            formatted_json = json.dumps(hyperparams, indent=4)
+            return format_html('<pre>{}</pre>', formatted_json)
+        except:
+            return obj.hyperparameters
+    hyperparameters_display.short_description = 'Hyperparameters'
     
     def has_add_permission(self, request):
         return False

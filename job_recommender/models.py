@@ -154,17 +154,55 @@ class MLModelInfo(models.Model):
     """
     Model to track ML model generation information. 
     This is not a real ML model - it just tracks information about model generation.
+    For AutoML models, additional information about algorithm, scores, and training is stored.
     """
     model_type = models.CharField(max_length=20, choices=[
         ('alumni', 'Alumni Model'),
-        ('job', 'Job Model')
+        ('job', 'Job Model'),
+        ('automl', 'AutoML Model')
     ])
     file_path = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     
+    # AutoML specific fields
+    algorithm = models.CharField(max_length=100, null=True, blank=True, 
+                               help_text='The algorithm used by AutoML (e.g., lgbm, xgboost)')
+    hyperparameters = models.TextField(null=True, blank=True, 
+                                     help_text='JSON string of hyperparameters')
+    train_score = models.FloatField(null=True, blank=True, 
+                                  help_text='Training score of the model')
+    test_score = models.FloatField(null=True, blank=True, 
+                                 help_text='Testing score of the model')
+    metrics = models.CharField(max_length=50, null=True, blank=True, 
+                             help_text='Metrics used for evaluation (e.g., f1, accuracy)')
+    training_time = models.FloatField(null=True, blank=True, 
+                                    help_text='Time taken to train the model in seconds')
+    
     def __str__(self):
-        return f"{self.get_model_type_display()} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+        base_str = f"{self.get_model_type_display()} ({self.created_at.strftime('%Y-%m-%d %H:%M')})"
+        if self.algorithm:
+            return f"{base_str} - {self.algorithm}"
+        return base_str
+    
+    @property
+    def hyperparameters_dict(self):
+        """
+        Returns the hyperparameters as a Python dictionary
+        """
+        if self.hyperparameters:
+            try:
+                return json.loads(self.hyperparameters)
+            except json.JSONDecodeError:
+                return {}
+        return {}
+    
+    def set_hyperparameters(self, params_dict):
+        """
+        Store hyperparameters from a dictionary as a JSON string
+        """
+        if params_dict:
+            self.hyperparameters = json.dumps(params_dict)
     
     class Meta:
         verbose_name = 'ML Model Info'

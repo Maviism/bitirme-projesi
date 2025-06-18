@@ -1,11 +1,52 @@
 student_id,id_number,fullname,last_name,birth_date,faculty,program,gpa
-S001,ID12345,John,Doe,1998-05-15,Engineering,Computer Engineering Pr.,3.8
-S002,ID23456,Jane,Smith,1999-02-20,Engineering,Computer Engineering Pr.,3.5
-S003,ID34567,Michael,Brown,1997-11-10,Engineering,Computer Engineering Pr.,3.2
-S004,ID45678,Emily,Johnson,1998-07-22,Engineering,Computer Engineering Pr.,3.9
-S005,ID56789,David,Wilson,1999-04-11,Engineering,Electrical Engineering,3.6
-S006,ID67890,Sarah,Taylor,1998-09-30,Engineering,Electrical Engineering,3.3
-S007,ID78901,Robert,Miller,1997-06-18,Engineering,Mechanical Engineering,3.7
-S008,ID89012,Jennifer,Anderson,1999-01-07,Engineering,Mechanical Engineering,3.4
-S009,ID90123,Matthew,Thomas,1998-03-25,Engineering,Civil Engineering,3.1
-S010,ID01234,Lisa,Jackson,1997-12-14,Engineering,Civil Engineering,3.8
+S001,ID12345,John,Doe,1998-05-15,Engineering,Computer Engineering Pr.,2.5
+S002,ID23456,Jane,Smith,1999-02-20,Engineering,Computer Engineering Pr.,3.1
+S003,ID34567,Michael,Brown,1997-11-10,Engineering,Computer Engineering Pr.,2.2
+S004,ID45678,Emily,Johnson,1998-07-22,Engineering,Computer Engineering Pr.,3.8
+S005,ID56789,David,Wilson,1999-04-11,Engineering,Electrical Engineering,2.9
+S006,ID67890,Sarah,Taylor,1998-09-30,Engineering,Electrical Engineering,2.4
+S007,ID78901,Robert,Miller,1997-06-18,Engineering,Mechanical Engineering,3.3
+S008,ID89012,Jennifer,Anderson,1999-01-07,Engineering,Mechanical Engineering,2.8
+S009,ID90123,Matthew,Thomas,1998-03-25,Engineering,Civil Engineering,2.1
+S010,ID23452,Alex,Martinez,1999-01-15,Engineering,Computer Engineering Pr.,3.4
+S011,ID76543,Sofia,Chen,1998-06-28,Engineering,Computer Engineering Pr.,3.0
+S012,ID87234,Chris,Rodriguez,1997-09-17,Engineering,Computer Engineering Pr.,2.7
+S013,ID67245,Leila,Khan,1998-11-23,Engineering,Computer Engineering Pr.,3.6
+S014,ID54637,James,Wilson,1997-12-02,Engineering,Computer Engineering Pr.,2.6
+S015,ID92364,Olivia,Lee,1999-05-19,Engineering,Computer Engineering Pr.,3.9
+S016,ID18765,Noah,Garcia,1998-08-14,Engineering,Computer Engineering Pr.,3.2
+S017,ID24890,Ava,Patel,1997-10-30,Engineering,Computer Engineering Pr.,2.9
+S018,ID73921,Daniel,Kim,1999-03-07,Engineering,Computer Engineering Pr.,3.1
+S019,ID61029,Emma,Nguyen,1998-01-21,Engineering,Computer Engineering Pr.,2.3
+S020,ID59273,Lucas,Davis,1997-07-16,Engineering,Computer Engineering Pr.,3.5
+S010,ID01234,Lisa,Jackson,1997-12-14,Engineering,Civil Engineering,3.7
+S021,ID01235,Ethan,Harris,1998-02-18,Engineering,Computer Engineering Pr.,2.8
+S022,ID01236,Chloe,Clark,1999-07-21,Engineering,Computer Engineering Pr.,3.8
+S023,ID01237,Benjamin,Lewis,1997-04-30,Engineering,Computer Engineering Pr.,2.2
+S024,ID01238,Mia,Walker,1998-10-12,Engineering,Computer Engineering Pr.,3.6
+S025,ID01239,Henry,Hall,1999-03-25,Engineering,Electrical Engineering,3.0
+S026,ID01240,Ella,Allen,1998-08-17,Engineering,Electrical Engineering,2.5
+S027,ID01241,Alexander,Young,1997-05-28,Engineering,Mechanical Engineering,3.4
+S028,ID01242,Grace,King,1999-02-09,Engineering,Mechanical Engineering,2.7
+S029,ID01243,William,Wright,1998-04-15,Engineering,Civil Engineering,2.0
+S030,ID01244,Victoria,Scott,1997-11-01,Engineering,Civil Engineering,3.7
+S031,ID01245,James,Green,1998-01-20,Engineering,Computer Engineering Pr.,3.3
+S032,ID01246,Scarlett,Adams,1999-06-11,Engineering,Computer Engineering Pr.,3.1
+S033,ID01247,Daniel,Baker,1997-08-22,Engineering,Computer Engineering Pr.,2.9
+S034,ID01248,Madison,Nelson,1998-12-03,Engineering,Computer Engineering Pr.,3.6
+S035,ID01249,Joseph,Carter,1997-10-14,Engineering,Computer Engineering Pr.,2.6
+S036,ID01250,Luna,Mitchell,1999-04-29,Engineering,Computer Engineering Pr.,3.9
+S037,ID01251,David,Perez,1998-07-24,Engineering,Computer Engineering Pr.,3.2
+S038,ID01252,Aria,Roberts,1997-09-10,Engineering,Computer Engineering Pr.,2.8
+S039,ID01253,Samuel,Turner,1999-02-17,Engineering,Computer Engineering Pr.,3.0
+S040,ID01254,Penelope,Phillips,1998-03-11,Engineering,Computer Engineering Pr.,2.4
+S041,ID01255,Matthew,Campbell,1997-06-26,Engineering,Computer Engineering Pr.,3.5
+S042,ID01256,Riley,Parker,1999-08-08,Engineering,Electrical Engineering,2.9
+S043,ID01257,Elijah,Evans,1998-05-19,Engineering,Electrical Engineering,3.8
+S044,ID01258,Zoe,Edwards,1997-02-28,Engineering,Mechanical Engineering,2.3
+S045,ID01259,Christopher,Collins,1998-09-02,Engineering,Mechanical Engineering,3.7
+S046,ID01260,Lily,Stewart,1999-01-05,Engineering,Civil Engineering,3.1
+S047,ID01261,Andrew,Sanchez,1998-11-18,Engineering,Civil Engineering,2.5
+S048,ID01262,Hannah,Morris,1997-07-07,Engineering,Computer Engineering Pr.,3.4
+S049,ID01263,Joshua,Rogers,1999-12-30,Engineering,Computer Engineering Pr.,2.7
+S050,ID01264,Nora,Bell,1998-10-09,Engineering,Computer Engineering Pr.,2.1
