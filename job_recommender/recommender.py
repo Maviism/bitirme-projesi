@@ -194,17 +194,22 @@ class HybridRecommender:
             return []
             
         try:
-            # If no AutoML recommender available, initialize it
+            # If no AutoML recommender available, try to load the latest model first
             if self.automl_recommender is None:
                 try:
-                    from .ml_model.automl_recommender import AlumniAutoMLRecommender
-                    logger.info("Initializing new AutoML recommender")
-                    self.automl_recommender = AlumniAutoMLRecommender(time_budget=60)
+                    # Always prioritize loading an existing model from disk first
+                    self.automl_recommender = get_automl_model()
+                    
+                    # If still no model, only then initialize a new one
+                    if self.automl_recommender is None:
+                        from .ml_model.automl_recommender import AlumniAutoMLRecommender
+                        logger.info("No existing AutoML model found. Initializing new AutoML recommender")
+                        self.automl_recommender = AlumniAutoMLRecommender(time_budget=60)
                 except Exception as e:
-                    logger.error(f"Failed to initialize AutoML recommender: {e}")
+                    logger.error(f"Failed to initialize or load AutoML recommender: {e}")
                     return []
                 
-            # Train the model if not already trained
+            # Train the model only if it's not already trained and we couldn't load one from disk
             if not self.automl_recommender.is_trained:
                 # Log dataset size for debugging
                 logger.info(f"Training AutoML model on {len(alumni_data)} alumni records")
@@ -310,24 +315,13 @@ class HybridRecommender:
                     job_text = f"{job.get('title', '')}. {job.get('description', '')}"
                     job_embedding = self.model.encode(job_text, convert_to_tensor=True)
                 
-                # Calculate similarity score
-                similarity_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
-
-                # Program match bonus
-                required_majors = job.get('required_majors', '')
-                program_match = 1.5 if program and program in required_majors else 1.0
+                # Calculate similarity score (no bonuses applied)
+                total_score = float(util.pytorch_cos_sim(experience_embedding, job_embedding)[0][0])
                 
-                # Skills matching bonus
-                skill_bonus = 1.0
-                if skills and len(skills) > 0:
-                    job_skills = job.get('required_skills', [])
-                    if job_skills and isinstance(job_skills, list):
-                        matching_skills = len(set(skills) & set(job_skills))
-                        if matching_skills > 0:
-                            skill_bonus = 1.0 + (matching_skills / max(len(skills), 1)) * 0.5
-                
-                # Calculate total score with all bonuses
-                total_score = similarity_score * program_match * skill_bonus
+                # Debug log for similarity score - using INFO level for visibility
+                logger.info(f"SCORE_DEBUG: Job {job.get('id')} - {job.get('title')}: similarity score = {total_score:.4f}")
+                # Also print to console for immediate visibility
+                print(f"SCORE_DEBUG: Job {job.get('id')} - {job.get('title')}: similarity score = {total_score:.4f}")
 
                 matches.append((total_score, job))
             except Exception as e:
@@ -419,10 +413,17 @@ class HybridRecommender:
                     
                 score = (len(alumni_recs) - i) / max(1, len(alumni_recs))  # Avoid division by zero
                 job_id = str(job['id'])  # Convert to string to ensure consistent key types
+                weighted_score = score * self.alumni_weight
+                
+                # Debug log for alumni score - using INFO level for visibility
+                logger.info(f"SCORE_DEBUG: Alumni recommendation - Job {job_id} - {job.get('title')}: raw score = {score:.4f}, weighted = {weighted_score:.4f}")
+                # Also print to console for immediate visibility
+                print(f"SCORE_DEBUG: Alumni recommendation - Job {job_id} - {job.get('title')}: raw score = {score:.4f}, weighted = {weighted_score:.4f}")
+                
                 if job_id not in combined_scores:
                     combined_scores[job_id] = {
                         'job': job,
-                        'score': score * self.alumni_weight,
+                        'score': weighted_score,
                         'sources': ['alumni_automl']
                     }
                 else:
@@ -440,10 +441,17 @@ class HybridRecommender:
                     
                 score = (len(job_recs) - i) / max(1, len(job_recs))  # Avoid division by zero
                 job_id = str(job['id'])  # Convert to string to ensure consistent key types
+                weighted_score = score * self.job_weight
+                
+                # Debug log for job posting score - using INFO level for visibility
+                logger.info(f"SCORE_DEBUG: Job posting recommendation - Job {job_id} - {job.get('title')}: raw score = {score:.4f}, weighted = {weighted_score:.4f}")
+                # Also print to console for immediate visibility
+                print(f"SCORE_DEBUG: Job posting recommendation - Job {job_id} - {job.get('title')}: raw score = {score:.4f}, weighted = {weighted_score:.4f}")
+                
                 if job_id not in combined_scores:
                     combined_scores[job_id] = {
                         'job': job,
-                        'score': score * self.job_weight,
+                        'score': weighted_score,
                         'sources': ['job_posting']
                     }
                 else:
@@ -457,8 +465,21 @@ class HybridRecommender:
         recommendations = list(combined_scores.values())
         recommendations.sort(key=lambda x: x.get('score', 0), reverse=True)
         
+        # Debug log for final recommendations - using INFO level for visibility
         if len(recommendations) > 0:
-            pass
+            header = "--- Final Recommendation Scores ---"
+            logger.info(f"SCORE_DEBUG: {header}")
+            print(f"SCORE_DEBUG: {header}")
+            
+            for i, rec in enumerate(recommendations[:10]):  # Log top 10
+                job = rec['job']
+                score_msg = f"#{i+1}: Job {job.get('id')} - {job.get('title')}: final score = {rec['score']:.4f}, sources = {rec['sources']}"
+                logger.info(f"SCORE_DEBUG: {score_msg}")
+                print(f"SCORE_DEBUG: {score_msg}")
+                
+            footer = "--------------------------------"
+            logger.info(f"SCORE_DEBUG: {footer}")
+            print(f"SCORE_DEBUG: {footer}")
         else:
             # If we've processed everything but still have no recommendations, return a message
             return [{

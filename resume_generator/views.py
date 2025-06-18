@@ -7,7 +7,7 @@ from job_recommender.models import Student, Course, Experience
 from utils.llm_utils import get_llm_instance, cache_llm_response
 from resume_generator.utils import (
     generate_resume_content, improve_resume_section as improve_section_util,
-    generate_cover_letter_content, improve_cover_letter,
+    generate_cover_letter_content,
     # New utility functions
     calculate_duration_months, get_student_data_for_resume, get_template_name,
     get_context_for_resume_template, get_enhanced_user_data_for_llm,
@@ -499,7 +499,8 @@ def improve_cover_letter_view(request: HttpRequest):
         }
         
         # Improve cover letter using the LLM instance we already have
-        improved_cover_letter = improve_cover_letter(llm, improvement_context)
+        from resume_generator.utils import improve_cover_letter as improve_cover_letter_util
+        improved_cover_letter = improve_cover_letter_util(llm, improvement_context)
         
         return JsonResponse({
             'success': True,
