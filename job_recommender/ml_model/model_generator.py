@@ -293,7 +293,7 @@ class MLModelGenerator:
             
             # Extract model metadata for the database
             import json
-            algorithm = self.automl_recommender.model.best_estimator_name
+            algorithm = self.automl_recommender.model.best_estimator
             hyperparameters = json.dumps(self.automl_recommender.model.best_config)
             
             # Extract metrics if available

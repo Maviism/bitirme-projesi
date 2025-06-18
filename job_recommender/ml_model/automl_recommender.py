@@ -22,7 +22,7 @@ class AlumniAutoMLRecommender:
     Alumni recommendation system using FLAML AutoML
     """
     
-    def __init__(self, time_budget=60, metric="r2", estimator_list=None, ensemble=True):
+    def __init__(self, time_budget=60, metric="macro_f1", estimator_list=None, ensemble=True):
         """
         Initialize the AutoML recommender with configuration parameters.
         
@@ -43,6 +43,8 @@ class AlumniAutoMLRecommender:
         self.ensemble = ensemble
         self.model = AutoML()
         self.is_trained = False
+        self.preprocessor = None
+        self.training_columns = None
         self.grade_mapping = {
             'AA': 4.0, 'BA': 3.5, 'BB': 3.0, 'CB': 2.5, 
             'CC': 2.0, 'DC': 1.5, 'DD': 1.0, 'FF': 0.0
@@ -91,7 +93,7 @@ class AlumniAutoMLRecommender:
             
             # Add course grades
             for course_code, grade in course_grades.items():
-                record[f'course_{course_code}'] = float(grade)
+                record[f'course_{course_code}'] = self.grade_mapping.get(grade, 0.0)
             
             records.append(record)
             job_targets.append(job.get('id', -1))
@@ -100,7 +102,7 @@ class AlumniAutoMLRecommender:
             return None, None
         
         # Convert to pandas DataFrames
-        X_df = pd.DataFrame(records)
+        X_df = pd.DataFrame(records).fillna(0)
         y = np.array(job_targets)
         
         return X_df, y
@@ -122,7 +124,7 @@ class AlumniAutoMLRecommender:
         try:
             X_df, y = self._preprocess_alumni_data(alumni_data)
             
-            if X_df is None or y is None:
+            if X_df is None or y is None or X_df.empty:
                 logger.warning("No valid alumni data for training")
                 return False
             
@@ -142,12 +144,19 @@ class AlumniAutoMLRecommender:
             numeric_features = [col for col in X_df.columns if col != 'program']
             categorical_features = ['program'] if 'program' in X_df.columns else []
             
-            preprocessor = ColumnTransformer(
+            self.preprocessor = ColumnTransformer(
                 transformers=[
                     ('num', StandardScaler(), numeric_features),
                     ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
-                ]
+                ],
+                remainder='passthrough'
             )
+
+            # Store training columns
+            self.training_columns = X_df.columns
+
+            # Fit and transform the data
+            X_train_processed = self.preprocessor.fit_transform(X_df)
             
             # Use the previously determined estimator list
             auto_estimator_list = self.estimator_list
@@ -179,12 +188,12 @@ class AlumniAutoMLRecommender:
             
             # Fit the model
             self.model.fit(
-                X_train=X_df, 
+                X_train=X_train_processed, 
                 y_train=y, 
                 **settings
             )
             
-            logger.info(f"AutoML training completed. Best model: {self.model.best_estimator_name}")
+            logger.info(f"AutoML training completed. Best model: {self.model.best_estimator}")
             self.is_trained = True
             
             # Log best config for future reference
@@ -243,19 +252,25 @@ class AlumniAutoMLRecommender:
             for course in courses:
                 if isinstance(course, dict) and 'code' in course and 'grade' in course:
                     course_code = course['code']
-                    grade = self.grade_mapping.get(course['grade'], 0)
+                    grade = self.grade_mapping.get(course['grade'], 0.0)
                     student_record[f'course_{course_code}'] = grade
             
             # Convert to DataFrame
             X_student = pd.DataFrame([student_record])
             
-            # Handle missing features that were in training but not in test data
-            # Get model features from best config if available
-            logger.debug(f"Student data fields: {list(student_record.keys())}")
+            # Align columns with the training data
+            if self.training_columns is not None:
+                missing_cols = set(self.training_columns) - set(X_student.columns)
+                for c in missing_cols:
+                    X_student[c] = 0
+                X_student = X_student[self.training_columns]
+
+            # Preprocess the student data
+            X_student_processed = self.preprocessor.transform(X_student)
             
             # Get predictions with probabilities
             try:
-                job_probs = self.model.predict_proba(X_student)
+                job_probs = self.model.predict_proba(X_student_processed)
                 job_ids = self.model.classes_
                 
                 # Create recommendations list
@@ -400,7 +415,7 @@ class AlumniAutoMLRecommender:
         # Logic to select estimators based on dataset size
         if n_samples < 100:
             # For very small datasets, simple models work best
-            return ['lgbm', 'rf', 'xgboost','kneighbor']
+            return ['rf', 'xgboost','kneighbor']
         elif n_samples < 1000:
             # Medium datasets - add more options
             return ['lgbm', 'rf', 'xgboost', 'catboost', 'extra_tree', 'kneighbor']

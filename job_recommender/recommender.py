@@ -129,7 +129,7 @@ class HybridRecommender:
     A hybrid recommender system that combines alumni-based and job-posting-based recommendations.
     """
     
-    def __init__(self, alumni_weight=0.6, job_weight=0.4, min_recommendations=5):
+    def __init__(self, alumni_weight=0.4, job_weight=0.6, min_recommendations=5):
         """
         Initialize the recommender with weights for each component.
         
