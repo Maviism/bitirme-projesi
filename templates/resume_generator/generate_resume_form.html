@@ -274,8 +274,8 @@
           <textarea class="form-control" id="student_summary" name="student_summary"
             rows="3">{{ student.summary }}</textarea>
           <div class="d-flex justify-content-end mt-2">
-            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="improveSummary()">
-              <i class="fas fa-magic me-1"></i> AI ile Oluştur/Güncelle
+            <button type="button" id="improveSummaryBtn" class="btn btn-outline-primary btn-sm me-2" onclick="improveSummary(this)">
+                <i class="fas fa-magic me-1"></i> AI ile Geliştir
             </button>
           </div>
         </div>
@@ -291,14 +291,8 @@
             <i class="fas fa-lightbulb text-warning me-2"></i>
             Pozisyonla ilgili becerileri ekleyin. İş gereksinimlerine uyan teknik ve sosyal becerileri vurgulayın.
           </div>
-          <div class="d-flex gap-2 mb-2">
-            <button type="button" class="btn btn-custom btn-primary btn-sm" onclick="generateAISkills()">
-              <i class="fas fa-magic me-2"></i> AI Beceri Önerisi
-            </button>
-          </div>
           <textarea class="form-control" id="student_skills" name="student_skills" rows="3"
             placeholder="örn: Python, SQL, Proje Yönetimi, İletişim">{{ student.skills }}</textarea>
-          <small class="form-text text-muted mt-2"><i class="fas fa-info-circle me-1"></i> AI geçmişinize ve hedef işe dayalı olarak ilgili becerileri önerebilir.</small>
         </div>
 
         <hr>
@@ -567,15 +561,23 @@
   }
 
   // For backwards compatibility, now just calls improveSummary
-  async function generateAISummary() {
+  async function generateAISummary(button) {
     // First make sure the summary is empty
     document.getElementById('student_summary').value = '';
     // Then call improveSummary which will handle generation
-    await improveSummary();
+    await improveSummary(button);
   }
 
   // Generate or Update Professional Summary with AI
-  async function improveSummary() {
+  async function improveSummary(button) {
+    const originalButtonHTML = button.innerHTML;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Yükleniyor...';
+    button.disabled = true;
+
+    const otherButton = button.id === 'improveSummaryBtn' 
+        ? document.querySelector('button[onclick^="generateAISummary"]')
+        : document.getElementById('improveSummaryBtn');
+    if(otherButton) otherButton.disabled = true;
     try {
       const currentSummary = document.getElementById('student_summary').value;
       const isGenerating = !currentSummary.trim();
@@ -691,6 +693,10 @@
       } catch (fallbackError) {
         alert('Profesyonel özet ile ilgili hata oluştu. Lütfen özetinizi manuel olarak düzenlemeyi deneyin.');
       }
+    } finally {
+        button.innerHTML = originalButtonHTML;
+        button.disabled = false;
+        if(otherButton) otherButton.disabled = false;
     }
   }
 

@@ -318,7 +318,7 @@ class AgentConsumer(AsyncWebsocketConsumer):
         try:
             # Inisialisasi Deepgram
             config = DeepgramClientOptions(options={"keepalive": "true"})
-            self.deepgram = DeepgramClient("e100be4bf9db8db782649b9342eeb3fe1cac9557", config)
+            self.deepgram = DeepgramClient(os.getenv("DEEPGRAM_API_KEY"), config)
             self.dg_connection = self.deepgram.agent.websocket.v("1")
 
             # Setup options

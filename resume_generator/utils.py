@@ -27,55 +27,23 @@ def generate_resume_content(llm_utils: LLMUtils, user_data: Dict, job_descriptio
         Dictionary with generated resume sections
     """
     prompt = f"""
-    Aşağıdaki kullanıcı verilerine dayanarak profesyonel bir özgeçmiş içeriği oluşturun. Türkçe doğal dil kullanın ve iş dünyasında kabul görmüş terimler kullanın.
+    Aşağıdaki kullanıcı verilerine dayanarak profesyonel bir özgeçmiş içeriği oluşturun.
 
     Kullanıcı Bilgileri:
     {json.dumps(user_data, indent=2)}
 
-    {f"Hedeflenen İş Pozisyonu ve Açıklama: {job_description}" if job_description else ""}
+    {f"Hedeflenen İş Pozisyonu: {job_description}" if job_description else ""}
 
-    Aşağıdaki bölümleri içeren kapsamlı bir özgeçmiş oluşturun:
+    Özgeçmiş için şu bölümleri oluştur:
 
-    1. Profesyonel Özet (2-3 cümle): 
-       - Kişinin güçlü yönlerini vurgulayan
-       - Kariyer hedeflerini belirten  
-       - İş pozisyonuna uygun yetenekleri öne çıkaran
+    1. Profesyonel Özet: Kişinin güçlü yönlerini ve kariyer hedeflerini vurgulayan 2-3 cümlelik bir özet.
+    2. Yetenekler: Teknik, kişisel, dil becerileri ve kullanılan araçlar.
+    3. Deneyim: Kurum, pozisyon, görev süresi, sorumluluklar ve başarılar.
+    4. Eğitim: Üniversite, bölüm, mezuniyet tarihi. Eğer GNO (GPA) 2.5'in altındaysa, kesinlikle özgeçmişe ekleme. Sadece yüksekse (örneğin 3.0/4.0 veya üzeri) eklenmelidir.
+    5. Projeler (varsa): Proje adı, açıklaması, kullanılan teknolojiler ve sonuçlar.
+    6. Sertifikalar ve Kurslar (varsa): Alınan sertifikalar ve tamamlanan kurslar.
 
-    2. Yetenekler:
-       - Teknik beceriler
-       - Yazılım ve araçlar
-       - Kişisel özellikler
-       - Dil becerileri (varsa)
-
-    3. Deneyim:
-       - Kurum adı ve pozisyon
-       - Görev süreleri
-       - Başarılar ve sorumluluklar (sayısal verilerle desteklenen)
-       - Kullanılan teknolojiler
-
-    4. Eğitim:
-       - Üniversite ve fakülte
-       - Bölüm ve GNO
-       - Mezuniyet tarihi
-       - Akademik başarılar
-
-    5. Projeler (varsa):
-       - Proje adı ve açıklaması
-       - Kullanılan teknolojiler
-       - Elde edilen sonuçlar
-
-    6. Sertifikalar ve Kurslar (varsa):
-       - Alınan sertifikalar
-       - Tamamlanan kurslar
-       - Eğitim platformları
-
-    İçerik şu kriterleri karşılamalı:
-    - Türkçe iş dünyası terminolojisini kullanın
-    - ATS (Applicant Tracking System) dostu olsun
-    - Özgün ve kişiselleştirilmiş olsun
-    - Ölçülebilir başarılar içersin
-    - Profesyonel ve etkili bir dil kullanın
-    - İş pozisyonuna özel anahtar kelimeler içersin
+    İçerik profesyonel, ATS uyumlu ve ölçülebilir başarılar içermelidir.
     """
     
     schema = {
@@ -150,7 +118,7 @@ def improve_resume_section(llm_utils: LLMUtils, section_content: str, section_ty
         Improved section content
     """
     prompt = f"""
-    Aşağıdaki özgeçmiş bölümünü geliştirin ve daha etkili hale getirin:
+    Aşağıdaki özgeçmiş bölümünü geliştirin.
 
     Bölüm Türü: {section_type}
     Mevcut İçerik:
@@ -158,22 +126,13 @@ def improve_resume_section(llm_utils: LLMUtils, section_content: str, section_ty
 
     {f"İş Pozisyonu Bağlamı: {job_context}" if job_context else ""}
 
-    Bölümü şu açılardan geliştirin:
+    Geliştirme için ipuçları:
+    - Profesyonel ve etkili bir dil kullanın.
+    - Güçlü eylem fiilleri ve ölçülebilir başarılar ekleyin.
+    - ATS uyumluluğu için ilgili anahtar kelimeleri kullanın.
+    - Eğitim bölümünü geliştiriyorsanız, GNO (GPA) 2.5'in altındaysa kesinlikle gösterme. Sadece yüksekse vurgulayın.
 
-    1. Profesyonellik: İş dünyasına uygun Türkçe terminoloji kullanın
-    2. Etki: Güçlü eylem fiilleri ve ölçülebilir başarılar ekleyin  
-    3. ATS Uyumluluğu: Anahtar kelimeler ve sektör terimleri kullanın
-    4. Özgünlük: Standart ifadelerden kaçının, kişiselleştirilmiş içerik oluşturun
-    5. Okuma Kolaylığı: Net ve anlaşılır ifadeler kullanın
-
-    Bölüm türüne özel geliştirmeler:
-    - Özet: Kişinin güçlü yönlerini, kariyer hedeflerini ve değer önerisini vurgulayın
-    - Deneyim: Başarıları sayısal verilerle destekleyin, sorumlulukları net açıklayın
-    - Beceriler: Teknik ve kişisel becerileri kategorize edin, yeterlilik seviyelerini belirtin
-    - Eğitim: Akademik başarıları, önemli projeleri ve dersleri vurgulayın
-    - Projeler: Projenin etkisini, kullanılan teknolojileri ve sonuçları detaylı açıklayın
-
-    Sadece geliştirilen içeriği döndürün, ek açıklama yapmayın.
+    Sadece geliştirilen bölüm içeriğini, ek açıklama yapmadan döndürün.
     """
     
     return llm_utils.provider.generate_text(prompt)
@@ -191,7 +150,7 @@ def generate_cover_letter_content(llm_utils: LLMUtils, user_data: Dict, job_data
         Generated cover letter text
     """
     prompt = f"""
-    Aşağıdaki bilgilere dayanarak profesyonel ve kişiselleştirilmiş bir İnsan Kaynakları ön yazısı (cover letter) oluşturun:
+    Aşağıdaki bilgilere dayanarak profesyonel ve kişiselleştirilmiş bir ön yazı oluşturun.
 
     Başvuran Bilgileri:
     {json.dumps(user_data, indent=2)}
@@ -199,34 +158,12 @@ def generate_cover_letter_content(llm_utils: LLMUtils, user_data: Dict, job_data
     İş Pozisyonu Bilgileri:
     {json.dumps(job_data, indent=2)}
 
-    Ön yazı şu özellikleri taşımalı:
+    Ön yazı şu yapıda olmalıdır:
+    - Giriş: Pozisyona ve şirkete olan ilgi belirtilmelidir.
+    - Gelişme: Adayın deneyim ve becerilerinin pozisyonla olan ilgisi vurgulanmalıdır.
+    - Sonuç: Şirkete sağlanacak katkı özetlenmeli ve görüşme talebi iletilmelidir.
 
-    1. Profesyonel Format:
-       - Tarih ve adres bilgileri
-       - Uygun hitap şekli
-       - Profesyonel kapanış
-
-    2. İçerik Yapısı:
-       - Giriş Paragrafı: Hangi pozisyona başvurduğunu belirt, ilgi çekici bir açılış yap
-       - Gelişme Paragrafları: 
-         * İlgili deneyim ve becerilerini vurgula
-         * Pozisyona uygunluğunu göster
-         * Somut başarılar ve örnekler ver
-         * İlgili alana olan ilgini ve bilgini göster
-       - Sonuç Paragrafı: Görüşme talebi ve teşekkür
-
-    3. Dil ve Üslup:
-       - Türkçe iş dünyası terminolojisi kullan
-       - Özgüvenli ama mütevazı bir ton
-       - Kişiselleştirilmiş ve özgün ifadeler
-       - Standart kalıplardan kaçın
-
-    4. Özelleştirme:
-       - Pozisyonun gereksinimlerine odaklanma
-       - Başvuranın güçlü yönlerini öne çıkarma
-       - Sunabileceği katma değeri vurgulama
-
-    Yaklaşık 3-4 paragraf uzunluğunda, samimi ama profesyonel bir ön yazı oluşturun.
+    Ton profesyonel ve samimi olmalıdır. Sadece ön yazı metnini döndürün.
     """
     
     return llm_utils.provider.generate_text(prompt)
